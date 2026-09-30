@@ -3,153 +3,210 @@ import plotly.graph_objects as go
 from plotly.subplots import make_subplots
 from app_modules import NaturalLanguageParser, PhysicsValidator, PhysicsEngine
 
+
 st.set_page_config(
     page_title="AI Physical Science Lab",
     layout="wide",
     page_icon="🔬"
 )
 
-if "result" not in st.session_state:
-    st.session_state.result = None
 
-if "validation_result" not in st.session_state:
-    st.session_state.validation_result = None
+with open("style.css", "r", encoding="utf-8") as f:
+    st.markdown(
+        f"<style>{f.read()}</style>",
+        unsafe_allow_html=True
+    )
 
-if "user_prompt" not in st.session_state:
-    st.session_state.user_prompt = ""
 
-st.sidebar.header("⚙️ Advanced Controls")
+def init_state():
+    defaults = {
+        "page": "home",
+        "experiment": None,
+        "result": None,
+        "validation": None,
+        "prompt": ""
+    }
 
-manual_mass = st.sidebar.slider(
-    "Mass (kg)",
-    0.1,
-    50.0,
-    1.0
-)
+    for key, value in defaults.items():
+        if key not in st.session_state:
+            st.session_state[key] = value
 
-manual_gravity = st.sidebar.slider(
-    "Gravity (m/s²)",
-    0.0,
-    30.0,
-    9.81
-)
 
-manual_height = st.sidebar.slider(
-    "Initial Height (m)",
-    0.0,
-    100.0,
-    10.0
-)
+def card(title, description):
+    st.markdown(
+        f"""
+        <div class="card">
+            <div class="card-title">{title}</div>
+            <div class="card-description">
+                {description}
+            </div>
+        </div>
+        """,
+        unsafe_allow_html=True
+    )
 
-manual_v0 = st.sidebar.slider(
-    "Initial Velocity (m/s)",
-    0.0,
-    50.0,
-    0.0
-)
 
-manual_angle = st.sidebar.slider(
-    "Launch Angle (deg)",
-    0,
-    90,
-    0
-)
+def run_simulation(validation):
+    engine = PhysicsEngine(
+        dt=0.02,
+        solver="rk4"
+    )
 
-manual_elasticity = st.sidebar.slider(
-    "Elasticity",
-    0.0,
-    1.0,
-    0.8
-)
+    return engine.simulate(
+        validation,
+        total_time=8.0
+    )
 
-st.markdown(
-    """
-    <div style="
-        text-align:center;
-        padding:55px 0 20px 0;
-    ">
-        <h1 style="
-            font-size:64px;
-            margin-bottom:12px;
-            font-weight:700;
-        ">
-            What happens if…?
-        </h1>
 
-        <p style="
-            font-size:20px;
-            color:#777;
-            margin-bottom:10px;
-        ">
-            Turn your imagination into a physics experiment.
-        </p>
-    </div>
-    """,
-    unsafe_allow_html=True
-)
+def show_home():
+    st.markdown(
+        """
+        <div class="hero">
+            <div class="hero-title">
+                What happens if…?
+            </div>
 
-st.markdown(
-    """
-    <div style="
-        text-align:center;
-        color:#888;
-        font-size:15px;
-        margin-bottom:25px;
-    ">
-        Describe anything you can imagine and let AI turn it into physics.
-    </div>
-    """,
-    unsafe_allow_html=True
-)
+            <div class="hero-subtitle">
+                Turn your imagination into a physics experiment.
+            </div>
 
-user_prompt = st.text_input(
-    "What would you like to simulate?",
-    value=st.session_state.user_prompt,
-    placeholder="Example: Drop a ball from 20 meters on the Moon.",
-    label_visibility="visible"
-)
+            <div class="hero-description">
+                Imagine a physical situation and explore
+                what happens through physics simulation.
+            </div>
+        </div>
+        """,
+        unsafe_allow_html=True
+    )
 
-st.session_state.user_prompt = user_prompt
+    col1, col2, col3 = st.columns([1, 2, 1])
 
-st.markdown(
-    """
-    <div style="
-        text-align:center;
-        color:#888;
-        font-size:14px;
-        margin-top:8px;
-        margin-bottom:20px;
-    ">
-        Try: drop an object • throw a ball • change gravity • launch an object
-    </div>
-    """,
-    unsafe_allow_html=True
-)
+    with col2:
+        if st.button(
+            "🚀 Start Exploring",
+            use_container_width=True,
+            type="primary"
+        ):
+            st.session_state.page = "select"
+            st.rerun()
 
-col1, col2, col3 = st.columns([1, 2, 1])
 
-with col2:
-    run_ai = st.button(
+def show_selection():
+    st.markdown(
+        '<div class="section-title">Choose an Experiment</div>',
+        unsafe_allow_html=True
+    )
+
+    st.markdown(
+        '<p class="muted">Choose how you want to explore physics.</p>',
+        unsafe_allow_html=True
+    )
+
+    st.write("")
+
+    col1, col2 = st.columns(2)
+
+    with col1:
+        card(
+            "🤖 AI Experiment",
+            "Describe a situation in natural language "
+            "and let AI turn it into a physics simulation."
+        )
+
+        if st.button(
+            "Start AI Experiment",
+            use_container_width=True
+        ):
+            st.session_state.experiment = "ai"
+            st.session_state.page = "experiment"
+            st.rerun()
+
+    with col2:
+        card(
+            "🎛️ Custom Experiment",
+            "Adjust physical variables yourself "
+            "and build your own experiment."
+        )
+
+        if st.button(
+            "Start Custom Experiment",
+            use_container_width=True
+        ):
+            st.session_state.experiment = "custom"
+            st.session_state.page = "experiment"
+            st.rerun()
+
+    st.write("")
+    st.write("")
+
+    col1, col2, col3 = st.columns(3)
+
+    with col1:
+        card(
+            "🪂 Free Fall",
+            "Explore how objects move under gravity."
+        )
+
+    with col2:
+        card(
+            "🏀 Projectile Motion",
+            "Explore how launch speed and angle affect motion."
+        )
+
+    with col3:
+        card(
+            "🌎 Different Worlds",
+            "Explore how different gravity changes motion."
+        )
+
+    st.write("")
+
+    if st.button("← Back to Home"):
+        st.session_state.page = "home"
+        st.rerun()
+
+
+def show_ai_experiment():
+
+    st.sidebar.header("⚙️ Experiment")
+
+    st.sidebar.caption(
+        "AI determines the physical parameters "
+        "from your description."
+    )
+
+    st.markdown(
+        '<div class="section-title">🤖 AI Physics Experiment</div>',
+        unsafe_allow_html=True
+    )
+
+    st.markdown(
+        '<p class="muted">'
+        'Describe the situation you want to simulate.'
+        '</p>',
+        unsafe_allow_html=True
+    )
+
+    prompt = st.text_input(
+        "What happens if...",
+        value=st.session_state.prompt,
+        placeholder="Example: Drop a ball from 20 meters on the Moon."
+    )
+
+    st.session_state.prompt = prompt
+
+    if st.button(
         "🚀 Run Experiment",
+        type="primary",
         use_container_width=True
-    )
+    ):
 
-st.markdown("---")
+        if not prompt.strip():
+            st.warning("Describe a physics situation first.")
+            return
 
-manual_col1, manual_col2, manual_col3 = st.columns([1, 2, 1])
-
-with manual_col2:
-    run_manual = st.button(
-        "🎛️ Run with Advanced Controls",
-        use_container_width=True
-    )
-
-if run_ai:
-    if not user_prompt.strip():
-        st.warning("Describe a physics situation first.")
-    else:
-        with st.spinner("AI is turning your idea into a physics experiment..."):
-            parsed = NaturalLanguageParser.parse(user_prompt)
+        with st.spinner("AI is analyzing your experiment..."):
+            parsed = NaturalLanguageParser.parse(prompt)
 
         if parsed.get("needs_clarification"):
             st.warning(
@@ -158,341 +215,413 @@ if run_ai:
                     "More information is required."
                 )
             )
-        else:
-            validation_result = PhysicsValidator.validate(parsed)
+            return
 
-            if validation_result.is_valid:
-                st.session_state.validation_result = validation_result
+        validation = PhysicsValidator.validate(parsed)
 
-                with st.spinner("Running physics simulation..."):
-                    engine = PhysicsEngine(
-                        dt=0.02,
-                        solver="rk4"
-                    )
-
-                    result = engine.simulate(
-                        validation_result,
-                        total_time=8.0
-                    )
-
-                st.session_state.result = result
-
-                st.success(
-                    f"Experiment ready! [{validation_result.mode}]"
-                )
-
-            else:
-                st.session_state.result = None
-                st.session_state.validation_result = None
-                st.error(
-                    "\n".join(validation_result.errors)
-                )
-
-if run_manual:
-    params = {
-        "mass": manual_mass,
-        "gravity": manual_gravity,
-        "height": manual_height,
-        "initial_velocity": manual_v0,
-        "launch_angle": manual_angle,
-        "friction": 0.0,
-        "tension": 0.0,
-        "elasticity": manual_elasticity,
-        "air_resistance": 0.0,
-        "planet_mass": 5.972e24,
-        "planet_radius": 6371000.0
-    }
-
-    validation_result = PhysicsValidator.validate(
-        {"parameters": params}
-    )
-
-    if validation_result.is_valid:
-        st.session_state.validation_result = validation_result
+        if not validation.is_valid:
+            st.error("\n".join(validation.errors))
+            return
 
         with st.spinner("Running physics simulation..."):
-            engine = PhysicsEngine(
-                dt=0.02,
-                solver="rk4"
-            )
+            result = run_simulation(validation)
 
-            result = engine.simulate(
-                validation_result,
-                total_time=8.0
-            )
-
+        st.session_state.validation = validation
         st.session_state.result = result
 
-        st.success("Manual experiment ready.")
+        st.success("Experiment ready!")
 
-    else:
-        st.session_state.result = None
-        st.session_state.validation_result = None
-        st.error(
-            "\n".join(validation_result.errors)
+
+def show_custom_experiment():
+
+    st.sidebar.header("⚙️ Physics Controls")
+
+    mass = st.sidebar.slider(
+        "Mass (kg)",
+        0.1,
+        50.0,
+        1.0
+    )
+
+    gravity = st.sidebar.slider(
+        "Gravity (m/s²)",
+        0.0,
+        30.0,
+        9.81
+    )
+
+    height = st.sidebar.slider(
+        "Initial Height (m)",
+        0.0,
+        100.0,
+        10.0
+    )
+
+    velocity = st.sidebar.slider(
+        "Initial Velocity (m/s)",
+        0.0,
+        50.0,
+        0.0
+    )
+
+    angle = st.sidebar.slider(
+        "Launch Angle (deg)",
+        0,
+        90,
+        0
+    )
+
+    elasticity = st.sidebar.slider(
+        "Elasticity",
+        0.0,
+        1.0,
+        0.8
+    )
+
+    st.markdown(
+        '<div class="section-title">'
+        '🎛️ Custom Physics Experiment'
+        '</div>',
+        unsafe_allow_html=True
+    )
+
+    st.markdown(
+        '<p class="muted">'
+        'Adjust the physical variables and run your experiment.'
+        '</p>',
+        unsafe_allow_html=True
+    )
+
+    if st.button(
+        "🚀 Run Experiment",
+        type="primary",
+        use_container_width=True
+    ):
+
+        params = {
+            "mass": mass,
+            "gravity": gravity,
+            "height": height,
+            "initial_velocity": velocity,
+            "launch_angle": angle,
+            "friction": 0.0,
+            "tension": 0.0,
+            "elasticity": elasticity,
+            "air_resistance": 0.0,
+            "planet_mass": 5.972e24,
+            "planet_radius": 6371000.0
+        }
+
+        validation = PhysicsValidator.validate(
+            {"parameters": params}
         )
 
-result = st.session_state.result
-validation_result = st.session_state.validation_result
+        if not validation.is_valid:
+            st.error("\n".join(validation.errors))
+            return
 
-if result is not None and validation_result is not None:
+        with st.spinner("Running physics simulation..."):
+            result = run_simulation(validation)
 
-    if result["status"] == "success":
+        st.session_state.validation = validation
+        st.session_state.result = result
 
-        trajectory = result["trajectory"]
+        st.success("Experiment ready!")
 
-        st.markdown("---")
 
-        st.subheader("🔬 Experiment Results")
+def show_results():
 
-        left, right = st.columns([3, 2])
+    result = st.session_state.result
+    validation = st.session_state.validation
 
-        with left:
+    if result is None or validation is None:
+        return
 
-            tab1, tab2 = st.tabs(
-                [
-                    "🎥 2D Motion & Vectors",
-                    "📊 Energy & Velocity"
-                ]
+    if result["status"] != "success":
+        return
+
+    trajectory = result["trajectory"]
+
+    st.markdown("---")
+
+    st.markdown(
+        '<div class="section-title">🔬 Experiment Results</div>',
+        unsafe_allow_html=True
+    )
+
+    left, right = st.columns([3, 2])
+
+    with left:
+        show_motion_graph(trajectory)
+
+    with right:
+        show_tutor(validation, trajectory)
+
+    if result["warnings"]:
+        st.warning("\n".join(result["warnings"]))
+
+    st.subheader("📍 Final State")
+    st.json(result["final_state"])
+
+
+def show_motion_graph(trajectory):
+
+    tab1, tab2 = st.tabs(
+        [
+            "🎥 2D Motion & Vectors",
+            "📊 Energy & Velocity"
+        ]
+    )
+
+    xs = [p["x"] for p in trajectory]
+    ys = [p["y"] for p in trajectory]
+    times = [p["time"] for p in trajectory]
+
+    with tab1:
+
+        fig = go.Figure()
+
+        fig.add_trace(
+            go.Scatter(
+                x=xs,
+                y=ys,
+                mode="lines",
+                name="Trajectory",
+                line=dict(dash="dot")
+            )
+        )
+
+        fig.add_trace(
+            go.Scatter(
+                x=[xs[0]],
+                y=[ys[0]],
+                mode="markers",
+                marker=dict(size=18),
+                name="Object"
+            )
+        )
+
+        frames = []
+
+        step = max(
+            1,
+            len(trajectory) // 100
+        )
+
+        for i in range(0, len(trajectory), step):
+
+            p = trajectory[i]
+
+            frames.append(
+                go.Frame(
+                    data=[
+                        go.Scatter(
+                            x=xs,
+                            y=ys,
+                            mode="lines"
+                        ),
+                        go.Scatter(
+                            x=[p["x"]],
+                            y=[p["y"]],
+                            mode="markers",
+                            marker=dict(size=18)
+                        ),
+                        go.Scatter(
+                            x=[
+                                p["x"],
+                                p["x"] + p["fx"] * 0.05
+                            ],
+                            y=[
+                                p["y"],
+                                p["y"] + p["fy"] * 0.05
+                            ],
+                            mode="lines+markers"
+                        )
+                    ]
+                )
             )
 
-            with tab1:
+        fig.frames = frames
 
-                xs = [p["x"] for p in trajectory]
-                ys = [p["y"] for p in trajectory]
-
-                fig = go.Figure()
-
-                fig.add_trace(
-                    go.Scatter(
-                        x=xs,
-                        y=ys,
-                        mode="lines",
-                        name="Trajectory",
-                        line=dict(dash="dot")
-                    )
-                )
-
-                fig.add_trace(
-                    go.Scatter(
-                        x=[xs[0]],
-                        y=[ys[0]],
-                        mode="markers",
-                        marker=dict(size=18),
-                        name="Object"
-                    )
-                )
-
-                frames = []
-
-                step = max(
-                    1,
-                    len(trajectory) // 100
-                )
-
-                for i in range(
-                    0,
-                    len(trajectory),
-                    step
-                ):
-                    p = trajectory[i]
-
-                    frames.append(
-                        go.Frame(
-                            data=[
-                                go.Scatter(
-                                    x=xs,
-                                    y=ys,
-                                    mode="lines"
-                                ),
-                                go.Scatter(
-                                    x=[p["x"]],
-                                    y=[p["y"]],
-                                    mode="markers",
-                                    marker=dict(size=18)
-                                ),
-                                go.Scatter(
-                                    x=[
-                                        p["x"],
-                                        p["x"] + p["fx"] * 0.05
-                                    ],
-                                    y=[
-                                        p["y"],
-                                        p["y"] + p["fy"] * 0.05
-                                    ],
-                                    mode="lines+markers"
-                                )
-                            ]
-                        )
-                    )
-
-                fig.frames = frames
-
-                fig.update_layout(
-                    xaxis_title="X Position (m)",
-                    yaxis_title="Y Position (m)",
-                    height=450,
-                    margin=dict(
-                        l=20,
-                        r=20,
-                        t=30,
-                        b=20
-                    ),
-                    updatemenus=[
+        fig.update_layout(
+            xaxis_title="X Position (m)",
+            yaxis_title="Y Position (m)",
+            height=450,
+            margin=dict(
+                l=20,
+                r=20,
+                t=30,
+                b=20
+            ),
+            updatemenus=[
+                {
+                    "type": "buttons",
+                    "buttons": [
                         {
-                            "type": "buttons",
-                            "buttons": [
+                            "label": "▶ Play",
+                            "method": "animate",
+                            "args": [
+                                None,
                                 {
-                                    "label": "▶ Play",
-                                    "method": "animate",
-                                    "args": [
-                                        None,
-                                        {
-                                            "frame": {
-                                                "duration": 20,
-                                                "redraw": True
-                                            },
-                                            "fromcurrent": True
-                                        }
-                                    ]
+                                    "frame": {
+                                        "duration": 20,
+                                        "redraw": True
+                                    },
+                                    "fromcurrent": True
                                 }
                             ]
                         }
                     ]
-                )
-
-                st.plotly_chart(
-                    fig,
-                    use_container_width=True
-                )
-
-            with tab2:
-
-                times = [
-                    p["time"]
-                    for p in trajectory
-                ]
-
-                fig = make_subplots(
-                    rows=2,
-                    cols=1,
-                    subplot_titles=[
-                        "Energy Changes (J)",
-                        "Velocity Components (m/s)"
-                    ]
-                )
-
-                fig.add_trace(
-                    go.Scatter(
-                        x=times,
-                        y=[p["ke"] for p in trajectory],
-                        name="Kinetic Energy"
-                    ),
-                    row=1,
-                    col=1
-                )
-
-                fig.add_trace(
-                    go.Scatter(
-                        x=times,
-                        y=[p["pe"] for p in trajectory],
-                        name="Potential Energy"
-                    ),
-                    row=1,
-                    col=1
-                )
-
-                fig.add_trace(
-                    go.Scatter(
-                        x=times,
-                        y=[p["total_e"] for p in trajectory],
-                        name="Total Energy"
-                    ),
-                    row=1,
-                    col=1
-                )
-
-                fig.add_trace(
-                    go.Scatter(
-                        x=times,
-                        y=[p["vx"] for p in trajectory],
-                        name="Vx"
-                    ),
-                    row=2,
-                    col=1
-                )
-
-                fig.add_trace(
-                    go.Scatter(
-                        x=times,
-                        y=[p["vy"] for p in trajectory],
-                        name="Vy"
-                    ),
-                    row=2,
-                    col=1
-                )
-
-                fig.update_layout(
-                    height=450,
-                    margin=dict(
-                        l=20,
-                        r=20,
-                        t=50,
-                        b=20
-                    )
-                )
-
-                st.plotly_chart(
-                    fig,
-                    use_container_width=True
-                )
-
-        with right:
-
-            st.subheader("🤖 AI Physics Tutor")
-
-            st.markdown(
-                "Ask a question about your experiment."
-            )
-
-            q = st.text_input(
-                "Question",
-                placeholder="Why does potential energy decrease?",
-                key="physics_question"
-            )
-
-            if q:
-                st.write(f"**Q:** {q}")
-
-                st.info(
-                    "As the object falls, gravity does work "
-                    "on it, converting gravitational potential "
-                    "energy into kinetic energy."
-                )
-
-            st.markdown("---")
-
-            st.subheader("📌 Experiment Summary")
-
-            st.write(
-                f"**Mode:** {validation_result.mode}"
-            )
-
-            st.write(
-                f"**Simulation:** RK4"
-            )
-
-            st.write(
-                f"**Time:** {result['trajectory'][-1]['time']:.2f} s"
-            )
-
-        if result["warnings"]:
-            st.warning(
-                "\n".join(result["warnings"])
-            )
-
-        st.subheader("📍 Final State")
-
-        st.json(
-            result["final_state"]
+                }
+            ]
         )
+
+        st.plotly_chart(
+            fig,
+            use_container_width=True
+        )
+
+    with tab2:
+
+        fig = make_subplots(
+            rows=2,
+            cols=1,
+            subplot_titles=[
+                "Energy Changes (J)",
+                "Velocity Components (m/s)"
+            ]
+        )
+
+        fig.add_trace(
+            go.Scatter(
+                x=times,
+                y=[p["ke"] for p in trajectory],
+                name="Kinetic Energy"
+            ),
+            row=1,
+            col=1
+        )
+
+        fig.add_trace(
+            go.Scatter(
+                x=times,
+                y=[p["pe"] for p in trajectory],
+                name="Potential Energy"
+            ),
+            row=1,
+            col=1
+        )
+
+        fig.add_trace(
+            go.Scatter(
+                x=times,
+                y=[p["total_e"] for p in trajectory],
+                name="Total Energy"
+            ),
+            row=1,
+            col=1
+        )
+
+        fig.add_trace(
+            go.Scatter(
+                x=times,
+                y=[p["vx"] for p in trajectory],
+                name="Vx"
+            ),
+            row=2,
+            col=1
+        )
+
+        fig.add_trace(
+            go.Scatter(
+                x=times,
+                y=[p["vy"] for p in trajectory],
+                name="Vy"
+            ),
+            row=2,
+            col=1
+        )
+
+        fig.update_layout(
+            height=450,
+            margin=dict(
+                l=20,
+                r=20,
+                t=50,
+                b=20
+            )
+        )
+
+        st.plotly_chart(
+            fig,
+            use_container_width=True
+        )
+
+
+def show_tutor(validation, trajectory):
+
+    st.subheader("🤖 AI Physics Tutor")
+
+    st.markdown(
+        "Ask a question about your experiment."
+    )
+
+    question = st.text_input(
+        "Question",
+        placeholder="Why does potential energy decrease?",
+        key="physics_question"
+    )
+
+    if question:
+        st.write(f"**Q:** {question}")
+
+        st.info(
+            "As the object falls, gravity does work on it, "
+            "converting gravitational potential energy into "
+            "kinetic energy."
+        )
+
+    st.markdown("---")
+
+    st.subheader("📌 Experiment Summary")
+
+    st.write(
+        f"**Mode:** {validation.mode}"
+    )
+
+    st.write(
+        "**Simulation:** RK4"
+    )
+
+    st.write(
+        f"**Time:** {trajectory[-1]['time']:.2f} s"
+    )
+
+
+def show_experiment():
+
+    if st.sidebar.button("← Back to Experiments"):
+        st.session_state.page = "select"
+        st.session_state.result = None
+        st.session_state.validation = None
+        st.rerun()
+
+    if st.session_state.experiment == "ai":
+        show_ai_experiment()
+
+    elif st.session_state.experiment == "custom":
+        show_custom_experiment()
+
+    show_results()
+
+
+init_state()
+
+if st.session_state.page == "home":
+    show_home()
+
+elif st.session_state.page == "select":
+    show_selection()
+
+elif st.session_state.page == "experiment":
+    show_experiment()
