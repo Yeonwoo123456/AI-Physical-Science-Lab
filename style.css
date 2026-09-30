@@ -102,6 +102,7 @@
     margin-bottom: 16px;
     color: #111827;
     text-align: center;
+    white-space: nowrap;
 }
 
 .physics-concept {
@@ -117,6 +118,33 @@
     line-height: 1.5;
     color: #4B5563;
     text-align: center;
+}
+
+
+/* Title Size Adjustments */
+
+.projectile-title {
+    font-size: 26px;
+}
+
+.collision-title {
+    font-size: 34px;
+}
+
+.pendulum-title {
+    font-size: 34px;
+}
+
+.spring-title {
+    font-size: 34px;
+}
+
+.friction-title {
+    font-size: 34px;
+}
+
+.orbit-title {
+    font-size: 26px;
 }
 
 
