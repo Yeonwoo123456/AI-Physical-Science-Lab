@@ -97,24 +97,24 @@
 }
 
 .physics-title {
-    font-size: 24px;
+    font-size: 34px;
     font-weight: 700;
-    margin-bottom: 12px;
+    margin-bottom: 16px;
     color: #111827;
     text-align: center;
 }
 
 .physics-concept {
-    font-size: 16px;
+    font-size: 21px;
     font-weight: 700;
-    margin-bottom: 12px;
+    margin-bottom: 14px;
     color: #374151;
     text-align: center;
 }
 
 .physics-parameters {
-    font-size: 14px;
-    line-height: 1.6;
+    font-size: 17px;
+    line-height: 1.5;
     color: #4B5563;
     text-align: center;
 }
