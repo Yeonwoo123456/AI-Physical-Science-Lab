@@ -82,82 +82,110 @@ def home_page():
             st.session_state.page = "select"
             st.rerun()
 
-
 def selection_page():
     st.markdown(
-        '<div class="section-title">Choose an Experiment</div>',
+        """
+        <div class="experiment-header">
+            <div class="section-title">Choose Your Experiment</div>
+            <div class="muted">
+                Explore different physical phenomena through simulation.
+            </div>
+        </div>
+        """,
         unsafe_allow_html=True
     )
 
-    st.markdown(
-        '<div class="muted">Choose how you want to explore physics.</div>',
-        unsafe_allow_html=True
-    )
-
-    st.write("")
-
-    col1, col2 = st.columns(2)
-
-    with col1:
-        card(
-            "🤖 AI Experiment",
-            "Describe a situation in natural language "
-            "and let AI turn it into a physics simulation."
+    experiments = [
+        (
+            "projectile",
+            "🏹",
+            "Projectile Motion",
+            "Kinematics",
+            "Speed · Angle · Gravity",
+            "projectile-card"
+        ),
+        (
+            "collision",
+            "💥",
+            "Collision",
+            "Momentum & Energy",
+            "Mass · Speed · Elasticity",
+            "collision-card"
+        ),
+        (
+            "pendulum",
+            "🕐",
+            "Pendulum",
+            "Periodic Motion",
+            "Length · Gravity · Angle",
+            "pendulum-card"
+        ),
+        (
+            "spring",
+            "🌀",
+            "Spring",
+            "Hooke's Law",
+            "Mass · k · Displacement",
+            "spring-card"
+        ),
+        (
+            "friction",
+            "🧊",
+            "Friction",
+            "Friction Force",
+            "μ · Mass · Gravity",
+            "friction-card"
+        ),
+        (
+            "orbit",
+            "🪐",
+            "Gravity & Orbit",
+            "Gravity",
+            "Mass · Distance · Velocity",
+            "orbit-card"
         )
+    ]
 
-        if st.button(
-            "Start AI Experiment",
-            key="ai_start",
-            use_container_width=True
+    for row in range(0, 6, 3):
+
+        cols = st.columns(3)
+
+        for col, experiment in zip(
+            cols,
+            experiments[row:row + 3]
         ):
-            st.session_state.experiment = "ai"
-            st.session_state.page = "experiment"
-            st.rerun()
+            key, icon, title, concept, parameters, css_class = experiment
 
-    with col2:
-        card(
-            "🎛️ Custom Experiment",
-            "Adjust physical variables yourself "
-            "and build your own experiment."
-        )
+            with col:
+                st.markdown(
+                    f"""
+                    <div class="physics-card {css_class}">
+                        <div class="physics-icon">{icon}</div>
+                        <div class="physics-title">{title}</div>
+                        <div class="physics-concept">{concept}</div>
+                        <div class="physics-parameters">
+                            {parameters}
+                        </div>
+                    </div>
+                    """,
+                    unsafe_allow_html=True
+                )
 
-        if st.button(
-            "Start Custom Experiment",
-            key="custom_start",
-            use_container_width=True
-        ):
-            st.session_state.experiment = "custom"
-            st.session_state.page = "experiment"
-            st.rerun()
-
-    st.write("")
-    st.write("")
-
-    col1, col2, col3 = st.columns(3)
-
-    with col1:
-        card(
-            "🪂 Free Fall",
-            "Explore how objects move under gravity."
-        )
-
-    with col2:
-        card(
-            "🏀 Projectile Motion",
-            "Explore how launch speed and angle affect motion."
-        )
-
-    with col3:
-        card(
-            "🌎 Different Worlds",
-            "Explore how different gravity changes motion."
-        )
+                if st.button(
+                    "Select",
+                    key=f"select_{key}",
+                    use_container_width=True
+                ):
+                    st.session_state.experiment = key
+                    st.session_state.page = "experiment"
+                    st.rerun()
 
     st.write("")
 
     if st.button("← Back to Home"):
         st.session_state.page = "home"
         st.rerun()
+
 
 
 def ai_experiment():
