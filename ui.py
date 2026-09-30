@@ -98,7 +98,6 @@ def selection_page():
     experiments = [
         (
             "projectile",
-            "🏹",
             "Projectile Motion",
             "Kinematics",
             "Speed · Angle · Gravity",
@@ -106,7 +105,6 @@ def selection_page():
         ),
         (
             "collision",
-            "💥",
             "Collision",
             "Momentum & Energy",
             "Mass · Speed · Elasticity",
@@ -114,7 +112,6 @@ def selection_page():
         ),
         (
             "pendulum",
-            "🕐",
             "Pendulum",
             "Periodic Motion",
             "Length · Gravity · Angle",
@@ -122,7 +119,6 @@ def selection_page():
         ),
         (
             "spring",
-            "🌀",
             "Spring",
             "Hooke's Law",
             "Mass · k · Displacement",
@@ -130,7 +126,6 @@ def selection_page():
         ),
         (
             "friction",
-            "🧊",
             "Friction",
             "Friction Force",
             "μ · Mass · Gravity",
@@ -138,7 +133,6 @@ def selection_page():
         ),
         (
             "orbit",
-            "🪐",
             "Gravity & Orbit",
             "Gravity",
             "Mass · Distance · Velocity",
@@ -147,20 +141,15 @@ def selection_page():
     ]
 
     for row in range(0, 6, 3):
-
         cols = st.columns(3)
 
-        for col, experiment in zip(
-            cols,
-            experiments[row:row + 3]
-        ):
-            key, icon, title, concept, parameters, css_class = experiment
+        for col, experiment in zip(cols, experiments[row:row + 3]):
+            key, title, concept, parameters, css_class = experiment
 
             with col:
                 st.markdown(
                     f"""
                     <div class="physics-card {css_class}">
-                        <div class="physics-icon">{icon}</div>
                         <div class="physics-title">{title}</div>
                         <div class="physics-concept">{concept}</div>
                         <div class="physics-parameters">
@@ -182,11 +171,9 @@ def selection_page():
 
     st.write("")
 
-    if st.button("← Back to Home"):
+    if st.button("Back to Home"):
         st.session_state.page = "home"
         st.rerun()
-
-
 
 def ai_experiment():
     st.markdown(
