@@ -1,0 +1,61 @@
+.hero {
+    text-align: center;
+    padding-top: 110px;
+    padding-bottom: 45px;
+}
+
+.hero-title {
+    font-size: 64px;
+    font-weight: 700;
+    margin-bottom: 18px;
+}
+
+.hero-subtitle {
+    font-size: 21px;
+    color: #777777;
+    margin-bottom: 30px;
+}
+
+.hero-description {
+    font-size: 17px;
+    color: #666666;
+    max-width: 650px;
+    margin: 0 auto;
+    line-height: 1.7;
+}
+
+.experiment-card {
+    padding: 30px;
+    border-radius: 18px;
+    border: 1px solid #dddddd;
+    margin-bottom: 20px;
+}
+
+.experiment-title {
+    font-size: 24px;
+    font-weight: 600;
+    margin-bottom: 10px;
+}
+
+.experiment-description {
+    font-size: 16px;
+    color: #666666;
+    line-height: 1.6;
+}
+
+.section-title {
+    font-size: 30px;
+    font-weight: 650;
+    margin-bottom: 10px;
+}
+
+.small-description {
+    color: #777777;
+    font-size: 16px;
+}
+
+.result-title {
+    font-size: 28px;
+    font-weight: 650;
+    margin-bottom: 20px;
+}
