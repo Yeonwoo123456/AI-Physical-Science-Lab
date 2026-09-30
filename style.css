@@ -25,7 +25,7 @@
 
 .experiment-header {
     text-align: center;
-    margin-bottom: 45px;
+    margin-bottom: 55px;
 }
 
 .section-title {
@@ -63,17 +63,22 @@
 
 .physics-card {
     width: 100%;
+    max-width: 280px;
     aspect-ratio: 1 / 1;
+
     box-sizing: border-box;
 
+    margin: 0 auto 35px auto;
+    padding: 28px;
+
     border-radius: 20px;
-    padding: 32px;
 
     display: flex;
     flex-direction: column;
     justify-content: center;
+    align-items: center;
 
-    margin-bottom: 20px;
+    text-align: center;
 
     text-decoration: none !important;
 
@@ -86,29 +91,32 @@
 }
 
 .physics-card:hover {
-    transform: translateY(-7px) scale(1.02);
+    transform: translateY(-7px) scale(1.03);
     opacity: 0.88;
     box-shadow: 0 14px 32px rgba(0, 0, 0, 0.20);
 }
 
 .physics-title {
-    font-size: 25px;
+    font-size: 24px;
     font-weight: 700;
     margin-bottom: 12px;
     color: #111827;
+    text-align: center;
 }
 
 .physics-concept {
     font-size: 16px;
     font-weight: 700;
-    margin-bottom: 14px;
+    margin-bottom: 12px;
     color: #374151;
+    text-align: center;
 }
 
 .physics-parameters {
     font-size: 14px;
     line-height: 1.6;
     color: #4B5563;
+    text-align: center;
 }
 
 
