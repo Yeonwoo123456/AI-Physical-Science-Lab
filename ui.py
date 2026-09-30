@@ -81,7 +81,7 @@ def home_page():
         ):
             st.session_state.page = "select"
             st.rerun()
-
+            
 def selection_page():
     st.markdown(
         """
