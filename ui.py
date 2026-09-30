@@ -75,7 +75,7 @@ def home_page():
 
     with col:
         if st.button(
-            "🚀 Start Exploring",
+            "Start Exploring",
             type="primary",
             use_container_width=True
         ):
@@ -149,30 +149,22 @@ def selection_page():
             with col:
                 st.markdown(
                     f"""
-                    <div class="physics-card {css_class}">
+                    <a href="?experiment={key}" class="physics-card {css_class}">
                         <div class="physics-title">{title}</div>
                         <div class="physics-concept">{concept}</div>
                         <div class="physics-parameters">
                             {parameters}
                         </div>
-                    </div>
+                    </a>
                     """,
                     unsafe_allow_html=True
                 )
-
-                if st.button(
-                    "Select",
-                    key=f"select_{key}",
-                    use_container_width=True
-                ):
-                    st.session_state.experiment = key
-                    st.session_state.page = "experiment"
-                    st.rerun()
 
     st.write("")
 
     if st.button("Back to Home"):
         st.session_state.page = "home"
+        st.query_params.clear()
         st.rerun()
 
 def ai_experiment():
@@ -559,11 +551,15 @@ def render_app():
     load_css()
     init_state()
 
+    experiment = st.query_params.get("experiment")
+
+    if experiment:
+        st.session_state.experiment = experiment
+        st.session_state.page = "experiment"
+
     if st.session_state.page == "home":
         home_page()
-
     elif st.session_state.page == "select":
         selection_page()
-
     elif st.session_state.page == "experiment":
         experiment_page()
