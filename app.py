@@ -9,66 +9,186 @@ st.set_page_config(
     page_icon="🔬"
 )
 
-st.sidebar.header("⚙️ Manual Controls")
+if "result" not in st.session_state:
+    st.session_state.result = None
 
-manual_mass = st.sidebar.slider("Mass (kg)", 0.1, 50.0, 1.0)
-manual_gravity = st.sidebar.slider("Gravity (m/s²)", 0.0, 30.0, 9.81)
-manual_height = st.sidebar.slider("Initial Height (m)", 0.0, 100.0, 10.0)
-manual_v0 = st.sidebar.slider("Initial Velocity (m/s)", 0.0, 50.0, 0.0)
-manual_angle = st.sidebar.slider("Launch Angle (deg)", 0, 90, 0)
-manual_elasticity = st.sidebar.slider("Elasticity", 0.0, 1.0, 0.8)
+if "validation_result" not in st.session_state:
+    st.session_state.validation_result = None
 
-st.title("🔬 AI Physical Science Lab")
+if "user_prompt" not in st.session_state:
+    st.session_state.user_prompt = ""
+
+st.sidebar.header("⚙️ Advanced Controls")
+
+manual_mass = st.sidebar.slider(
+    "Mass (kg)",
+    0.1,
+    50.0,
+    1.0
+)
+
+manual_gravity = st.sidebar.slider(
+    "Gravity (m/s²)",
+    0.0,
+    30.0,
+    9.81
+)
+
+manual_height = st.sidebar.slider(
+    "Initial Height (m)",
+    0.0,
+    100.0,
+    10.0
+)
+
+manual_v0 = st.sidebar.slider(
+    "Initial Velocity (m/s)",
+    0.0,
+    50.0,
+    0.0
+)
+
+manual_angle = st.sidebar.slider(
+    "Launch Angle (deg)",
+    0,
+    90,
+    0
+)
+
+manual_elasticity = st.sidebar.slider(
+    "Elasticity",
+    0.0,
+    1.0,
+    0.8
+)
 
 st.markdown(
-    "Describe a physics experiment in natural language "
-    "or adjust the variables manually."
+    """
+    <div style="
+        text-align:center;
+        padding:55px 0 20px 0;
+    ">
+        <h1 style="
+            font-size:64px;
+            margin-bottom:12px;
+            font-weight:700;
+        ">
+            What happens if…?
+        </h1>
+
+        <p style="
+            font-size:20px;
+            color:#777;
+            margin-bottom:10px;
+        ">
+            Turn your imagination into a physics experiment.
+        </p>
+    </div>
+    """,
+    unsafe_allow_html=True
+)
+
+st.markdown(
+    """
+    <div style="
+        text-align:center;
+        color:#888;
+        font-size:15px;
+        margin-bottom:25px;
+    ">
+        Describe anything you can imagine and let AI turn it into physics.
+    </div>
+    """,
+    unsafe_allow_html=True
 )
 
 user_prompt = st.text_input(
-    "💬 AI Natural Language Command",
-    placeholder="Example: Drop a 5 kg ball from 20 meters on a planet with 3 times Earth's gravity."
+    "What would you like to simulate?",
+    value=st.session_state.user_prompt,
+    placeholder="Example: Drop a ball from 20 meters on the Moon.",
+    label_visibility="visible"
 )
 
-col_btn1, col_btn2 = st.columns([1, 4])
+st.session_state.user_prompt = user_prompt
 
-with col_btn1:
+st.markdown(
+    """
+    <div style="
+        text-align:center;
+        color:#888;
+        font-size:14px;
+        margin-top:8px;
+        margin-bottom:20px;
+    ">
+        Try: drop an object • throw a ball • change gravity • launch an object
+    </div>
+    """,
+    unsafe_allow_html=True
+)
+
+col1, col2, col3 = st.columns([1, 2, 1])
+
+with col2:
     run_ai = st.button(
-        "🚀 Run AI Analysis",
+        "🚀 Run Experiment",
         use_container_width=True
     )
 
-with col_btn2:
+st.markdown("---")
+
+manual_col1, manual_col2, manual_col3 = st.columns([1, 2, 1])
+
+with manual_col2:
     run_manual = st.button(
-        "🎛️ Run Manual Experiment",
+        "🎛️ Run with Advanced Controls",
         use_container_width=True
     )
 
-params = None
-validation_result = None
-
-if run_ai and user_prompt:
-    parsed = NaturalLanguageParser.parse(user_prompt)
-
-    if parsed.get("needs_clarification"):
-        st.warning(
-            parsed.get(
-                "clarification_message",
-                "More information is required."
-            )
-        )
+if run_ai:
+    if not user_prompt.strip():
+        st.warning("Describe a physics situation first.")
     else:
-        validation_result = PhysicsValidator.validate(parsed)
+        with st.spinner("AI is turning your idea into a physics experiment..."):
+            parsed = NaturalLanguageParser.parse(user_prompt)
 
-        if validation_result.is_valid:
-            params = validation_result.validated_params
-            st.success(
-                f"AI analysis complete! [{validation_result.mode}]"
+        if parsed.get("needs_clarification"):
+            st.warning(
+                parsed.get(
+                    "clarification_message",
+                    "More information is required."
+                )
             )
         else:
-            st.error("\n".join(validation_result.errors))
+            validation_result = PhysicsValidator.validate(parsed)
 
-elif run_manual:
+            if validation_result.is_valid:
+                st.session_state.validation_result = validation_result
+
+                with st.spinner("Running physics simulation..."):
+                    engine = PhysicsEngine(
+                        dt=0.02,
+                        solver="rk4"
+                    )
+
+                    result = engine.simulate(
+                        validation_result,
+                        total_time=8.0
+                    )
+
+                st.session_state.result = result
+
+                st.success(
+                    f"Experiment ready! [{validation_result.mode}]"
+                )
+
+            else:
+                st.session_state.result = None
+                st.session_state.validation_result = None
+                st.error(
+                    "\n".join(validation_result.errors)
+                )
+
+if run_manual:
     params = {
         "mass": manual_mass,
         "gravity": manual_gravity,
@@ -88,30 +208,56 @@ elif run_manual:
     )
 
     if validation_result.is_valid:
-        st.info("Manual experiment initialized.")
+        st.session_state.validation_result = validation_result
+
+        with st.spinner("Running physics simulation..."):
+            engine = PhysicsEngine(
+                dt=0.02,
+                solver="rk4"
+            )
+
+            result = engine.simulate(
+                validation_result,
+                total_time=8.0
+            )
+
+        st.session_state.result = result
+
+        st.success("Manual experiment ready.")
+
     else:
-        st.error("\n".join(validation_result.errors))
-        params = None
+        st.session_state.result = None
+        st.session_state.validation_result = None
+        st.error(
+            "\n".join(validation_result.errors)
+        )
 
-if params is not None and validation_result is not None:
-    engine = PhysicsEngine(dt=0.02, solver="rk4")
+result = st.session_state.result
+validation_result = st.session_state.validation_result
 
-    result = engine.simulate(
-        validation_result,
-        total_time=8.0
-    )
+if result is not None and validation_result is not None:
 
     if result["status"] == "success":
+
         trajectory = result["trajectory"]
+
+        st.markdown("---")
+
+        st.subheader("🔬 Experiment Results")
 
         left, right = st.columns([3, 2])
 
         with left:
+
             tab1, tab2 = st.tabs(
-                ["🎥 2D Motion & Vectors", "📊 Energy & Velocity"]
+                [
+                    "🎥 2D Motion & Vectors",
+                    "📊 Energy & Velocity"
+                ]
             )
 
             with tab1:
+
                 xs = [p["x"] for p in trajectory]
                 ys = [p["y"] for p in trajectory]
 
@@ -139,10 +285,15 @@ if params is not None and validation_result is not None:
 
                 frames = []
 
+                step = max(
+                    1,
+                    len(trajectory) // 100
+                )
+
                 for i in range(
                     0,
                     len(trajectory),
-                    max(1, len(trajectory) // 100)
+                    step
                 ):
                     p = trajectory[i]
 
@@ -180,7 +331,13 @@ if params is not None and validation_result is not None:
                 fig.update_layout(
                     xaxis_title="X Position (m)",
                     yaxis_title="Y Position (m)",
-                    height=420,
+                    height=450,
+                    margin=dict(
+                        l=20,
+                        r=20,
+                        t=30,
+                        b=20
+                    ),
                     updatemenus=[
                         {
                             "type": "buttons",
@@ -194,7 +351,8 @@ if params is not None and validation_result is not None:
                                             "frame": {
                                                 "duration": 20,
                                                 "redraw": True
-                                            }
+                                            },
+                                            "fromcurrent": True
                                         }
                                     ]
                                 }
@@ -209,7 +367,11 @@ if params is not None and validation_result is not None:
                 )
 
             with tab2:
-                times = [p["time"] for p in trajectory]
+
+                times = [
+                    p["time"]
+                    for p in trajectory
+                ]
 
                 fig = make_subplots(
                     rows=2,
@@ -270,7 +432,15 @@ if params is not None and validation_result is not None:
                     col=1
                 )
 
-                fig.update_layout(height=420)
+                fig.update_layout(
+                    height=450,
+                    margin=dict(
+                        l=20,
+                        r=20,
+                        t=50,
+                        b=20
+                    )
+                )
 
                 st.plotly_chart(
                     fig,
@@ -278,24 +448,51 @@ if params is not None and validation_result is not None:
                 )
 
         with right:
+
             st.subheader("🤖 AI Physics Tutor")
-            st.markdown("Ask questions about the simulation.")
+
+            st.markdown(
+                "Ask a question about your experiment."
+            )
 
             q = st.text_input(
                 "Question",
-                placeholder="Why does potential energy decrease?"
+                placeholder="Why does potential energy decrease?",
+                key="physics_question"
             )
 
             if q:
                 st.write(f"**Q:** {q}")
+
                 st.info(
-                    "**AI Answer:** As the object falls, gravity does work "
-                    "on it, converting gravitational potential energy into "
-                    "kinetic energy."
+                    "As the object falls, gravity does work "
+                    "on it, converting gravitational potential "
+                    "energy into kinetic energy."
                 )
 
-        if result["warnings"]:
-            st.warning("\n".join(result["warnings"]))
+            st.markdown("---")
 
-        st.subheader("Final State")
-        st.json(result["final_state"])
+            st.subheader("📌 Experiment Summary")
+
+            st.write(
+                f"**Mode:** {validation_result.mode}"
+            )
+
+            st.write(
+                f"**Simulation:** RK4"
+            )
+
+            st.write(
+                f"**Time:** {result['trajectory'][-1]['time']:.2f} s"
+            )
+
+        if result["warnings"]:
+            st.warning(
+                "\n".join(result["warnings"])
+            )
+
+        st.subheader("📍 Final State")
+
+        st.json(
+            result["final_state"]
+        )
