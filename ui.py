@@ -18,17 +18,16 @@ def load_css():
 
 
 def init_state():
-    if "page" not in st.session_state:
-        st.session_state.page = "home"
+    defaults = {
+        "page": "home",
+        "experiment": None,
+        "result": None,
+        "validation": None
+    }
 
-    if "experiment" not in st.session_state:
-        st.session_state.experiment = None
-
-    if "result" not in st.session_state:
-        st.session_state.result = None
-
-    if "validation" not in st.session_state:
-        st.session_state.validation = None
+    for key, value in defaults.items():
+        if key not in st.session_state:
+            st.session_state[key] = value
 
 
 def card(title, description):
@@ -36,9 +35,7 @@ def card(title, description):
         f"""
         <div class="experiment-card">
             <div class="experiment-title">{title}</div>
-            <div class="experiment-description">
-                {description}
-            </div>
+            <div class="experiment-description">{description}</div>
         </div>
         """,
         unsafe_allow_html=True
@@ -62,11 +59,9 @@ def home_page():
         """
         <div class="hero">
             <div class="hero-title">What happens if…?</div>
-
             <div class="hero-subtitle">
                 Turn your imagination into a physics experiment.
             </div>
-
             <div class="hero-description">
                 Imagine a situation, describe it, and explore
                 what happens through physics simulation.
@@ -172,9 +167,7 @@ def ai_experiment():
     )
 
     st.markdown(
-        '<div class="muted">'
-        'Describe the situation you want to simulate.'
-        '</div>',
+        '<div class="muted">Describe the situation you want to simulate.</div>',
         unsafe_allow_html=True
     )
 
@@ -230,9 +223,7 @@ def custom_experiment():
     )
 
     st.markdown(
-        '<div class="muted">'
-        'Adjust the physical variables yourself.'
-        '</div>',
+        '<div class="muted">Adjust the physical variables yourself.</div>',
         unsafe_allow_html=True
     )
 
@@ -386,7 +377,6 @@ def motion_graph(trajectory):
         )
 
         frames = []
-
         step = max(1, len(trajectory) // 100)
 
         for i in range(0, len(trajectory), step):
