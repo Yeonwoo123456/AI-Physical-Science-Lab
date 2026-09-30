@@ -6,12 +6,13 @@
 .hero-title {
     font-size: 64px;
     font-weight: 700;
+    margin-bottom: 15px;
 }
 
 .hero-subtitle {
     font-size: 21px;
     color: #777;
-    margin-top: 15px;
+    margin-top: 10px;
 }
 
 .hero-description {
@@ -22,6 +23,11 @@
     line-height: 1.7;
 }
 
+.experiment-header {
+    text-align: center;
+    margin-bottom: 45px;
+}
+
 .section-title {
     font-size: 30px;
     font-weight: 650;
@@ -30,6 +36,7 @@
 
 .muted {
     color: #777;
+    font-size: 16px;
 }
 
 .experiment-card {
@@ -49,4 +56,75 @@
 .experiment-description {
     color: #666;
     line-height: 1.6;
+}
+
+
+/* Physics Experiment Cards */
+
+.physics-card {
+    border-radius: 20px;
+    padding: 28px;
+    min-height: 220px;
+    margin-bottom: 12px;
+    transition:
+        transform 0.25s ease,
+        opacity 0.25s ease,
+        box-shadow 0.25s ease;
+    cursor: pointer;
+}
+
+.physics-card:hover {
+    transform: translateY(-7px) scale(1.02);
+    opacity: 0.82;
+    box-shadow: 0 12px 30px rgba(0, 0, 0, 0.15);
+}
+
+.physics-icon {
+    font-size: 42px;
+    margin-bottom: 18px;
+}
+
+.physics-title {
+    font-size: 24px;
+    font-weight: 700;
+    margin-bottom: 8px;
+}
+
+.physics-concept {
+    font-size: 15px;
+    font-weight: 600;
+    margin-bottom: 14px;
+}
+
+.physics-parameters {
+    font-size: 14px;
+    line-height: 1.6;
+    opacity: 0.75;
+}
+
+
+/* Individual Experiment Colors */
+
+.projectile-card {
+    background: #e8f1ff;
+}
+
+.collision-card {
+    background: #ffeaea;
+}
+
+.pendulum-card {
+    background: #fff4d9;
+}
+
+.spring-card {
+    background: #eaf8ed;
+}
+
+.friction-card {
+    background: #e9f7f7;
+}
+
+.orbit-card {
+    background: #eee9ff;
 }
