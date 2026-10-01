@@ -68,22 +68,20 @@ def run_engine(validation):
 def home_page():
     st.markdown(
         """
-        <div class="hero">
-            <div class="hero-title">
-                What happens if…?
-            </div>
-
-            <div class="hero-subtitle">
-                Turn your imagination into a physics experiment.
-            </div>
-
-            <div class="hero-description">
-                Imagine a situation, describe it, and explore
-                what happens through physics simulation.
-            </div>
+        <div class="hero-title">
+            What happens if…?
         </div>
         """,
         unsafe_allow_html=True
+    )
+
+    st.markdown(
+        "Turn your imagination into a physics experiment."
+    )
+
+    st.markdown(
+        "Imagine a situation, describe it, and explore "
+        "what happens through physics simulation."
     )
 
     _, col, _ = st.columns([1, 2, 1])
