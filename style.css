@@ -2,10 +2,7 @@
     background: #0d1117;
 }
 
-[data-testid="stAppViewContainer"] {
-    background: #0d1117;
-}
-
+[data-testid="stAppViewContainer"],
 [data-testid="stMain"] {
     background: #0d1117;
 }
@@ -59,47 +56,70 @@
     font-size: 16px;
 }
 
-.experiment-card {
-    border: 1px solid #333842;
-    border-radius: 16px;
-    padding: 25px;
-    margin-bottom: 15px;
-    min-height: 120px;
-    background: #161b22;
+.physics-grid {
+    width: 100%;
+    max-width: 920px;
+    margin: 0 auto;
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 32px 24px;
 }
 
-.experiment-title {
-    font-size: 22px;
+.physics-card {
+    position: relative;
+    width: 100%;
+    aspect-ratio: 1 / 1;
+    overflow: hidden;
+    border-radius: 20px;
+    background-position: center;
+    background-repeat: no-repeat;
+    background-size: 82%;
+    display: flex;
+    align-items: flex-end;
+    text-decoration: none !important;
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.physics-card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 12px 30px rgba(0, 0, 0, 0.3);
+}
+
+.card-text {
+    width: 100%;
+    padding: 17px 10px;
+    background: rgba(255, 255, 255, 0.78);
+    text-align: center;
+    color: #111827;
+    box-sizing: border-box;
+}
+
+.card-title {
+    font-size: 23px;
+    line-height: 1.15;
+    font-weight: 700;
+}
+
+.card-concept {
+    margin-top: 5px;
+    font-size: 15px;
     font-weight: 600;
-    margin-bottom: 10px;
-    color: #ffffff;
 }
 
-.experiment-description {
-    color: #b6bcc6;
-    line-height: 1.6;
+.card-parameters {
+    margin-top: 4px;
+    font-size: 13px;
 }
 
-.muted {
-    color: #9ca3af;
-    font-size: 16px;
+@media (max-width: 800px) {
+    .physics-grid {
+        grid-template-columns: repeat(2, 1fr);
+    }
 }
 
-@media (max-width: 700px) {
-    .home-title {
-        font-size: 48px;
-    }
-
-    .home-subtitle {
-        font-size: 19px;
-    }
-
-    .home-description {
-        font-size: 16px;
-        padding: 0 20px;
-    }
-
-    .section-title {
-        font-size: 26px;
+@media (max-width: 500px) {
+    .physics-grid {
+        grid-template-columns: 1fr;
+        max-width: 360px;
     }
 }
