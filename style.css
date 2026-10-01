@@ -148,3 +148,9 @@
         max-width: 360px;
     }
 }
+
+.stButton > button {
+    font-size: 23px !important;
+    font-weight: 600;
+    padding: 14px 32px;
+}
