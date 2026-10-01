@@ -1,6 +1,8 @@
 import streamlit as st
 import plotly.graph_objects as go
 from plotly.subplots import make_subplots
+import base64
+from pathlib import Path
 
 from app_modules import (
     NaturalLanguageParser,
@@ -28,6 +30,13 @@ def init_state():
     for key, value in defaults.items():
         if key not in st.session_state:
             st.session_state[key] = value
+
+
+def get_image_base64(path):
+    image_path = Path(__file__).parent / path
+
+    with open(image_path, "rb") as f:
+        return base64.b64encode(f.read()).decode()
 
 
 def card(title, description):
@@ -58,10 +67,14 @@ def home_page():
     st.markdown(
         """
         <div class="hero">
-            <div class="hero-title">What happens if…?</div>
+            <div class="hero-title">
+                What happens if…?
+            </div>
+
             <div class="hero-subtitle">
                 Turn your imagination into a physics experiment.
             </div>
+
             <div class="hero-description">
                 Imagine a situation, describe it, and explore
                 what happens through physics simulation.
@@ -81,12 +94,16 @@ def home_page():
         ):
             st.session_state.page = "select"
             st.rerun()
-            
+
+
 def selection_page():
     st.markdown(
         """
         <div class="experiment-header">
-            <div class="section-title">Choose Your Experiment</div>
+            <div class="section-title">
+                Choose Your Experiment
+            </div>
+
             <div class="muted">
                 Explore different physical phenomena through simulation.
             </div>
@@ -96,64 +113,91 @@ def selection_page():
     )
 
     experiments = [
-        (
-            "projectile",
-            "Projectile Motion",
-            "Kinematics",
-            "Speed · Angle · Gravity",
-            "projectile-card"
-        ),
-        (
-            "collision",
-            "Collision",
-            "Momentum & Energy",
-            "Mass · Speed · Elasticity",
-            "collision-card"
-        ),
-        (
-            "pendulum",
-            "Pendulum",
-            "Periodic Motion",
-            "Length · Gravity · Angle",
-            "pendulum-card"
-        ),
-        (
-            "spring",
-            "Spring",
-            "Hooke's Law",
-            "Mass · k · Displacement",
-            "spring-card"
-        ),
-        (
-            "friction",
-            "Friction",
-            "Friction Force",
-            "μ · Mass · Gravity",
-            "friction-card"
-        ),
-        (
-            "orbit",
-            "Gravity & Orbit",
-            "Gravity",
-            "Mass · Distance · Velocity",
-            "orbit-card"
-        )
+        {
+            "key": "projectile",
+            "title": "Projectile Motion",
+            "concept": "Kinematics",
+            "parameters": "Speed · Angle · Gravity",
+            "class": "projectile-card",
+            "image": "assets/projectile.png"
+        },
+        {
+            "key": "collision",
+            "title": "Collision",
+            "concept": "Momentum & Energy",
+            "parameters": "Mass · Speed · Elasticity",
+            "class": "collision-card",
+            "image": "assets/collision.png"
+        },
+        {
+            "key": "pendulum",
+            "title": "Pendulum",
+            "concept": "Periodic Motion",
+            "parameters": "Length · Gravity · Angle",
+            "class": "pendulum-card",
+            "image": "assets/pendulum.png"
+        },
+        {
+            "key": "spring",
+            "title": "Spring",
+            "concept": "Hooke's Law",
+            "parameters": "Mass · k · Displacement",
+            "class": "spring-card",
+            "image": "assets/spring.png"
+        },
+        {
+            "key": "friction",
+            "title": "Friction",
+            "concept": "Friction Force",
+            "parameters": "μ · Mass · Gravity",
+            "class": "friction-card",
+            "image": "assets/friction.png"
+        },
+        {
+            "key": "orbit",
+            "title": "Gravity & Orbit",
+            "concept": "Gravity",
+            "parameters": "Mass · Distance · Velocity",
+            "class": "orbit-card",
+            "image": "assets/orbit.png"
+        }
     ]
 
     for row in range(0, 6, 3):
         cols = st.columns(3)
 
-        for col, experiment in zip(cols, experiments[row:row + 3]):
-            key, title, concept, parameters, css_class = experiment
+        for col, experiment in zip(
+            cols,
+            experiments[row:row + 3]
+        ):
+            image_data = get_image_base64(
+                experiment["image"]
+            )
 
             with col:
                 st.markdown(
                     f"""
-                    <a href="?experiment={key}" class="physics-card {css_class}">
-                        <div class="physics-title">{title}</div>
-                        <div class="physics-concept">{concept}</div>
-                        <div class="physics-parameters">
-                            {parameters}
+                    <a
+                        href="?experiment={experiment["key"]}"
+                        class="physics-card {experiment["class"]}"
+                    >
+                        <img
+                            class="physics-illustration"
+                            src="data:image/png;base64,{image_data}"
+                        >
+
+                        <div class="physics-overlay">
+                            <div class="physics-title {experiment["key"]}-title">
+                                {experiment["title"]}
+                            </div>
+
+                            <div class="physics-concept">
+                                {experiment["concept"]}
+                            </div>
+
+                            <div class="physics-parameters">
+                                {experiment["parameters"]}
+                            </div>
                         </div>
                     </a>
                     """,
@@ -167,9 +211,10 @@ def selection_page():
         st.query_params.clear()
         st.rerun()
 
+
 def ai_experiment():
     st.markdown(
-        '<div class="section-title">🤖 AI Physics Experiment</div>',
+        '<div class="section-title">AI Physics Experiment</div>',
         unsafe_allow_html=True
     )
 
@@ -188,7 +233,7 @@ def ai_experiment():
     )
 
     if st.button(
-        "🚀 Run Experiment",
+        "Run Experiment",
         type="primary",
         use_container_width=True
     ):
@@ -225,7 +270,7 @@ def ai_experiment():
 
 def custom_experiment():
     st.markdown(
-        '<div class="section-title">🎛️ Custom Experiment</div>',
+        '<div class="section-title">Custom Experiment</div>',
         unsafe_allow_html=True
     )
 
@@ -235,7 +280,7 @@ def custom_experiment():
     )
 
     with st.sidebar:
-        st.header("⚙️ Physics Controls")
+        st.header("Physics Controls")
 
         mass = st.slider(
             "Mass (kg)",
@@ -280,7 +325,7 @@ def custom_experiment():
         )
 
     if st.button(
-        "🚀 Run Experiment",
+        "Run Experiment",
         type="primary",
         use_container_width=True
     ):
@@ -330,7 +375,7 @@ def results_page():
     st.divider()
 
     st.markdown(
-        '<div class="section-title">🔬 Experiment Results</div>',
+        '<div class="section-title">Experiment Results</div>',
         unsafe_allow_html=True
     )
 
@@ -345,15 +390,15 @@ def results_page():
     if result.get("warnings"):
         st.warning("\n".join(result["warnings"]))
 
-    st.subheader("📍 Final State")
+    st.subheader("Final State")
     st.json(result["final_state"])
 
 
 def motion_graph(trajectory):
     tab1, tab2 = st.tabs(
         [
-            "🎥 2D Motion & Vectors",
-            "📊 Energy & Velocity"
+            "2D Motion & Vectors",
+            "Energy & Velocity"
         ]
     )
 
@@ -418,7 +463,7 @@ def motion_graph(trajectory):
                     "type": "buttons",
                     "buttons": [
                         {
-                            "label": "▶ Play",
+                            "label": "Play",
                             "method": "animate",
                             "args": [
                                 None,
@@ -510,7 +555,7 @@ def motion_graph(trajectory):
 
 
 def physics_tutor(trajectory):
-    st.subheader("🤖 AI Physics Tutor")
+    st.subheader("AI Physics Tutor")
 
     question = st.text_input(
         "Ask about the experiment",
@@ -523,19 +568,21 @@ def physics_tutor(trajectory):
             "energy is converted into kinetic energy."
         )
 
-    st.subheader("📌 Experiment Summary")
+    st.subheader("Experiment Summary")
 
     st.write("**Simulation:** RK4")
+
     st.write(
         f"**Time:** {trajectory[-1]['time']:.2f} s"
     )
 
 
 def experiment_page():
-    if st.sidebar.button("← Back to Experiments"):
+    if st.sidebar.button("Back to Experiments"):
         st.session_state.page = "select"
         st.session_state.result = None
         st.session_state.validation = None
+        st.query_params.clear()
         st.rerun()
 
     if st.session_state.experiment == "ai":
@@ -559,7 +606,9 @@ def render_app():
 
     if st.session_state.page == "home":
         home_page()
+
     elif st.session_state.page == "select":
         selection_page()
+
     elif st.session_state.page == "experiment":
         experiment_page()
