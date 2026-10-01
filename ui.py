@@ -72,27 +72,35 @@ def home_page():
 
 def selection_page():
     st.markdown(
-        '<div class="selection-header">'
-        '<div class="section-title">Choose Your Experiment</div>'
-        '<div class="selection-description">'
-        'Explore different physical phenomena through simulation.'
-        '</div></div>',
+        """
+        <div class="selection-header">
+            <div class="section-title">Choose Your Experiment</div>
+            <div class="selection-description">
+                Explore different physical phenomena through simulation.
+            </div>
+        </div>
+        """,
         unsafe_allow_html=True
     )
 
     experiments = [
         ("projectile", "Projectile Motion", "Kinematics",
-         "Speed · Angle · Gravity", "9FC5F8"),
+         "Speed · Angle · Gravity", "#9FC5F8"),
+
         ("collision", "Collision", "Momentum & Energy",
-         "Mass · Speed · Elasticity", "F4A6A6"),
+         "Mass · Speed · Elasticity", "#F4A6A6"),
+
         ("pendulum", "Pendulum", "Periodic Motion",
-         "Length · Gravity · Angle", "F6D77A"),
+         "Length · Gravity · Angle", "#F6D77A"),
+
         ("spring", "Spring", "Hooke's Law",
-         "Mass · k · Displacement", "9ED6A8"),
+         "Mass · k · Displacement", "#9ED6A8"),
+
         ("friction", "Friction", "Friction Force",
-         "μ · Mass · Gravity", "8FD3D3"),
+         "μ · Mass · Gravity", "#8FD3D3"),
+
         ("orbit", "Gravity & Orbit", "Gravity",
-         "Mass · Distance · Velocity", "B7A4E8")
+         "Mass · Distance · Velocity", "#B7A4E8")
     ]
 
     cards = ""
@@ -100,25 +108,34 @@ def selection_page():
     for key, title, concept, params, color in experiments:
         image = get_image(f"assets/{key}.png")
 
+        background = f"""
+            background-color: {color};
+            background-image: url("data:image/png;base64,{image}");
+        """
+
         cards += f"""
-        <a class="physics-card"
-           href="?experiment={key}"
-           style="background:#{color}">
-            <img class="physics-image"
-                 src="data:image/png;base64,{image}">
+        <a href="?experiment={key}" class="physics-card"
+           style="{background}">
+
             <div class="card-text">
                 <div class="card-title">{title}</div>
                 <div class="card-concept">{concept}</div>
                 <div class="card-parameters">{params}</div>
             </div>
+
         </a>
         """
 
-    st.html(f"""
-    <div class="physics-grid">
-        {cards}
-    </div>
-    """)
+    st.markdown(
+        f"""
+        <div class="physics-grid">
+            {cards}
+        </div>
+        """,
+        unsafe_allow_html=True
+    )
+
+    st.markdown("<br>", unsafe_allow_html=True)
 
     if st.button("Back to Home"):
         st.session_state.page = "home"
