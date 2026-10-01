@@ -1,23 +1,22 @@
-.hero {
-    text-align: center;
-    padding: 100px 0 50px;
-}
-
 .hero-title {
+    text-align: center;
     font-size: 64px;
     font-weight: 700;
+    margin-top: 100px;
     margin-bottom: 15px;
 }
 
-.hero-subtitle {
+.hero-title + p {
+    text-align: center;
     font-size: 21px;
     color: #777;
     margin-top: 10px;
 }
 
-.hero-description {
+.hero-title + p + p {
     max-width: 650px;
     margin: 25px auto;
+    text-align: center;
     color: #666;
     font-size: 17px;
     line-height: 1.7;
