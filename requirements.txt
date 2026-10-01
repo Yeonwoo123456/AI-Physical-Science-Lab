@@ -2,4 +2,3 @@ streamlit>=1.37.0
 plotly
 groq
 pydantic
-streamlit-drawable-canvas>=0.13.0
