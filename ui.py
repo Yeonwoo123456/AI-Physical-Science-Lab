@@ -37,9 +37,11 @@ def init_state():
 def get_image_base64(path):
     image_path = Path(__file__).parent / path
 
+    if not image_path.exists():
+        return None
+
     with open(image_path, "rb") as f:
         return base64.b64encode(f.read()).decode("utf-8")
-
 
 def card(title, description):
     st.markdown(
@@ -94,8 +96,6 @@ def home_page():
         ):
             st.session_state.page = "select"
             st.rerun()
-
-
 def selection_page():
     st.markdown(
         """
@@ -103,7 +103,6 @@ def selection_page():
             <div class="section-title">
                 Choose Your Experiment
             </div>
-
             <div class="selection-description">
                 Explore different physical phenomena through simulation.
             </div>
@@ -174,6 +173,17 @@ def selection_page():
 
             image_data = get_image_base64(image)
 
+            if image_data:
+                image_html = f"""
+                    <img
+                        class="physics-illustration"
+                        src="data:image/png;base64,{image_data}"
+                        alt=""
+                    >
+                """
+            else:
+                image_html = ""
+
             with col:
                 st.markdown(
                     f"""
@@ -181,11 +191,7 @@ def selection_page():
                         href="?experiment={key}"
                         class="physics-card {css_class}"
                     >
-                        <img
-                            class="physics-illustration"
-                            src="data:image/png;base64,{image_data}"
-                            alt=""
-                        >
+                        {image_html}
 
                         <div class="physics-overlay">
                             <div class="physics-title {key}-title">
@@ -205,13 +211,10 @@ def selection_page():
                     unsafe_allow_html=True
                 )
 
-    st.write("")
-
     if st.button("Back to Home"):
         st.session_state.page = "home"
         st.query_params.clear()
         st.rerun()
-
 
 def ai_experiment():
     st.markdown(
