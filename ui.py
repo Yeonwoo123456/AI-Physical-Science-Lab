@@ -66,24 +66,25 @@ def run_engine(validation):
         total_time=8.0
     )
 
-
 def home_page():
     st.markdown(
         """
-        <div class="hero-title">
-            What happens if…?
+        <div class="home-content">
+            <div class="home-title">
+                What happens if…?
+            </div>
+
+            <div class="home-subtitle">
+                Turn your imagination into a physics experiment.
+            </div>
+
+            <div class="home-description">
+                Imagine a situation, describe it, and explore
+                what happens through physics simulation.
+            </div>
         </div>
         """,
         unsafe_allow_html=True
-    )
-
-    st.markdown(
-        "Turn your imagination into a physics experiment."
-    )
-
-    st.markdown(
-        "Imagine a situation, describe it, and explore "
-        "what happens through physics simulation."
     )
 
     _, col, _ = st.columns([1, 2, 1])
@@ -96,6 +97,7 @@ def home_page():
         ):
             st.session_state.page = "select"
             st.rerun()
+
 def selection_page():
     st.markdown(
         """
