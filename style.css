@@ -154,3 +154,8 @@
     font-weight: 700 !important;
     padding: 14px 32px;
 }
+
+.stButton > button p {
+    font-size: 26px !important;
+    font-weight: 700 !important;
+}
