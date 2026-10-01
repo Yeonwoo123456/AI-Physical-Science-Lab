@@ -108,14 +108,11 @@ def selection_page():
     for key, title, concept, params, color in experiments:
         image = get_image(f"assets/{key}.png")
 
-        background = f"""
-            background-color: {color};
-            background-image: url("data:image/png;base64,{image}");
-        """
-
         cards += f"""
-        <a href="?experiment={key}" class="physics-card"
-           style="{background}">
+        <a href="?experiment={key}"
+           class="physics-card"
+           style="background-color:{color};
+                  background-image:url('data:image/png;base64,{image}');">
 
             <div class="card-text">
                 <div class="card-title">{title}</div>
@@ -126,14 +123,11 @@ def selection_page():
         </a>
         """
 
-    st.markdown(
-        f"""
+    st.html(f"""
         <div class="physics-grid">
             {cards}
         </div>
-        """,
-        unsafe_allow_html=True
-    )
+    """)
 
     st.markdown("<br>", unsafe_allow_html=True)
 
