@@ -12,7 +12,9 @@ from app_modules import (
 
 
 def load_css():
-    with open("style.css", "r", encoding="utf-8") as f:
+    css_path = Path(__file__).parent / "style.css"
+
+    with open(css_path, "r", encoding="utf-8") as f:
         st.markdown(
             f"<style>{f.read()}</style>",
             unsafe_allow_html=True
@@ -36,7 +38,7 @@ def get_image_base64(path):
     image_path = Path(__file__).parent / path
 
     with open(image_path, "rb") as f:
-        return base64.b64encode(f.read()).decode()
+        return base64.b64encode(f.read()).decode("utf-8")
 
 
 def card(title, description):
@@ -95,15 +97,16 @@ def home_page():
             st.session_state.page = "select"
             st.rerun()
 
+
 def selection_page():
     st.markdown(
         """
-        <div class="experiment-header">
+        <div class="selection-header">
             <div class="section-title">
                 Choose Your Experiment
             </div>
 
-            <div class="muted">
+            <div class="selection-description">
                 Explore different physical phenomena through simulation.
             </div>
         </div>
@@ -171,14 +174,21 @@ def selection_page():
         ):
             key, title, concept, parameters, css_class, image = experiment
 
+            image_data = get_image_base64(image)
+
             with col:
                 st.markdown(
                     f"""
                     <a
                         href="?experiment={key}"
                         class="physics-card {css_class}"
-                        style="--card-image: url('{image}');"
                     >
+                        <img
+                            class="physics-illustration"
+                            src="data:image/png;base64,{image_data}"
+                            alt=""
+                        >
+
                         <div class="physics-overlay">
                             <div class="physics-title {key}-title">
                                 {title}
@@ -203,7 +213,6 @@ def selection_page():
         st.session_state.page = "home"
         st.query_params.clear()
         st.rerun()
-
 
 
 def ai_experiment():
