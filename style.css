@@ -28,10 +28,20 @@
     margin-bottom: 55px;
 }
 
+.selection-header {
+    text-align: center;
+    margin-bottom: 55px;
+}
+
 .section-title {
     font-size: 30px;
     font-weight: 650;
     margin-bottom: 8px;
+}
+
+.selection-description {
+    color: #777;
+    font-size: 16px;
 }
 
 .muted {
@@ -79,27 +89,22 @@
         filter 0.25s ease;
 }
 
-.physics-card::before {
-    content: "";
-    position: absolute;
-    inset: 0;
-    background-image: var(--card-image);
-    background-repeat: no-repeat;
-    background-position: center;
-    background-size: contain;
-    pointer-events: none;
-    z-index: 1;
-    mix-blend-mode: multiply;
-    filter:
-        contrast(0.9)
-        saturate(0.25);
-    opacity: 0.23;
-}
-
 .physics-card:hover {
     transform: translateY(-7px) scale(1.025);
     box-shadow: 0 14px 32px rgba(0, 0, 0, 0.18);
     filter: brightness(1.03);
+}
+
+.physics-illustration {
+    position: absolute;
+    z-index: 1;
+    pointer-events: none;
+    user-select: none;
+    object-fit: contain;
+    mix-blend-mode: multiply;
+    filter:
+        contrast(0.9)
+        saturate(0.25);
 }
 
 .physics-overlay {
@@ -141,6 +146,7 @@
 
 .projectile-title {
     font-size: 26px;
+    max-width: 100%;
 }
 
 .collision-title {
@@ -187,39 +193,45 @@
     background: #B7A4E8;
 }
 
-.projectile-card::before {
-    background-size: 92%;
-    background-position: center 5%;
+.projectile-card .physics-illustration {
+    width: 92%;
+    left: 4%;
+    top: 5%;
     opacity: 0.22;
 }
 
-.collision-card::before {
-    background-size: 76%;
-    background-position: center 12%;
+.collision-card .physics-illustration {
+    width: 76%;
+    left: 12%;
+    top: 12%;
     opacity: 0.25;
 }
 
-.pendulum-card::before {
-    background-size: 78%;
-    background-position: center 8%;
+.pendulum-card .physics-illustration {
+    width: 78%;
+    left: 11%;
+    top: 8%;
     opacity: 0.23;
 }
 
-.spring-card::before {
-    background-size: 72%;
-    background-position: center 8%;
+.spring-card .physics-illustration {
+    width: 72%;
+    left: 14%;
+    top: 8%;
     opacity: 0.23;
 }
 
-.friction-card::before {
-    background-size: 88%;
-    background-position: center 23%;
+.friction-card .physics-illustration {
+    width: 88%;
+    left: 6%;
+    top: 23%;
     opacity: 0.21;
 }
 
-.orbit-card::before {
-    background-size: 88%;
-    background-position: center 7%;
+.orbit-card .physics-illustration {
+    width: 88%;
+    left: 6%;
+    top: 7%;
     opacity: 0.22;
 }
 
