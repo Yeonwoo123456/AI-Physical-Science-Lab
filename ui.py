@@ -95,7 +95,6 @@ def home_page():
             st.session_state.page = "select"
             st.rerun()
 
-
 def selection_page():
     st.markdown(
         """
@@ -113,54 +112,54 @@ def selection_page():
     )
 
     experiments = [
-        {
-            "key": "projectile",
-            "title": "Projectile Motion",
-            "concept": "Kinematics",
-            "parameters": "Speed · Angle · Gravity",
-            "class": "projectile-card",
-            "image": "assets/projectile.png"
-        },
-        {
-            "key": "collision",
-            "title": "Collision",
-            "concept": "Momentum & Energy",
-            "parameters": "Mass · Speed · Elasticity",
-            "class": "collision-card",
-            "image": "assets/collision.png"
-        },
-        {
-            "key": "pendulum",
-            "title": "Pendulum",
-            "concept": "Periodic Motion",
-            "parameters": "Length · Gravity · Angle",
-            "class": "pendulum-card",
-            "image": "assets/pendulum.png"
-        },
-        {
-            "key": "spring",
-            "title": "Spring",
-            "concept": "Hooke's Law",
-            "parameters": "Mass · k · Displacement",
-            "class": "spring-card",
-            "image": "assets/spring.png"
-        },
-        {
-            "key": "friction",
-            "title": "Friction",
-            "concept": "Friction Force",
-            "parameters": "μ · Mass · Gravity",
-            "class": "friction-card",
-            "image": "assets/friction.png"
-        },
-        {
-            "key": "orbit",
-            "title": "Gravity & Orbit",
-            "concept": "Gravity",
-            "parameters": "Mass · Distance · Velocity",
-            "class": "orbit-card",
-            "image": "assets/orbit.png"
-        }
+        (
+            "projectile",
+            "Projectile Motion",
+            "Kinematics",
+            "Speed · Angle · Gravity",
+            "projectile-card",
+            "assets/projectile.png"
+        ),
+        (
+            "collision",
+            "Collision",
+            "Momentum & Energy",
+            "Mass · Speed · Elasticity",
+            "collision-card",
+            "assets/collision.png"
+        ),
+        (
+            "pendulum",
+            "Pendulum",
+            "Periodic Motion",
+            "Length · Gravity · Angle",
+            "pendulum-card",
+            "assets/pendulum.png"
+        ),
+        (
+            "spring",
+            "Spring",
+            "Hooke's Law",
+            "Mass · k · Displacement",
+            "spring-card",
+            "assets/spring.png"
+        ),
+        (
+            "friction",
+            "Friction",
+            "Friction Force",
+            "μ · Mass · Gravity",
+            "friction-card",
+            "assets/friction.png"
+        ),
+        (
+            "orbit",
+            "Gravity & Orbit",
+            "Gravity",
+            "Mass · Distance · Velocity",
+            "orbit-card",
+            "assets/orbit.png"
+        )
     ]
 
     for row in range(0, 6, 3):
@@ -170,33 +169,27 @@ def selection_page():
             cols,
             experiments[row:row + 3]
         ):
-            image_data = get_image_base64(
-                experiment["image"]
-            )
+            key, title, concept, parameters, css_class, image = experiment
 
             with col:
                 st.markdown(
                     f"""
                     <a
-                        href="?experiment={experiment["key"]}"
-                        class="physics-card {experiment["class"]}"
+                        href="?experiment={key}"
+                        class="physics-card {css_class}"
+                        style="--card-image: url('{image}');"
                     >
-                        <img
-                            class="physics-illustration"
-                            src="data:image/png;base64,{image_data}"
-                        >
-
                         <div class="physics-overlay">
-                            <div class="physics-title {experiment["key"]}-title">
-                                {experiment["title"]}
+                            <div class="physics-title {key}-title">
+                                {title}
                             </div>
 
                             <div class="physics-concept">
-                                {experiment["concept"]}
+                                {concept}
                             </div>
 
                             <div class="physics-parameters">
-                                {experiment["parameters"]}
+                                {parameters}
                             </div>
                         </div>
                     </a>
@@ -210,6 +203,7 @@ def selection_page():
         st.session_state.page = "home"
         st.query_params.clear()
         st.rerun()
+
 
 
 def ai_experiment():
