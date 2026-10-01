@@ -8,7 +8,7 @@ from app_modules import (
     PhysicsValidator,
     PhysicsEngine
 )
-
+from experiments.projectile import projectile_experiment
 
 def load_css():
     path = Path(__file__).parent / "style.css"
@@ -138,8 +138,13 @@ def selection_page():
 
 
 def experiment_page():
+    experiment = st.session_state.experiment
+
+    if experiment == "projectile":
+        projectile_experiment()
+        return
+
     names = {
-        "projectile": "Projectile Motion",
         "collision": "Collision",
         "pendulum": "Pendulum",
         "spring": "Spring",
@@ -148,14 +153,14 @@ def experiment_page():
     }
 
     name = names.get(
-        st.session_state.experiment,
+        experiment,
         "Physics Experiment"
     )
 
     st.title(name)
 
     st.write(
-        "Configure your experiment and run the physics simulation."
+        "This experiment is currently under development."
     )
 
     if st.button("Back to Experiments"):
