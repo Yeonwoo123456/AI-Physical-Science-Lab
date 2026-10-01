@@ -95,118 +95,51 @@ def home_page():
 
 def selection_page():
     st.markdown(
-        """
-        <div class="selection-header">
-            <div class="section-title">
-                Choose Your Experiment
-            </div>
-            <div class="selection-description">
-                Explore different physical phenomena through simulation.
-            </div>
-        </div>
-        """,
+        '<div class="selection-header">'
+        '<div class="section-title">Choose Your Experiment</div>'
+        '<div class="selection-description">Explore different physical phenomena through simulation.</div>'
+        '</div>',
         unsafe_allow_html=True
     )
 
     experiments = [
-        (
-            "projectile",
-            "Projectile Motion",
-            "Kinematics",
-            "Speed · Angle · Gravity",
-            "projectile-card",
-            "assets/projectile.png"
-        ),
-        (
-            "collision",
-            "Collision",
-            "Momentum & Energy",
-            "Mass · Speed · Elasticity",
-            "collision-card",
-            "assets/collision.png"
-        ),
-        (
-            "pendulum",
-            "Pendulum",
-            "Periodic Motion",
-            "Length · Gravity · Angle",
-            "pendulum-card",
-            "assets/pendulum.png"
-        ),
-        (
-            "spring",
-            "Spring",
-            "Hooke's Law",
-            "Mass · k · Displacement",
-            "spring-card",
-            "assets/spring.png"
-        ),
-        (
-            "friction",
-            "Friction",
-            "Friction Force",
-            "μ · Mass · Gravity",
-            "friction-card",
-            "assets/friction.png"
-        ),
-        (
-            "orbit",
-            "Gravity & Orbit",
-            "Gravity",
-            "Mass · Distance · Velocity",
-            "orbit-card",
-            "assets/orbit.png"
-        )
+        ("projectile", "Projectile Motion", "Kinematics", "Speed · Angle · Gravity", "projectile-card", "assets/projectile.png"),
+        ("collision", "Collision", "Momentum & Energy", "Mass · Speed · Elasticity", "collision-card", "assets/collision.png"),
+        ("pendulum", "Pendulum", "Periodic Motion", "Length · Gravity · Angle", "pendulum-card", "assets/pendulum.png"),
+        ("spring", "Spring", "Hooke's Law", "Mass · k · Displacement", "spring-card", "assets/spring.png"),
+        ("friction", "Friction", "Friction Force", "μ · Mass · Gravity", "friction-card", "assets/friction.png"),
+        ("orbit", "Gravity & Orbit", "Gravity", "Mass · Distance · Velocity", "orbit-card", "assets/orbit.png")
     ]
 
     for row in range(0, 6, 3):
         cols = st.columns(3)
 
-        for col, experiment in zip(
-            cols,
-            experiments[row:row + 3]
-        ):
+        for col, experiment in zip(cols, experiments[row:row + 3]):
             key, title, concept, parameters, css_class, image = experiment
 
             image_data = get_image_base64(image)
 
             if image_data:
-                image_html = f"""
-                    <img
-                        class="physics-illustration"
-                        src="data:image/png;base64,{image_data}"
-                        alt=""
-                    >
-                """
+                image_html = (
+                    f'<img class="physics-illustration" '
+                    f'src="data:image/png;base64,{image_data}" alt="">'
+                )
             else:
                 image_html = ""
 
+            card_html = (
+                f'<a href="?experiment={key}" class="physics-card {css_class}">'
+                f'{image_html}'
+                f'<div class="physics-overlay">'
+                f'<div class="physics-title {key}-title">{title}</div>'
+                f'<div class="physics-concept">{concept}</div>'
+                f'<div class="physics-parameters">{parameters}</div>'
+                f'</div>'
+                f'</a>'
+            )
+
             with col:
-                st.markdown(
-                    f"""
-                    <a
-                        href="?experiment={key}"
-                        class="physics-card {css_class}"
-                    >
-                        {image_html}
-
-                        <div class="physics-overlay">
-                            <div class="physics-title {key}-title">
-                                {title}
-                            </div>
-
-                            <div class="physics-concept">
-                                {concept}
-                            </div>
-
-                            <div class="physics-parameters">
-                                {parameters}
-                            </div>
-                        </div>
-                    </a>
-                    """,
-                    unsafe_allow_html=True
-                )
+                st.markdown(card_html, unsafe_allow_html=True)
 
     if st.button("Back to Home"):
         st.session_state.page = "home"
