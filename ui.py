@@ -97,9 +97,7 @@ def selection_page():
     st.markdown(
         '<div class="selection-header">'
         '<div class="section-title">Choose Your Experiment</div>'
-        '<div class="selection-description">'
-        'Explore different physical phenomena through simulation.'
-        '</div>'
+        '<div class="selection-description">Explore different physical phenomena through simulation.</div>'
         '</div>',
         unsafe_allow_html=True
     )
@@ -158,25 +156,14 @@ def selection_page():
     for row in range(0, 6, 3):
         cols = st.columns(3)
 
-        for col, experiment in zip(
-            cols,
-            experiments[row:row + 3]
-        ):
-            (
-                key,
-                title,
-                concept,
-                parameters,
-                css_class,
-                image
-            ) = experiment
+        for col, experiment in zip(cols, experiments[row:row + 3]):
+            key, title, concept, parameters, css_class, image = experiment
 
             image_data = get_image_base64(image)
 
             if image_data:
                 image_html = (
-                    f'<img '
-                    f'class="physics-illustration" '
+                    f'<img class="physics-illustration" '
                     f'src="data:image/png;base64,{image_data}" '
                     f'alt="">'
                 )
@@ -184,22 +171,13 @@ def selection_page():
                 image_html = ""
 
             card_html = (
-                f'<a '
-                f'href="?experiment={key}" '
+                f'<a href="?experiment={key}" '
                 f'class="physics-card {css_class}">'
                 f'{image_html}'
-                f'<div class="physics-overlay">'
-                f'<div class="physics-info-box">'
-                f'<div class="physics-title {key}-title">'
-                f'{title}'
-                f'</div>'
-                f'<div class="physics-concept">'
-                f'{concept}'
-                f'</div>'
-                f'<div class="physics-parameters">'
-                f'{parameters}'
-                f'</div>'
-                f'</div>'
+                f'<div class="physics-card-content">'
+                f'<div class="physics-title {key}-title">{title}</div>'
+                f'<div class="physics-concept">{concept}</div>'
+                f'<div class="physics-parameters">{parameters}</div>'
                 f'</div>'
                 f'</a>'
             )
