@@ -68,22 +68,17 @@ def run_engine(validation):
 
 def home_page():
     st.markdown(
-        """
-        <div class="home-content">
-            <div class="home-title">
-                What happens if…?
-            </div>
+        '<div class="home-title">What happens if…?</div>',
+        unsafe_allow_html=True
+    )
 
-            <div class="home-subtitle">
-                Turn your imagination into a physics experiment.
-            </div>
+    st.markdown(
+        '<div class="home-subtitle">Turn your imagination into a physics experiment.</div>',
+        unsafe_allow_html=True
+    )
 
-            <div class="home-description">
-                Imagine a situation, describe it, and explore
-                what happens through physics simulation.
-            </div>
-        </div>
-        """,
+    st.markdown(
+        '<div class="home-description">Imagine a situation, describe it, and explore what happens through physics simulation.</div>',
         unsafe_allow_html=True
     )
 
