@@ -43,6 +43,7 @@ Rules:
    - projectile
    - slanted_motion
    - unknown
+
 3. Use these defaults:
    mass=1.0
    gravity=9.81
@@ -55,25 +56,35 @@ Rules:
    air_resistance=0.0
    planet_mass=5.972e24
    planet_radius=6371000.0
-4. Preserve explicitly modified planet mass and radius.
-5. Set needs_clarification=true only when an essential parameter is ambiguous.
+
+4. Preserve explicitly provided values.
+
+5. Never invent, estimate, or assume a numerical value that the user did not explicitly provide.
+
+6. If the user does not explicitly provide a parameter, use its default value.
+
+7. Do not infer speed, angle, height, mass, gravity, or any other numerical parameter from vague descriptions.
+
+8. Set needs_clarification=true only when an essential part of the requested experiment is genuinely ambiguous.
+
+9. Return all parameters using the exact field names in the JSON schema.
 
 Return only valid JSON:
 
 {
   "intent": "free_fall | projectile | slanted_motion | unknown",
   "parameters": {
-    "mass": 0,
-    "gravity": 0,
-    "height": 0,
-    "initial_velocity": 0,
-    "launch_angle": 0,
-    "friction": 0,
-    "tension": 0,
-    "elasticity": 0,
-    "air_resistance": 0,
-    "planet_mass": 0,
-    "planet_radius": 0
+    "mass": 1.0,
+    "gravity": 9.81,
+    "height": 0.0,
+    "initial_velocity": 0.0,
+    "launch_angle": 0.0,
+    "friction": 0.0,
+    "tension": 0.0,
+    "elasticity": 1.0,
+    "air_resistance": 0.0,
+    "planet_mass": 5972000000000000000000000,
+    "planet_radius": 6371000.0
   },
   "needs_clarification": false,
   "clarification_message": null
@@ -86,13 +97,22 @@ Return only valid JSON:
             response = client.chat.completions.create(
                 model="openai/gpt-oss-120b",
                 messages=[
-                    {"role": "system", "content": cls.SYSTEM_INSTRUCTION},
-                    {"role": "user", "content": prompt}
+                    {
+                        "role": "system",
+                        "content": cls.SYSTEM_INSTRUCTION
+                    },
+                    {
+                        "role": "user",
+                        "content": prompt
+                    }
                 ],
                 response_format={"type": "json_object"},
                 temperature=0.1
             )
-            return json.loads(response.choices[0].message.content)
+
+            return json.loads(
+                response.choices[0].message.content
+            )
 
         except Exception as e:
             return {
@@ -101,7 +121,6 @@ Return only valid JSON:
                 "needs_clarification": True,
                 "clarification_message": f"Parsing error: {e}"
             }
-
 
 class ValidationResult(BaseModel):
     is_valid: bool
