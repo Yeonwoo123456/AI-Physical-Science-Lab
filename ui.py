@@ -12,7 +12,7 @@ from app_modules import (
 from experiments.projectile import projectile_experiment
 from experiments.collision import collision_experiment
 from experiments.pendulum import pendulum_experiment
-
+from experiments.spring import spring_experiment
 
 def load_css():
     path = Path(__file__).parent / "style.css"
@@ -199,6 +199,10 @@ def experiment_page():
     if experiment == "pendulum":
         pendulum_experiment()
         return
+
+    if experiment == "Spring":
+    spring_experiment()
+    return
 
     names = {
         "spring": "Spring",
