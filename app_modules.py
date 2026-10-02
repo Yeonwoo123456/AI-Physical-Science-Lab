@@ -1,7 +1,6 @@
 import os
 import json
 import math
-import re
 from typing import Dict, Any, Optional, List
 
 from pydantic import BaseModel, Field
@@ -158,6 +157,78 @@ Use the default value instead.
                     "Please describe the experiment with more specific values."
                 )
             }
+
+class CollisionNaturalLanguageParser:
+    SYSTEM_INSTRUCTION = """
+You are a physics collision parameter extraction system.
+
+Read the user's sentence carefully and extract ONLY values explicitly stated by the user.
+Never guess, infer, estimate, or calculate missing values.
+
+Parameters:
+- mass1: Object A mass
+- mass2: Object B mass
+- velocity1: Object A speed
+- velocity2: Object B speed
+- elasticity: coefficient of restitution
+
+Units:
+- g -> kg
+- kg -> kg
+- mg -> kg
+- km/h -> m/s
+- m/s -> m/s
+
+Object identification:
+- Object A, object 1, first object -> parameter 1
+- Object B, object 2, second object -> parameter 2
+- When two objects are described in order without labels, the first is Object A and the second is Object B.
+- Velocity must be returned as a positive speed magnitude.
+- Elasticity must be between 0 and 1.
+
+If a parameter is not explicitly mentioned, return null.
+
+Examples:
+"Object A is 4 kg and moving at 8 m/s" -> mass1=4, velocity1=8
+"Object B has a mass of 1 kg and speed of 3 m/s" -> mass2=1, velocity2=3
+"두 물체가 충돌한다. A는 6kg이고 10m/s로 움직인다." -> mass1=6, velocity1=10
+"첫 번째 공은 500g이고 36km/h로 움직인다." -> mass1=0.5, velocity1=10
+"탄성계수는 0.8이다." -> elasticity=0.8
+
+Return ONLY valid JSON in this form:
+{
+  "parameters": {
+    "mass1": null,
+    "mass2": null,
+    "velocity1": null,
+    "velocity2": null,
+    "elasticity": null
+  },
+  "needs_clarification": false,
+  "clarification_message": null
+}
+"""
+
+    @classmethod
+    def parse(cls, prompt: str) -> Dict[str, Any]:
+        try:
+            response = client.chat.completions.create(
+                model="openai/gpt-oss-120b",
+                messages=[
+                    {"role": "system", "content": cls.SYSTEM_INSTRUCTION},
+                    {"role": "user", "content": prompt}
+                ],
+                response_format={"type": "json_object"},
+                temperature=0
+            )
+            return json.loads(response.choices[0].message.content)
+        except Exception:
+            return {
+                "parameters": {},
+                "needs_clarification": True,
+                "clarification_message": "AI could not understand the collision experiment."
+            }
+
 
 class ValidationResult(BaseModel):
     is_valid: bool
