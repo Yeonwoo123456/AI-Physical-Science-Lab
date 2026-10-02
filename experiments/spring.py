@@ -16,7 +16,7 @@ def simulate_spring(
     gravity,
     damping,
     duration=10.0,
-    dt=0.02
+    dt=0.01
 ):
 
     n = int(duration / dt) + 1
@@ -27,60 +27,144 @@ def simulate_spring(
         n
     )
 
-    x = np.zeros(n)
-    v = np.zeros(n)
-    a = np.zeros(n)
+    displacement = np.zeros(n)
+    velocity = np.zeros(n)
+    acceleration_values = np.zeros(n)
 
-    x[0] = initial_displacement
-    v[0] = 0.0
+    displacement[0] = initial_displacement
+    velocity[0] = 0.0
+
+    equilibrium_displacement = (
+        mass * gravity / k
+    )
+
+    def acceleration(
+        x,
+        v
+    ):
+
+        return (
+            gravity
+            - (k * x / mass)
+            - (damping * v / mass)
+        )
 
     for i in range(n - 1):
 
-        a[i] = (
-            -k * x[i] / mass
-            - damping * v[i]
+        x0 = displacement[i]
+        v0 = velocity[i]
+
+        k1_x = v0
+
+        k1_v = acceleration(
+            x0,
+            v0
         )
 
-        v[i + 1] = (
-            v[i]
-            + a[i] * dt
+        k2_x = (
+            v0
+            + 0.5 * dt * k1_v
         )
 
-        x[i + 1] = (
-            x[i]
-            + v[i] * dt
+        k2_v = acceleration(
+            x0 + 0.5 * dt * k1_x,
+            v0 + 0.5 * dt * k1_v
         )
 
-    a[-1] = (
-        -k * x[-1] / mass
-        - damping * v[-1]
-    )
+        k3_x = (
+            v0
+            + 0.5 * dt * k2_v
+        )
+
+        k3_v = acceleration(
+            x0 + 0.5 * dt * k2_x,
+            v0 + 0.5 * dt * k2_v
+        )
+
+        k4_x = (
+            v0
+            + dt * k3_v
+        )
+
+        k4_v = acceleration(
+            x0 + dt * k3_x,
+            v0 + dt * k3_v
+        )
+
+        displacement[i + 1] = (
+            x0
+            + (dt / 6.0)
+            * (
+                k1_x
+                + 2 * k2_x
+                + 2 * k3_x
+                + k4_x
+            )
+        )
+
+        velocity[i + 1] = (
+            v0
+            + (dt / 6.0)
+            * (
+                k1_v
+                + 2 * k2_v
+                + 2 * k3_v
+                + k4_v
+            )
+        )
+
+    for i in range(n):
+
+        acceleration_values[i] = acceleration(
+            displacement[i],
+            velocity[i]
+        )
 
     kinetic_energy = (
         0.5
         * mass
-        * v ** 2
+        * velocity ** 2
     )
 
     elastic_energy = (
         0.5
         * k
-        * x ** 2
+        * displacement ** 2
     )
 
-    total_energy = (
+    gravitational_energy = (
+        -mass
+        * gravity
+        * displacement
+    )
+
+    total_mechanical_energy = (
         kinetic_energy
         + elastic_energy
+        + gravitational_energy
+    )
+
+    equilibrium_energy = (
+        0.5
+        * k
+        * (
+            displacement
+            - equilibrium_displacement
+        ) ** 2
+        + kinetic_energy
     )
 
     return (
         time,
-        x,
-        v,
-        a,
+        displacement,
+        velocity,
+        acceleration_values,
         kinetic_energy,
         elastic_energy,
-        total_energy
+        gravitational_energy,
+        total_mechanical_energy,
+        equilibrium_energy,
+        equilibrium_displacement
     )
 
 
@@ -116,15 +200,19 @@ gravity:
 m/s^2
 
 damping:
-dimensionless
+N*s/m
 
 Do NOT guess missing values.
 
 If a value is not explicitly given, return null.
 
+The displacement is measured from the spring's natural length.
+
 If the user says:
 - compress or 압축: displacement is negative.
-- stretch, pull, 당겨, or 늘려: displacement is positive.
+- stretch, pull, 당겨, 늘려: displacement is positive.
+
+If gravity is not specified, do not invent a value.
 """
 
     try:
@@ -177,7 +265,8 @@ If the user says:
         ],
 
         "damping": [
-            r"(?:damping|감쇠)\s*(?:=|은|는)?\s*"
+            r"(?:damping|감쇠|damping coefficient)"
+            r"\s*(?:=|은|는)?\s*"
             r"([-+]?\d+(?:\.\d+)?)"
         ]
     }
@@ -274,11 +363,11 @@ def create_box(
     j = []
     k = []
 
-    for a, b, c in faces:
+    for face in faces:
 
-        i.append(a)
-        j.append(b)
-        k.append(c)
+        i.append(face[0])
+        j.append(face[1])
+        k.append(face[2])
 
     return go.Mesh3d(
         x=vertices[:, 0],
@@ -428,24 +517,46 @@ def create_spring_coil(
 
 def create_spring_figure(
     displacement,
-    spring_length=3.0
+    equilibrium_displacement,
+    natural_length=1.2
 ):
 
     ceiling_z = 1.8
     spring_start = 1.45
 
-    mass_center = (
-        ceiling_z
-        - spring_length
-        - displacement
-    )
-
     mass_height = 0.45
     mass_radius = 0.32
+
+    current_spring_length = (
+        natural_length
+        + displacement
+    )
+
+    current_spring_length = max(
+        current_spring_length,
+        0.25
+    )
+
+    mass_center = (
+        spring_start
+        - current_spring_length
+        - mass_height / 2
+    )
 
     spring_end = (
         mass_center
         + mass_height / 2
+    )
+
+    equilibrium_spring_length = (
+        natural_length
+        + equilibrium_displacement
+    )
+
+    equilibrium_mass_center = (
+        spring_start
+        - equilibrium_spring_length
+        - mass_height / 2
     )
 
     fig = go.Figure()
@@ -506,6 +617,23 @@ def create_spring_figure(
                 dash="dot"
             ),
             opacity=0.35
+        )
+    )
+
+    fig.add_trace(
+        go.Scatter3d(
+            x=[-0.75, 0.75],
+            y=[0, 0],
+            z=[
+                equilibrium_mass_center,
+                equilibrium_mass_center
+            ],
+            mode="lines",
+            line=dict(
+                width=2,
+                dash="dash"
+            ),
+            opacity=0.45
         )
     )
 
@@ -631,7 +759,7 @@ def spring_experiment():
         placeholder=(
             "Example: A 1 kg mass is attached to a spring "
             "with a spring constant of 50 N/m and pulled "
-            "0.3 m before being released."
+            "0.3 m from its natural length before being released."
         ),
         height=100,
         key="spring_ai_input"
@@ -713,7 +841,7 @@ def spring_experiment():
         )
 
         displacement = st.number_input(
-            "Initial Displacement (m)",
+            "Initial Displacement from Natural Length (m)",
             value=float(
                 st.session_state.spring_displacement
             ),
@@ -734,7 +862,7 @@ def spring_experiment():
         )
 
         damping = st.number_input(
-            "Damping",
+            "Damping c (N·s/m)",
             min_value=0.0,
             value=float(
                 st.session_state.spring_damping
@@ -768,30 +896,40 @@ def spring_experiment():
             acceleration,
             kinetic_energy,
             elastic_energy,
-            total_energy
+            gravitational_energy,
+            total_mechanical_energy,
+            equilibrium_energy,
+            equilibrium_displacement
         ) = st.session_state.spring_result
 
-        col1, col2, col3 = st.columns(3)
+        col1, col2, col3, col4 = st.columns(4)
 
         with col1:
+
+            st.metric(
+                "Equilibrium Displacement",
+                f"{equilibrium_displacement:.3f} m"
+            )
+
+        with col2:
 
             st.metric(
                 "Maximum Displacement",
                 f"{np.max(np.abs(x)):.3f} m"
             )
 
-        with col2:
+        with col3:
 
             st.metric(
                 "Maximum Velocity",
                 f"{np.max(np.abs(velocity)):.3f} m/s"
             )
 
-        with col3:
+        with col4:
 
             st.metric(
                 "Maximum Energy",
-                f"{np.max(total_energy):.3f} J"
+                f"{np.max(equilibrium_energy):.3f} J"
             )
 
         st.markdown(
@@ -806,7 +944,8 @@ def spring_experiment():
         )
 
         initial_fig = create_spring_figure(
-            x[frame_indices[0]]
+            x[frame_indices[0]],
+            equilibrium_displacement
         )
 
         frames = []
@@ -814,7 +953,8 @@ def spring_experiment():
         for i in frame_indices:
 
             frame_fig = create_spring_figure(
-                x[i]
+                x[i],
+                equilibrium_displacement
             )
 
             frames.append(
@@ -886,9 +1026,15 @@ def spring_experiment():
             )
         )
 
+        displacement_fig.add_hline(
+            y=equilibrium_displacement,
+            line_dash="dash",
+            annotation_text="Equilibrium"
+        )
+
         displacement_fig.update_layout(
             xaxis_title="Time (s)",
-            yaxis_title="Displacement (m)",
+            yaxis_title="Displacement from Natural Length (m)",
             height=350
         )
 
@@ -925,9 +1071,18 @@ def spring_experiment():
         energy_fig.add_trace(
             go.Scatter(
                 x=time,
-                y=total_energy,
+                y=gravitational_energy,
                 mode="lines",
-                name="Total Energy"
+                name="Gravitational Energy"
+            )
+        )
+
+        energy_fig.add_trace(
+            go.Scatter(
+                x=time,
+                y=total_mechanical_energy,
+                mode="lines",
+                name="Total Mechanical Energy"
             )
         )
 
