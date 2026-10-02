@@ -159,11 +159,11 @@ Use the default value instead.
             }
 
 class CollisionNaturalLanguageParser:
-    SYSTEM_INSTRUCTION = """
-You are a physics collision parameter extraction system.
 
-Read the user's sentence carefully and extract ONLY values explicitly stated by the user.
-Never guess, infer, estimate, or calculate missing values.
+    SYSTEM_INSTRUCTION = """
+You extract collision experiment parameters from natural language.
+
+Extract ONLY values explicitly stated by the user. Never guess, infer, estimate, or calculate missing values.
 
 Parameters:
 - mass1: Object A mass
@@ -172,30 +172,34 @@ Parameters:
 - velocity2: Object B speed
 - elasticity: coefficient of restitution
 
-Units:
-- g -> kg
-- kg -> kg
+Unit conversion:
+- g, gram -> kg
 - mg -> kg
+- kg -> kg
 - km/h -> m/s
 - m/s -> m/s
 
 Object identification:
-- Object A, object 1, first object -> parameter 1
-- Object B, object 2, second object -> parameter 2
-- When two objects are described in order without labels, the first is Object A and the second is Object B.
-- Velocity must be returned as a positive speed magnitude.
-- Elasticity must be between 0 and 1.
+- Object A, first object, first ball -> parameter 1
+- Object B, second object, second ball -> parameter 2
+- If two objects are described in order without labels, the first is Object A and the second is Object B.
+
+Return velocity as a positive speed magnitude.
+Return elasticity between 0 and 1 only when explicitly stated.
 
 If a parameter is not explicitly mentioned, return null.
 
 Examples:
-"Object A is 4 kg and moving at 8 m/s" -> mass1=4, velocity1=8
-"Object B has a mass of 1 kg and speed of 3 m/s" -> mass2=1, velocity2=3
-"두 물체가 충돌한다. A는 6kg이고 10m/s로 움직인다." -> mass1=6, velocity1=10
-"첫 번째 공은 500g이고 36km/h로 움직인다." -> mass1=0.5, velocity1=10
-"탄성계수는 0.8이다." -> elasticity=0.8
+"Object A is 4 kg and moving at 8 m/s."
+-> mass1 = 4, velocity1 = 8
+"Object B has a mass of 500 g and moves at 36 km/h."
+-> mass2 = 0.5, velocity2 = 10
+"A is 6kg and B is 2kg."
+-> mass1 = 6, mass2 = 2
+"The coefficient of restitution is 0.8."
+-> elasticity = 0.8
 
-Return ONLY valid JSON in this form:
+Return ONLY valid JSON:
 {
   "parameters": {
     "mass1": null,
@@ -226,7 +230,7 @@ Return ONLY valid JSON in this form:
             return {
                 "parameters": {},
                 "needs_clarification": True,
-                "clarification_message": "AI could not understand the collision experiment."
+                "clarification_message": "AI could not understand the collision description."
             }
 
 
