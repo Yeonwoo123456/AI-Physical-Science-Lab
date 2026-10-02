@@ -797,82 +797,197 @@ def run_collision(
         0.5 * mass2 * collision_result_v2 ** 2
     )
 
-    st.markdown("### Results")
+        st.markdown(
+        """
+        <div style="
+            text-align: center;
+            font-size: 32px;
+            font-weight: 700;
+            margin-top: 25px;
+            margin-bottom: 25px;
+        ">
+            Results
+        </div>
+        """,
+        unsafe_allow_html=True
+    )
 
-    header = st.columns([2, 2, 2])
+    header = st.columns([1, 2, 2])
 
     with header[1]:
-        st.markdown("**BEFORE**")
+        st.markdown(
+            """
+            <div style="
+                text-align: center;
+                font-size: 21px;
+                font-weight: 700;
+            ">
+                BEFORE
+            </div>
+            """,
+            unsafe_allow_html=True
+        )
 
     with header[2]:
-        st.markdown("**AFTER**")
+        st.markdown(
+            """
+            <div style="
+                text-align: center;
+                font-size: 21px;
+                font-weight: 700;
+            ">
+                AFTER
+            </div>
+            """,
+            unsafe_allow_html=True
+        )
 
-    st.markdown("**Object A**")
+    st.markdown(
+        """
+        <div style="
+            text-align: center;
+            font-size: 21px;
+            font-weight: 700;
+            margin-top: 20px;
+            margin-bottom: 10px;
+        ">
+            Object A
+        </div>
+        """,
+        unsafe_allow_html=True
+    )
 
-    row = st.columns([2, 2, 2])
-
-    with row[0]:
-        st.write("Velocity")
-
-    with row[1]:
-        st.write(f"{initial_velocity1:.2f} m/s")
-
-    with row[2]:
-        st.write(f"{collision_result_v1:.2f} m/s")
-
-    row = st.columns([2, 2, 2])
-
-    with row[0]:
-        st.write("Momentum")
-
-    with row[1]:
-        st.write(f"{initial_momentum1:.2f} kg·m/s")
-
-    with row[2]:
-        st.write(f"{final_momentum1:.2f} kg·m/s")
-
-    row = st.columns([2, 2, 2])
-
-    with row[0]:
-        st.write("Energy")
-
-    with row[1]:
-        st.write(f"{initial_energy1:.2f} J")
-
-    with row[2]:
-        st.write(f"{final_energy1:.2f} J")
-
-    st.markdown("**Object B**")
-
-    row = st.columns([2, 2, 2])
+    row = st.columns([1, 2, 2])
 
     with row[0]:
-        st.write("Velocity")
+        st.markdown(
+            '<div style="font-size:19px; text-align:center;">Velocity</div>',
+            unsafe_allow_html=True
+        )
 
     with row[1]:
-        st.write(f"{initial_velocity2:.2f} m/s")
+        st.markdown(
+            f'<div style="font-size:19px; text-align:center;">{initial_velocity1:.2f} m/s</div>',
+            unsafe_allow_html=True
+        )
 
     with row[2]:
-        st.write(f"{collision_result_v2:.2f} m/s")
+        st.markdown(
+            f'<div style="font-size:19px; text-align:center;">{collision_result_v1:.2f} m/s</div>',
+            unsafe_allow_html=True
+        )
 
-    row = st.columns([2, 2, 2])
+    row = st.columns([1, 2, 2])
 
     with row[0]:
-        st.write("Momentum")
+        st.markdown(
+            '<div style="font-size:19px; text-align:center;">Momentum</div>',
+            unsafe_allow_html=True
+        )
 
     with row[1]:
-        st.write(f"{initial_momentum2:.2f} kg·m/s")
+        st.markdown(
+            f'<div style="font-size:19px; text-align:center;">{initial_momentum1:.2f} kg·m/s</div>',
+            unsafe_allow_html=True
+        )
 
     with row[2]:
-        st.write(f"{final_momentum2:.2f} kg·m/s")
+        st.markdown(
+            f'<div style="font-size:19px; text-align:center;">{final_momentum1:.2f} kg·m/s</div>',
+            unsafe_allow_html=True
+        )
 
-    row = st.columns([2, 2, 2])
+    row = st.columns([1, 2, 2])
 
     with row[0]:
-        st.write("Energy")
+        st.markdown(
+            '<div style="font-size:19px; text-align:center;">Energy</div>',
+            unsafe_allow_html=True
+        )
 
     with row[1]:
-        st.write(f"{initial_energy2:.2f} J")
+        st.markdown(
+            f'<div style="font-size:19px; text-align:center;">{initial_energy1:.2f} J</div>',
+            unsafe_allow_html=True
+        )
 
     with row[2]:
-        st.write(f"{final_energy2:.2f} J")
+        st.markdown(
+            f'<div style="font-size:19px; text-align:center;">{final_energy1:.2f} J</div>',
+            unsafe_allow_html=True
+        )
+
+    st.markdown(
+        """
+        <div style="
+            text-align: center;
+            font-size: 21px;
+            font-weight: 700;
+            margin-top: 25px;
+            margin-bottom: 10px;
+        ">
+            Object B
+        </div>
+        """,
+        unsafe_allow_html=True
+    )
+
+    row = st.columns([1, 2, 2])
+
+    with row[0]:
+        st.markdown(
+            '<div style="font-size:19px; text-align:center;">Velocity</div>',
+            unsafe_allow_html=True
+        )
+
+    with row[1]:
+        st.markdown(
+            f'<div style="font-size:19px; text-align:center;">{initial_velocity2:.2f} m/s</div>',
+            unsafe_allow_html=True
+        )
+
+    with row[2]:
+        st.markdown(
+            f'<div style="font-size:19px; text-align:center;">{collision_result_v2:.2f} m/s</div>',
+            unsafe_allow_html=True
+        )
+
+    row = st.columns([1, 2, 2])
+
+    with row[0]:
+        st.markdown(
+            '<div style="font-size:19px; text-align:center;">Momentum</div>',
+            unsafe_allow_html=True
+        )
+
+    with row[1]:
+        st.markdown(
+            f'<div style="font-size:19px; text-align:center;">{initial_momentum2:.2f} kg·m/s</div>',
+            unsafe_allow_html=True
+        )
+
+    with row[2]:
+        st.markdown(
+            f'<div style="font-size:19px; text-align:center;">{final_momentum2:.2f} kg·m/s</div>',
+            unsafe_allow_html=True
+        )
+
+    row = st.columns([1, 2, 2])
+
+    with row[0]:
+        st.markdown(
+            '<div style="font-size:19px; text-align:center;">Energy</div>',
+            unsafe_allow_html=True
+        )
+
+    with row[1]:
+        st.markdown(
+            f'<div style="font-size:19px; text-align:center;">{initial_energy2:.2f} J</div>',
+            unsafe_allow_html=True
+        )
+
+    with row[2]:
+        st.markdown(
+            f'<div style="font-size:19px; text-align:center;">{final_energy2:.2f} J</div>',
+            unsafe_allow_html=True
+        )
