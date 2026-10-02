@@ -182,40 +182,49 @@ def run_collision(
     elasticity
 ):
 
-    collision_distance = 4.0
+    radius = 1.0
+
+    start_distance = 8.0
+
+    collision_distance = radius * 2
+
+    closing_speed = velocity1 + velocity2
+
+    if closing_speed <= 0:
+
+        st.warning(
+            "The objects must move toward each other."
+        )
+
+        return
 
     collision_time = (
-        collision_distance /
-        (velocity1 + velocity2)
-        if velocity1 + velocity2 > 0
-        else 1.0
+        start_distance - collision_distance
+    ) / closing_speed
+
+    collision_time = max(
+        collision_time,
+        0.01
     )
 
     total_time = collision_time + 2.5
 
+    u1 = velocity1
+    u2 = -velocity2
+
     final_velocity1 = (
-        (
-            mass1 * velocity1
-            + mass2 * velocity2
-            - mass2 * elasticity *
-            (velocity1 - velocity2)
-        )
-        /
-        (mass1 + mass2)
-    )
+        mass1 * u1
+        + mass2 * u2
+        - mass2 * elasticity * (u1 - u2)
+    ) / (mass1 + mass2)
 
     final_velocity2 = (
-        (
-            mass1 * velocity1
-            + mass2 * velocity2
-            + mass1 * elasticity *
-            (velocity1 - velocity2)
-        )
-        /
-        (mass1 + mass2)
-    )
+        mass1 * u1
+        + mass2 * u2
+        + mass1 * elasticity * (u1 - u2)
+    ) / (mass1 + mass2)
 
-    points = 100
+    points = 120
 
     times = [
         total_time * i / (points - 1)
@@ -225,19 +234,36 @@ def run_collision(
     positions1 = []
     positions2 = []
 
+    collision_x1 = -radius
+    collision_x2 = radius
+
     for t in times:
 
-        if t <= collision_time:
+        if t < collision_time:
 
-            x1 = -collision_distance + velocity1 * t
-            x2 = collision_distance - velocity2 * t
+            x1 = (
+                -start_distance / 2
+                + velocity1 * t
+            )
+
+            x2 = (
+                start_distance / 2
+                - velocity2 * t
+            )
 
         else:
 
             dt = t - collision_time
 
-            x1 = final_velocity1 * dt
-            x2 = final_velocity2 * dt
+            x1 = (
+                collision_x1
+                + final_velocity1 * dt
+            )
+
+            x2 = (
+                collision_x2
+                + final_velocity2 * dt
+            )
 
         positions1.append(x1)
         positions2.append(x2)
@@ -275,6 +301,7 @@ def run_collision(
                         "blue",
                         "Object 1"
                     ),
+
                     make_object(
                         shape2,
                         positions2[i],
@@ -282,11 +309,20 @@ def run_collision(
                         "Object 2"
                     )
                 ],
+
                 name=str(i)
             )
         )
 
     fig.frames = frames
+
+    all_positions = (
+        positions1 +
+        positions2
+    )
+
+    x_min = min(all_positions) - 3
+    x_max = max(all_positions) + 3
 
     fig.update_layout(
 
@@ -295,12 +331,12 @@ def run_collision(
         scene=dict(
 
             xaxis=dict(
-    title="X Position (m)",
-    range=[
-        min(positions1 + positions2) - 3,
-        max(positions1 + positions2) + 3
-    ]
-),
+                title="X Position (m)",
+                range=[
+                    x_min,
+                    x_max
+                ]
+            ),
 
             yaxis=dict(
                 title="Y Position (m)",
@@ -340,21 +376,27 @@ def run_collision(
                 "xanchor": "center",
                 "y": -0.12,
                 "yanchor": "top",
+
                 "buttons": [
                     {
                         "label": "PLAY",
                         "method": "animate",
+
                         "args": [
                             None,
+
                             {
                                 "frame": {
                                     "duration": 35,
                                     "redraw": True
                                 },
+
                                 "transition": {
                                     "duration": 0
                                 },
+
                                 "fromcurrent": False,
+
                                 "mode": "immediate"
                             }
                         ]
@@ -403,12 +445,14 @@ def run_collision(
     col1, col2 = st.columns(2)
 
     with col1:
+
         st.metric(
             "Object 1 Final Velocity",
             f"{final_velocity1:.2f} m/s"
         )
 
     with col2:
+
         st.metric(
             "Object 2 Final Velocity",
             f"{final_velocity2:.2f} m/s"
@@ -417,12 +461,14 @@ def run_collision(
     col1, col2 = st.columns(2)
 
     with col1:
+
         st.metric(
             "Initial Kinetic Energy",
             f"{initial_energy:.2f} J"
         )
 
     with col2:
+
         st.metric(
             "Final Kinetic Energy",
             f"{final_energy:.2f} J"
@@ -431,12 +477,14 @@ def run_collision(
     col1, col2 = st.columns(2)
 
     with col1:
+
         st.metric(
             "Initial Momentum",
             f"{initial_momentum:.2f} kg·m/s"
         )
 
     with col2:
+
         st.metric(
             "Final Momentum",
             f"{final_momentum:.2f} kg·m/s"
