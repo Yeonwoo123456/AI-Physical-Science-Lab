@@ -52,7 +52,14 @@ def simulate_pendulum(
             * (1 - math.cos(theta))
         )
 
-        return px, py, v, tension_value, ke, pe
+        return (
+            px,
+            py,
+            v,
+            tension_value,
+            ke,
+            pe
+        )
 
     steps = int(duration / dt)
 
@@ -60,7 +67,14 @@ def simulate_pendulum(
 
         t = i * dt
 
-        px, py, v, tension_value, ke, pe = state()
+        (
+            px,
+            py,
+            v,
+            tension_value,
+            ke,
+            pe
+        ) = state()
 
         time.append(t)
         angle.append(math.degrees(theta))
@@ -74,7 +88,10 @@ def simulate_pendulum(
         total_energy.append(ke + pe)
 
         k1_theta = omega
-        k1_omega = acceleration(theta, omega)
+        k1_omega = acceleration(
+            theta,
+            omega
+        )
 
         k2_theta = (
             omega
@@ -213,11 +230,13 @@ def create_pendulum_figure(result):
             * math.sin(angle_rad)
         )
 
-        # 0.5초 단위 수치 갱신
+        # 0.5초마다 표시값 변경
         display_index = int(
             round(
                 result["time"][i] / 0.5
-            ) * 0.5 / 0.01
+            )
+            * 0.5
+            / 0.01
         )
 
         display_index = min(
@@ -254,7 +273,7 @@ def create_pendulum_figure(result):
                         ]]
                     ),
 
-                    # Velocity vector
+                    # Velocity
                     go.Scatter3d(
                         x=[
                             x,
@@ -268,13 +287,17 @@ def create_pendulum_figure(result):
                     )
                 ],
 
-                traces=[1, 3, 4],
+                traces=[
+                    1,
+                    3,
+                    4
+                ],
 
                 layout=go.Layout(
                     annotations=[
                         dict(
                             x=0.5,
-                            y=0.045,
+                            y=0.075,
                             xref="paper",
                             yref="paper",
                             text=info_text,
@@ -301,7 +324,7 @@ def create_pendulum_figure(result):
     fig = go.Figure(
         data=[
 
-            # Ground / reference
+            # Reference line
             go.Scatter3d(
                 x=[
                     -ground,
@@ -430,17 +453,17 @@ def create_pendulum_figure(result):
 
     fig.update_layout(
 
-        height=680,
+        # 전체 Plotly display 높이
+        height=560,
 
         margin=dict(
-            l=0,
-            r=0,
+            l=10,
+            r=10,
             t=10,
-            b=0
+            b=5
         ),
 
         paper_bgcolor="#0d1117",
-
         plot_bgcolor="#0d1117",
 
         font=dict(
@@ -448,6 +471,12 @@ def create_pendulum_figure(result):
         ),
 
         scene=dict(
+
+            # 3D 모델 영역
+            domain=dict(
+                x=[0.02, 0.98],
+                y=[0.20, 1.0]
+            ),
 
             xaxis=dict(
                 title="X",
@@ -487,9 +516,8 @@ def create_pendulum_figure(result):
                 z=0.7
             ),
 
+            # 정면 고정 시점
             camera=dict(
-
-                # 정면에서 바라보는 고정 시점
                 eye=dict(
                     x=0,
                     y=-0.15,
@@ -502,7 +530,6 @@ def create_pendulum_figure(result):
                     z=0
                 ),
 
-                # Y축을 화면의 위쪽으로
                 up=dict(
                     x=0,
                     y=1,
@@ -511,10 +538,11 @@ def create_pendulum_figure(result):
             )
         ),
 
+        # 수치
         annotations=[
             dict(
                 x=0.5,
-                y=0.045,
+                y=0.075,
                 xref="paper",
                 yref="paper",
                 text=initial_info,
@@ -527,13 +555,14 @@ def create_pendulum_figure(result):
             )
         ],
 
+        # Play
         updatemenus=[
             dict(
                 type="buttons",
                 showactive=False,
 
-                x=0.02,
-                y=0.98,
+                x=0.035,
+                y=0.965,
 
                 xanchor="left",
                 yanchor="top",
@@ -729,14 +758,17 @@ def pendulum_experiment():
 
     st.subheader("3D Simulation")
 
-    st.plotly_chart(
-        create_pendulum_figure(result),
-        use_container_width=True,
+    # 3D Simulation Display
+    with st.container(border=True):
 
-        config={
-            "displaylogo": False
-        }
-    )
+        st.plotly_chart(
+            create_pendulum_figure(result),
+            use_container_width=True,
+
+            config={
+                "displaylogo": False
+            }
+        )
 
     st.divider()
 
