@@ -180,33 +180,68 @@ def selection_page():
 def experiment_page():
     experiment = st.session_state.experiment
 
+    # --------------------------------
+    # Projectile Motion
+    # --------------------------------
     if experiment == "projectile":
         from experiments.projectile import projectile_experiment
+
         projectile_experiment()
         return
 
+    # --------------------------------
+    # Collision
+    # --------------------------------
     if experiment == "collision":
         from experiments.collision import collision_experiment
+
         collision_experiment()
         return
 
+    # --------------------------------
+    # Pendulum
+    # --------------------------------
     if experiment == "pendulum":
         from experiments.pendulum import pendulum_experiment
+
         pendulum_experiment()
         return
 
+    # --------------------------------
+    # Spring
+    # --------------------------------
     if experiment == "spring":
         from experiments.spring import spring_experiment
+
         spring_experiment()
         return
 
+    # --------------------------------
+    # Friction
+    # --------------------------------
     if experiment == "friction":
         from experiments.friction import friction_experiment
+
         friction_experiment()
         return
 
-    st.title("Gravity & Orbit")
-    st.write("This experiment is currently under development.")
+    # --------------------------------
+    # Gravity & Orbit
+    # --------------------------------
+    if experiment == "orbit":
+        from experiments.orbit import orbit_experiment
+
+        orbit_experiment()
+        return
+
+    # --------------------------------
+    # Unknown experiment
+    # --------------------------------
+    st.title("Physics Experiment")
+
+    st.write(
+        "This experiment is currently under development."
+    )
 
     if st.button("Back to Experiments"):
         st.session_state.page = "select"
