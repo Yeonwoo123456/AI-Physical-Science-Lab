@@ -3,17 +3,6 @@ from pathlib import Path
 
 import streamlit as st
 
-from app_modules import (
-    NaturalLanguageParser,
-    PhysicsValidator,
-    PhysicsEngine
-)
-
-from experiments.projectile import projectile_experiment
-from experiments.collision import collision_experiment
-from experiments.pendulum import pendulum_experiment
-from experiments.spring import spring_experiment
-
 
 def load_css():
     path = Path(__file__).parent / "style.css"
@@ -25,6 +14,7 @@ def load_css():
         )
 
 
+@st.cache_data
 def get_image(path):
     p = Path(__file__).parent / path
 
@@ -78,7 +68,6 @@ def home_page():
 
 
 def selection_page():
-
     st.markdown(
         '<div class="section-title">Choose Your Experiment</div>',
         unsafe_allow_html=True
@@ -139,7 +128,6 @@ def selection_page():
     cards = ""
 
     for key, title, concept, params, color in experiments:
-
         image = get_image(
             f"assets/{key}.png"
         )
@@ -177,31 +165,42 @@ def selection_page():
         """
     )
 
-    st.markdown("<br>", unsafe_allow_html=True)
+    st.markdown(
+        "<br>",
+        unsafe_allow_html=True
+    )
 
     if st.button("Back to Home"):
         st.session_state.page = "home"
+        st.session_state.experiment = None
         st.query_params.clear()
         st.rerun()
 
 
 def experiment_page():
-
     experiment = st.session_state.experiment
 
     if experiment == "projectile":
+        from experiments.projectile import projectile_experiment
+
         projectile_experiment()
         return
 
     if experiment == "collision":
+        from experiments.collision import collision_experiment
+
         collision_experiment()
         return
 
     if experiment == "pendulum":
+        from experiments.pendulum import pendulum_experiment
+
         pendulum_experiment()
         return
 
     if experiment == "spring":
+        from experiments.spring import spring_experiment
+
         spring_experiment()
         return
 
@@ -223,12 +222,12 @@ def experiment_page():
 
     if st.button("Back to Experiments"):
         st.session_state.page = "select"
+        st.session_state.experiment = None
         st.query_params.clear()
         st.rerun()
 
 
 def render_app():
-
     load_css()
     init_state()
 
