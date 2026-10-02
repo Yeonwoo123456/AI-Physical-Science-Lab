@@ -18,16 +18,26 @@ def simulate_spring(
     duration=10.0,
     dt=0.01
 ):
-    time = np.arange(0.0, duration + dt, dt)
+    time = np.arange(
+        0.0,
+        duration + dt,
+        dt
+    )
 
     n = len(time)
 
     x = np.zeros(n)
     v = np.zeros(n)
 
-    equilibrium_displacement = mass * gravity / k
+    equilibrium_displacement = (
+        mass * gravity / k
+    )
 
-    x[0] = equilibrium_displacement + initial_displacement
+    x[0] = (
+        equilibrium_displacement
+        + initial_displacement
+    )
+
     v[0] = 0.0
 
     def acceleration(position, velocity):
@@ -91,7 +101,9 @@ def simulate_spring(
     )
 
     spring_energy = (
-        0.5 * k * relative_displacement ** 2
+        0.5
+        * k
+        * relative_displacement ** 2
     )
 
     total_energy = (
@@ -174,6 +186,7 @@ displacement is positive.
         )
 
         content = response.choices[0].message.content.strip()
+
         content = re.sub(
             r"```json|```",
             "",
@@ -231,7 +244,10 @@ displacement is positive.
     text = user_text.lower()
 
     if result["displacement"] is not None:
-        if "압축" in user_text or "compress" in text:
+        if (
+            "압축" in user_text
+            or "compress" in text
+        ):
             result["displacement"] = -abs(
                 result["displacement"]
             )
@@ -259,8 +275,10 @@ def create_box(
 ):
     x0 = center_x - size_x / 2
     x1 = center_x + size_x / 2
+
     y0 = center_y - size_y / 2
     y1 = center_y + size_y / 2
+
     z0 = center_z - size_z / 2
     z1 = center_z + size_z / 2
 
@@ -353,7 +371,9 @@ def create_cylinder_z(
             center_z + height / 2
         )
 
-    vertices = np.column_stack((x, y, z))
+    vertices = np.column_stack(
+        (x, y, z)
+    )
 
     faces_i = []
     faces_j = []
@@ -385,8 +405,8 @@ def create_cylinder_z(
 def create_spring_coil(
     start_z,
     end_z,
-    radius=0.20,
-    turns=12
+    radius=0.18,
+    turns=14
 ):
     n_points = max(
         int(turns * 12),
@@ -421,14 +441,18 @@ def create_spring_coil(
 def create_spring_figure(
     relative_displacement,
     equilibrium_displacement,
-    natural_length=1.2
+    natural_length=1.0
 ):
     ceiling_z = 1.8
     spring_start = 1.45
 
+    visual_displacement = (
+        relative_displacement * 0.55
+    )
+
     actual_displacement = (
         equilibrium_displacement
-        + relative_displacement
+        + visual_displacement
     )
 
     current_length = (
@@ -436,9 +460,10 @@ def create_spring_figure(
         + actual_displacement
     )
 
-    current_length = max(
+    current_length = np.clip(
         current_length,
-        0.25
+        0.55,
+        1.85
     )
 
     mass_height = 0.45
@@ -453,6 +478,12 @@ def create_spring_figure(
     equilibrium_length = (
         natural_length
         + equilibrium_displacement
+    )
+
+    equilibrium_length = np.clip(
+        equilibrium_length,
+        0.55,
+        1.85
     )
 
     equilibrium_mass_center = (
@@ -520,14 +551,14 @@ def create_spring_figure(
                 width=2,
                 dash="dot"
             ),
-            opacity=0.35,
+            opacity=0.3,
             showlegend=False
         )
     )
 
     fig.add_trace(
         go.Scatter3d(
-            x=[-0.75, 0.75],
+            x=[-0.65, 0.65],
             y=[0, 0],
             z=[
                 equilibrium_mass_center,
@@ -538,7 +569,7 @@ def create_spring_figure(
                 width=2,
                 dash="dash"
             ),
-            opacity=0.45,
+            opacity=0.4,
             showlegend=False
         )
     )
@@ -546,42 +577,42 @@ def create_spring_figure(
     fig.update_layout(
         height=500,
         margin=dict(
-            l=12,
-            r=12,
-            t=12,
-            b=12
+            l=0,
+            r=0,
+            t=0,
+            b=0
         ),
         paper_bgcolor="#0E1117",
         scene=dict(
             bgcolor="#0E1117",
             xaxis=dict(
                 visible=False,
-                range=[-1.5, 1.5]
+                range=[-1.3, 1.3]
             ),
             yaxis=dict(
                 visible=False,
-                range=[-1.5, 1.5]
+                range=[-1.3, 1.3]
             ),
             zaxis=dict(
                 visible=False,
-                range=[-1.7, 2.1]
+                range=[-0.9, 2.2]
             ),
             aspectmode="manual",
             aspectratio=dict(
                 x=1,
                 y=1,
-                z=2.6
+                z=1.8
             ),
             camera=dict(
                 eye=dict(
                     x=0,
-                    y=3.0,
-                    z=0
+                    y=4.8,
+                    z=0.35
                 ),
                 center=dict(
                     x=0,
                     y=0,
-                    z=0.1
+                    z=0.45
                 ),
                 up=dict(
                     x=0,
@@ -605,8 +636,10 @@ def spring_experiment():
         st.session_state.page = "select"
         st.session_state.experiment = None
 
-        if "spring_result" in st.session_state:
-            del st.session_state.spring_result
+        st.session_state.pop(
+            "spring_result",
+            None
+        )
 
         st.query_params.clear()
         st.rerun()
@@ -639,17 +672,13 @@ def spring_experiment():
         "equilibrium_displacement"
     }
 
-    old_result = st.session_state.get(
+    result = st.session_state.get(
         "spring_result"
     )
 
-    if not isinstance(old_result, dict):
-        st.session_state.pop(
-            "spring_result",
-            None
-        )
-    elif not required_keys.issubset(
-        old_result.keys()
+    if (
+        not isinstance(result, dict)
+        or not required_keys.issubset(result.keys())
     ):
         st.session_state.pop(
             "spring_result",
@@ -780,17 +809,10 @@ def spring_experiment():
                 damping=damping
             )
 
-            if (
-                not isinstance(result, dict)
-                or "total_energy" not in result
-                or "time" not in result
-                or "x" not in result
-                or "v" not in result
+            if not required_keys.issubset(
+                result.keys()
             ):
-                st.error(
-                    "Simulation failed. Please try again."
-                )
-                return
+                raise ValueError()
 
             st.session_state.spring_result = result
 
@@ -804,6 +826,7 @@ def spring_experiment():
                 "The simulation could not be completed. "
                 "Please check the parameters."
             )
+
             return
 
     result = st.session_state.get(
@@ -819,11 +842,6 @@ def spring_experiment():
         st.session_state.pop(
             "spring_result",
             None
-        )
-
-        st.warning(
-            "The previous simulation result was outdated. "
-            "Please run the experiment again."
         )
         return
 
