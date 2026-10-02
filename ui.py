@@ -11,6 +11,7 @@ from app_modules import (
 
 from experiments.projectile import projectile_experiment
 from experiments.collision import collision_experiment
+from experiments.pendulum import pendulum_experiment
 
 
 def load_css():
@@ -88,6 +89,7 @@ def selection_page():
         """
         <div class="selection-header">
             <div class="section-title">Choose Your Experiment</div>
+
             <div class="selection-description">
                 Explore different physical phenomena through simulation.
             </div>
@@ -97,6 +99,7 @@ def selection_page():
     )
 
     experiments = [
+
         (
             "projectile",
             "Projectile Motion",
@@ -195,25 +198,30 @@ def selection_page():
     if st.button("Back to Home"):
 
         st.session_state.page = "home"
-
         st.query_params.clear()
-
         st.rerun()
+
 
 def experiment_page():
 
     experiment = st.session_state.experiment
 
     if experiment == "projectile":
+
         projectile_experiment()
         return
 
     if experiment == "collision":
+
         collision_experiment()
         return
 
+    if experiment == "pendulum":
+
+        pendulum_experiment()
+        return
+
     names = {
-        "pendulum": "Pendulum",
         "spring": "Spring",
         "friction": "Friction",
         "orbit": "Gravity & Orbit"
@@ -240,7 +248,6 @@ def experiment_page():
 def render_app():
 
     load_css()
-
     init_state()
 
     experiment = st.query_params.get(
@@ -250,7 +257,6 @@ def render_app():
     if experiment:
 
         st.session_state.experiment = experiment
-
         st.session_state.page = "experiment"
 
     if st.session_state.page == "home":
