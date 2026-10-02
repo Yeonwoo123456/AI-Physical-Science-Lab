@@ -248,24 +248,18 @@ def run_collision(
             const s = 1.25;
 
             const X = [
-                x - s, x + s,
-                x + s, x - s,
-                x - s, x + s,
-                x + s, x - s
+                x - s, x + s, x + s, x - s,
+                x - s, x + s, x + s, x - s
             ];
 
             const Y = [
-                -s, -s,
-                s, s,
-                -s, -s,
-                s, s
+                -s, -s, s, s,
+                -s, -s, s, s
             ];
 
             const Z = [
-                -s, -s,
-                -s, -s,
-                s, s,
-                s, s
+                -s, -s, -s, -s,
+                s, s, s, s
             ];
 
             return {{
@@ -303,10 +297,7 @@ def run_collision(
                 ],
 
                 color: color,
-
                 opacity: 1,
-
-                flatshading: true,
 
                 lighting: {{
                     ambient: 0.3,
@@ -334,7 +325,6 @@ def run_collision(
                 s1,
                 "Object 1"
             ),
-
             createObject(
                 p2[0],
                 "red",
@@ -348,6 +338,12 @@ def run_collision(
 
             scene: {{
                 dragmode: "orbit",
+
+                camera: {{
+                    projection: {{
+                        type: "orthographic"
+                    }}
+                }},
 
                 xaxis: {{
                     title: "X Position (m)",
@@ -440,7 +436,9 @@ def run_collision(
 
             await Plotly.animate(
                 plot,
-                frames.map(frame => frame.name),
+                frames.map(
+                    frame => frame.name
+                ),
                 {{
                     transition: {{
                         duration: 0
