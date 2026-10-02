@@ -1,0 +1,564 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+
+    <script src="https://unpkg.com/streamlit-component-lib@2.0.0/dist/index.js"></script>
+
+    <style>
+        * {
+            box-sizing: border-box;
+        }
+
+        body {
+            margin: 0;
+            padding: 0;
+            overflow: hidden;
+            background: transparent;
+            font-family: Arial, sans-serif;
+        }
+
+        #container {
+            width: 100%;
+            display: flex;
+            justify-content: center;
+        }
+
+        svg {
+            width: 100%;
+            max-width: 900px;
+            background: #f7f4ec;
+            border: 1px solid #d9d9d9;
+            border-radius: 8px;
+            display: block;
+            user-select: none;
+            touch-action: none;
+        }
+
+        .axis {
+            stroke: #333;
+            stroke-width: 2;
+        }
+
+        .grid {
+            stroke: #d8d8d8;
+            stroke-width: 1;
+        }
+
+        .trajectory {
+            fill: none;
+            stroke: #9ca3af;
+            stroke-width: 2;
+            stroke-dasharray: 7 7;
+        }
+
+        .vector {
+            stroke: #2e86de;
+            stroke-width: 5;
+            stroke-linecap: round;
+        }
+
+        .origin {
+            fill: #2e86de;
+            stroke: white;
+            stroke-width: 2;
+        }
+
+        .handle {
+            fill: #2e86de;
+            stroke: white;
+            stroke-width: 3;
+            cursor: grab;
+        }
+
+        .handle:hover {
+            fill: #1769aa;
+            r: 12;
+        }
+
+        .label {
+            font-size: 18px;
+            font-weight: 600;
+            fill: #374151;
+        }
+
+        .value-label {
+            font-size: 18px;
+            font-weight: 700;
+            fill: #2e86de;
+        }
+    </style>
+</head>
+
+<body>
+
+<div id="container">
+
+<svg
+    id="canvas"
+    viewBox="0 0 900 500"
+    preserveAspectRatio="xMidYMid meet"
+>
+
+    <defs>
+        <marker
+            id="arrowhead"
+            markerWidth="12"
+            markerHeight="12"
+            refX="9"
+            refY="5"
+            orient="auto"
+        >
+            <polygon
+                points="0 0, 10 5, 0 10"
+                fill="#2e86de"
+            />
+        </marker>
+    </defs>
+
+    <g id="grid"></g>
+
+    <line
+        id="xAxis"
+        class="axis"
+        x1="60"
+        y1="430"
+        x2="850"
+        y2="430"
+    />
+
+    <line
+        id="yAxis"
+        class="axis"
+        x1="60"
+        y1="430"
+        x2="60"
+        y2="50"
+    />
+
+    <path
+        id="trajectory"
+        class="trajectory"
+    />
+
+    <line
+        id="vector"
+        class="vector"
+        marker-end="url(#arrowhead)"
+    />
+
+    <circle
+        id="origin"
+        class="origin"
+        cx="60"
+        cy="430"
+        r="12"
+    />
+
+    <circle
+        id="handle"
+        class="handle"
+        r="10"
+    />
+
+    <text
+        id="speedLabel"
+        class="value-label"
+    />
+
+    <text
+        id="angleLabel"
+        class="value-label"
+    />
+
+    <text
+        x="825"
+        y="420"
+        class="label"
+    >
+        x
+    </text>
+
+    <text
+        x="40"
+        y="65"
+        class="label"
+    >
+        y
+    </text>
+
+</svg>
+
+</div>
+
+<script>
+
+const canvas = document.getElementById("canvas");
+const handle = document.getElementById("handle");
+const vector = document.getElementById("vector");
+const trajectory = document.getElementById("trajectory");
+const speedLabel = document.getElementById("speedLabel");
+const angleLabel = document.getElementById("angleLabel");
+
+const originX = 60;
+const originY = 430;
+
+const maxVelocity = 100;
+const maxArrowLength = 650;
+
+let velocity = 20;
+let angle = 45;
+
+let dragging = false;
+let lastSent = 0;
+
+
+function clamp(value, min, max) {
+    return Math.max(min, Math.min(max, value));
+}
+
+
+function getPointFromPhysics() {
+
+    const normalized =
+        velocity / maxVelocity;
+
+    const length =
+        normalized * maxArrowLength;
+
+    const radians =
+        angle * Math.PI / 180;
+
+    return {
+        x: originX + length * Math.cos(radians),
+        y: originY - length * Math.sin(radians)
+    };
+}
+
+
+function updateGraphics() {
+
+    const point = getPointFromPhysics();
+
+    vector.setAttribute(
+        "x1",
+        originX
+    );
+
+    vector.setAttribute(
+        "y1",
+        originY
+    );
+
+    vector.setAttribute(
+        "x2",
+        point.x
+    );
+
+    vector.setAttribute(
+        "y2",
+        point.y
+    );
+
+    handle.setAttribute(
+        "cx",
+        point.x
+    );
+
+    handle.setAttribute(
+        "cy",
+        point.y
+    );
+
+    speedLabel.textContent =
+        velocity.toFixed(1) + " m/s";
+
+    angleLabel.textContent =
+        angle.toFixed(1) + "°";
+
+    speedLabel.setAttribute(
+        "x",
+        point.x + 15
+    );
+
+    speedLabel.setAttribute(
+        "y",
+        point.y - 15
+    );
+
+    angleLabel.setAttribute(
+        "x",
+        originX + 50
+    );
+
+    angleLabel.setAttribute(
+        "y",
+        originY - 15
+    );
+
+    drawTrajectory();
+}
+
+
+function drawTrajectory() {
+
+    const points = [];
+
+    const radians =
+        angle * Math.PI / 180;
+
+    const vx =
+        velocity * Math.cos(radians);
+
+    const vy =
+        velocity * Math.sin(radians);
+
+    const gravity = 9.81;
+
+    const totalTime =
+        (
+            vy +
+            Math.sqrt(vy * vy)
+        ) / gravity;
+
+    const scaleX = 4;
+    const scaleY = 4;
+
+    for (
+        let i = 0;
+        i <= 50;
+        i++
+    ) {
+
+        const t =
+            totalTime * i / 50;
+
+        const x =
+            originX + vx * t * scaleX;
+
+        const y =
+            originY -
+            vy * t * scaleY +
+            0.5 * gravity * t * t * scaleY;
+
+        if (
+            x >= originX &&
+            x <= 850 &&
+            y >= 50 &&
+            y <= originY
+        ) {
+            points.push(
+                `${x},${y}`
+            );
+        }
+    }
+
+    trajectory.setAttribute(
+        "d",
+        "M " + points.join(" L ")
+    );
+}
+
+
+function sendValue() {
+
+    const now =
+        performance.now();
+
+    if (
+        now - lastSent < 40
+    ) {
+        return;
+    }
+
+    lastSent = now;
+
+    Streamlit.setComponentValue({
+        velocity: Number(
+            velocity.toFixed(2)
+        ),
+        angle: Number(
+            angle.toFixed(2)
+        )
+    });
+}
+
+
+function pointerPosition(event) {
+
+    const rect =
+        canvas.getBoundingClientRect();
+
+    const scaleX =
+        900 / rect.width;
+
+    const scaleY =
+        500 / rect.height;
+
+    return {
+        x:
+            (event.clientX - rect.left)
+            * scaleX,
+
+        y:
+            (event.clientY - rect.top)
+            * scaleY
+    };
+}
+
+
+handle.addEventListener(
+    "pointerdown",
+    function(event) {
+
+        dragging = true;
+
+        handle.setPointerCapture(
+            event.pointerId
+        );
+
+        event.preventDefault();
+    }
+);
+
+
+canvas.addEventListener(
+    "pointermove",
+    function(event) {
+
+        if (!dragging) {
+            return;
+        }
+
+        const point =
+            pointerPosition(event);
+
+        let dx =
+            point.x - originX;
+
+        let dy =
+            originY - point.y;
+
+        dx = Math.max(dx, 1);
+
+        dy = Math.max(dy, 0);
+
+        const distance =
+            Math.sqrt(
+                dx * dx +
+                dy * dy
+            );
+
+        let newVelocity =
+            distance /
+            maxArrowLength *
+            maxVelocity;
+
+        newVelocity =
+            clamp(
+                newVelocity,
+                0.1,
+                maxVelocity
+            );
+
+        let newAngle =
+            Math.atan2(
+                dy,
+                dx
+            ) * 180 / Math.PI;
+
+        newAngle =
+            clamp(
+                newAngle,
+                0,
+                90
+            );
+
+        velocity =
+            newVelocity;
+
+        angle =
+            newAngle;
+
+        updateGraphics();
+
+        sendValue();
+    }
+);
+
+
+canvas.addEventListener(
+    "pointerup",
+    function(event) {
+
+        dragging = false;
+
+        try {
+            handle.releasePointerCapture(
+                event.pointerId
+            );
+        } catch (e) {}
+
+        sendValue();
+    }
+);
+
+
+canvas.addEventListener(
+    "pointercancel",
+    function() {
+        dragging = false;
+    }
+);
+
+
+function initialize(args) {
+
+    if (
+        args &&
+        typeof args.velocity === "number"
+    ) {
+        velocity =
+            clamp(
+                args.velocity,
+                0.1,
+                maxVelocity
+            );
+    }
+
+    if (
+        args &&
+        typeof args.angle === "number"
+    ) {
+        angle =
+            clamp(
+                args.angle,
+                0,
+                90
+            );
+    }
+
+    updateGraphics();
+
+    Streamlit.setFrameHeight(510);
+}
+
+
+Streamlit.events.addEventListener(
+    Streamlit.RENDER_EVENT,
+    function(event) {
+
+        initialize(
+            event.detail.args
+        );
+
+        Streamlit.setComponentReady();
+    }
+);
+
+Streamlit.setComponentReady();
+
+</script>
+
+</body>
+</html>
