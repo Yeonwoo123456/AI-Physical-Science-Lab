@@ -2,6 +2,8 @@ import math
 import streamlit as st
 import plotly.graph_objects as go
 
+from app_modules import NaturalLanguageParser, PhysicsValidator
+
 
 def projectile_experiment():
 
@@ -10,14 +12,82 @@ def projectile_experiment():
         <div class="selection-header">
             <div class="section-title">Projectile Motion</div>
             <div class="selection-description">
-                Enter the initial conditions and observe the projectile motion.
+                Describe your experiment using natural language or adjust the values manually.
             </div>
         </div>
         """,
         unsafe_allow_html=True
     )
 
-    st.markdown("### Initial Conditions")
+    st.markdown("### AI Experiment Assistant")
+
+    user_input = st.text_area(
+        "Describe your experiment",
+        placeholder=(
+            "Example: Throw a 2 kg ball at 25 m/s "
+            "from a height of 5 meters at an angle of 40 degrees."
+        ),
+        height=100,
+        key="projectile_ai_input"
+    )
+
+    if st.button(
+        "Analyze with AI",
+        use_container_width=True
+    ):
+        if not user_input.strip():
+            st.warning("Please describe your experiment first.")
+        else:
+            with st.spinner("Analyzing your experiment..."):
+                result = NaturalLanguageParser.parse(user_input)
+
+            if result.get("needs_clarification", False):
+                st.warning(
+                    result.get(
+                        "clarification_message",
+                        "More information is needed."
+                    )
+                )
+            else:
+                params = result.get("parameters", {})
+
+                validation = PhysicsValidator.validate(result)
+
+                if not validation.is_valid:
+                    for error in validation.errors:
+                        st.error(error)
+                else:
+                    st.session_state.projectile_ai_params = {
+                        "velocity": float(
+                            params.get("initial_velocity", 20.0)
+                        ),
+                        "angle": float(
+                            params.get("launch_angle", 45.0)
+                        ),
+                        "height": float(
+                            params.get("height", 0.0)
+                        ),
+                        "gravity": float(
+                            validation.validated_params.get(
+                                "gravity",
+                                9.81
+                            )
+                        ),
+                        "mass": float(
+                            params.get("mass", 1.0)
+                        )
+                    }
+
+                    st.success(
+                        "The AI converted your description into physical parameters."
+                    )
+
+    ai_params = st.session_state.get(
+        "projectile_ai_params",
+        {}
+    )
+
+    st.markdown("### Parameters")
 
     col1, col2, col3 = st.columns(3)
 
@@ -26,8 +96,11 @@ def projectile_experiment():
             "Initial Speed (m/s)",
             min_value=0.1,
             max_value=100.0,
-            value=20.0,
-            step=1.0
+            value=float(
+                ai_params.get("velocity", 20.0)
+            ),
+            step=1.0,
+            key="projectile_velocity"
         )
 
     with col2:
@@ -35,8 +108,11 @@ def projectile_experiment():
             "Launch Angle (°)",
             min_value=0.0,
             max_value=90.0,
-            value=45.0,
-            step=1.0
+            value=float(
+                ai_params.get("angle", 45.0)
+            ),
+            step=1.0,
+            key="projectile_angle"
         )
 
     with col3:
@@ -44,8 +120,11 @@ def projectile_experiment():
             "Initial Height (m)",
             min_value=0.0,
             max_value=500.0,
-            value=0.0,
-            step=1.0
+            value=float(
+                ai_params.get("height", 0.0)
+            ),
+            step=1.0,
+            key="projectile_height"
         )
 
     col1, col2 = st.columns(2)
@@ -55,8 +134,11 @@ def projectile_experiment():
             "Gravity (m/s²)",
             min_value=0.01,
             max_value=30.0,
-            value=9.81,
-            step=0.1
+            value=float(
+                ai_params.get("gravity", 9.81)
+            ),
+            step=0.1,
+            key="projectile_gravity"
         )
 
     with col2:
@@ -64,8 +146,11 @@ def projectile_experiment():
             "Mass (kg)",
             min_value=0.01,
             max_value=1000.0,
-            value=1.0,
-            step=0.1
+            value=float(
+                ai_params.get("mass", 1.0)
+            ),
+            step=0.1,
+            key="projectile_mass"
         )
 
     st.markdown("<br>", unsafe_allow_html=True)
@@ -105,8 +190,10 @@ def run_projectile_simulation(
     vy = velocity * math.sin(theta)
 
     total_time = (
-        vy + math.sqrt(
-            vy ** 2 + 2 * gravity * height
+        vy +
+        math.sqrt(
+            vy ** 2 +
+            2 * gravity * height
         )
     ) / gravity
 
@@ -132,16 +219,23 @@ def run_projectile_simulation(
         x = vx * t
 
         y = (
-            height
-            + vy * t
-            - 0.5 * gravity * t ** 2
+            height +
+            vy * t -
+            0.5 * gravity * t ** 2
         )
 
         x_values.append(x)
         y_values.append(max(0.0, y))
 
-    x_max = max(horizontal_range * 1.1, 10)
-    y_max = max(max_height * 1.15, 10)
+    x_max = max(
+        horizontal_range * 1.1,
+        10
+    )
+
+    y_max = max(
+        max_height * 1.15,
+        10
+    )
 
     fig = go.Figure()
 
@@ -230,7 +324,7 @@ def run_projectile_simulation(
                 "yanchor": "top",
                 "buttons": [
                     {
-                        "label": "▶  PLAY",
+                        "label": "PLAY",
                         "method": "animate",
                         "args": [
                             None,
@@ -260,22 +354,6 @@ def run_projectile_simulation(
         config={
             "displayModeBar": False
         }
-    )
-
-    st.markdown(
-        """
-        <style>
-        .js-plotly-plot .updatemenu-button {
-            font-size: 22px !important;
-            font-weight: 700 !important;
-        }
-
-        .js-plotly-plot .updatemenu-button rect {
-            height: 48px !important;
-        }
-        </style>
-        """,
-        unsafe_allow_html=True
     )
 
     st.markdown("### Results")
