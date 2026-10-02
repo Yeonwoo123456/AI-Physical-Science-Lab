@@ -35,6 +35,7 @@ def collision_experiment():
     col1, col2 = st.columns(2)
 
     with col1:
+
         shape1 = st.selectbox(
             "Shape",
             ["Sphere", "Cube"],
@@ -58,6 +59,7 @@ def collision_experiment():
         )
 
     with col2:
+
         shape2 = st.selectbox(
             "Shape",
             ["Sphere", "Cube"],
@@ -112,6 +114,7 @@ def collision_experiment():
         )
 
     if st.button("Back to Experiments"):
+
         for key in defaults:
             st.session_state.pop(key, None)
 
@@ -134,10 +137,13 @@ def run_collision(
     radius = 1.25
     start_distance = 12.0
     collision_distance = radius * 2
+
     start1 = -start_distance / 2
     start2 = start_distance / 2
+
     collision1 = -collision_distance / 2
     collision2 = collision_distance / 2
+
     points = 240
 
     closing_speed = velocity1 + velocity2
@@ -306,8 +312,10 @@ def run_collision(
 
         const p1 = {p1};
         const p2 = {p2};
+
         const s1 = "{shape1}";
         const s2 = "{shape2}";
+
         const SPEED = {speed};
 
         const plot = document.getElementById("plot");
@@ -317,19 +325,21 @@ def run_collision(
         function sphere(x, color, name) {{
 
             const radius = 1.25;
-            const segments = 16;
-            const rings = 10;
+            const segments = 32;
+            const rings = 20;
 
             const X = [];
             const Y = [];
             const Z = [];
+
             const I = [];
             const J = [];
             const K = [];
 
             for (let r = 0; r <= rings; r++) {{
 
-                const phi = Math.PI * r / rings;
+                const phi =
+                    Math.PI * r / rings;
 
                 for (let s = 0; s < segments; s++) {{
 
@@ -350,7 +360,8 @@ def run_collision(
                     );
 
                     Z.push(
-                        radius * Math.cos(phi)
+                        radius *
+                        Math.cos(phi)
                     );
                 }}
             }}
@@ -386,21 +397,32 @@ def run_collision(
 
             return {{
                 type: "mesh3d",
+
                 x: X,
                 y: Y,
                 z: Z,
+
                 i: I,
                 j: J,
                 k: K,
+
                 color: color,
                 opacity: 1,
                 flatshading: false,
+
                 lighting: {{
-                    ambient: 0.35,
+                    ambient: 0.4,
                     diffuse: 0.8,
-                    specular: 0.4,
-                    roughness: 0.4
+                    specular: 0.5,
+                    roughness: 0.3
                 }},
+
+                lightposition: {{
+                    x: 100,
+                    y: 100,
+                    z: 200
+                }},
+
                 name: name
             }};
         }}
@@ -411,6 +433,7 @@ def run_collision(
             const s = 1.25;
 
             return {{
+
                 type: "mesh3d",
 
                 x: [
@@ -492,13 +515,15 @@ def run_collision(
         ) {{
 
             const radius = 1.25;
-            const segments = 16;
-            const rings = 10;
+            const segments = 32;
+            const rings = 20;
+
             const X = [];
 
             for (let r = 0; r <= rings; r++) {{
 
-                const phi = Math.PI * r / rings;
+                const phi =
+                    Math.PI * r / rings;
 
                 for (let s = 0; s < segments; s++) {{
 
@@ -557,18 +582,21 @@ def run_collision(
 
 
         const data = [
+
             createObject(
                 p1[0],
                 "blue",
                 s1,
                 "Object 1"
             ),
+
             createObject(
                 p2[0],
                 "red",
                 s2,
                 "Object 2"
             )
+
         ];
 
 
@@ -583,40 +611,80 @@ def run_collision(
                 dragmode: "orbit",
 
                 camera: {{
+
                     projection: {{
                         type: "orthographic"
                     }}
+
                 }},
 
                 xaxis: {{
+
                     title: "X Position (m)",
-                    range: [{xmin}, {xmax}]
+
+                    range: [
+                        {xmin},
+                        {xmax}
+                    ],
+
+                    autorange: false
+
                 }},
 
                 yaxis: {{
+
                     title: "Y Position (m)",
-                    range: [-5, 5]
+
+                    range: [
+                        -5,
+                        5
+                    ],
+
+                    autorange: false
+
                 }},
 
                 zaxis: {{
+
                     title: "Z Position (m)",
-                    range: [-5, 5]
+
+                    range: [
+                        -5,
+                        5
+                    ],
+
+                    autorange: false
+
                 }},
 
-                aspectmode: "cube"
+                aspectmode: "manual",
+
+                aspectratio: {{
+
+                    x: 1.6,
+                    y: 1,
+                    z: 1
+
+                }}
+
             }},
 
             height: 420,
 
             margin: {{
+
                 l: 0,
                 r: 0,
                 t: 50,
                 b: 0
+
             }},
 
-            paper_bgcolor: "rgba(0,0,0,0)",
-            plot_bgcolor: "rgba(0,0,0,0)"
+            paper_bgcolor:
+                "rgba(0,0,0,0)",
+
+            plot_bgcolor:
+                "rgba(0,0,0,0)"
         }};
 
 
@@ -665,17 +733,15 @@ def run_collision(
                         s2
                     );
 
-                    if (camera) {{
-
-                        Plotly.relayout(
-                            plot,
-                            {{
-                                "scene.camera": camera
-                            }}
-                        );
-                    }}
+                    Plotly.relayout(
+                        plot,
+                        {{
+                            "scene.camera": camera
+                        }}
+                    );
 
                     play.disabled = false;
+
                     return;
                 }}
 
@@ -691,7 +757,6 @@ def run_collision(
                     p2[i],
                     s2
                 );
-
 
                 i++;
 
@@ -714,7 +779,6 @@ def run_collision(
         scrolling=False
     )
 
-
     initial_energy = (
         0.5 * mass1 * velocity1 ** 2
         + 0.5 * mass2 * velocity2 ** 2
@@ -730,6 +794,7 @@ def run_collision(
     col1, col2 = st.columns(2)
 
     with col1:
+
         st.metric(
             "Object 1 Final Velocity",
             f"{v1:.2f} m/s"
@@ -741,6 +806,7 @@ def run_collision(
         )
 
     with col2:
+
         st.metric(
             "Object 2 Final Velocity",
             f"{v2:.2f} m/s"
