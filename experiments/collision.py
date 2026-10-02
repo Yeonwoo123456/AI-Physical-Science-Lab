@@ -411,12 +411,15 @@ def run_collision(
                 i: I,
                 j: J,
                 k: K,
+
                 color:
                     color === "blue"
                         ? "#4DA3FF"
                         : "#FF5C5C",
+
                 opacity: 1,
                 flatshading: false,
+
                 lighting: {{
                     ambient: 0.55,
                     diffuse: 1.0,
@@ -424,11 +427,13 @@ def run_collision(
                     fresnel: 0.45,
                     roughness: 0.05
                 }},
+
                 lightposition: {{
                     x: 100,
                     y: 150,
                     z: 300
                 }},
+
                 name: name
             }};
         }}
@@ -797,7 +802,7 @@ def run_collision(
         0.5 * mass2 * collision_result_v2 ** 2
     )
 
-        st.markdown(
+    st.markdown(
         """
         <div style="
             text-align: center;
