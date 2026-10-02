@@ -771,6 +771,19 @@ def create_energy_graph(result):
 
 def pendulum_experiment():
 
+    if st.button(
+        "Back to Experiments",
+        key="pendulum_back_button"
+    ):
+        st.session_state.page = "select"
+        st.session_state.experiment = None
+        st.query_params.clear()
+        st.rerun()
+
+    st.subheader(
+        "Pendulum Experiment"
+    )
+
     st.title("Pendulum")
 
     st.caption(
