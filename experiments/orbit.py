@@ -282,12 +282,9 @@ initial_altitude: m
 initial_velocity: m/s
 angle_deg: degrees
 
-The user may write:
-- planet mass in kg or t
-- planet radius in m or km
-- satellite mass in kg, t, or g
-- altitude in m or km
-- velocity in m/s or km/s
+The user may describe values using:
+tonnes (t), kilograms (kg), kilometers (km), meters (m),
+kilometers per second (km/s), or meters per second (m/s).
 
 Convert all values to SI units before returning JSON.
 
@@ -296,7 +293,6 @@ Do not invent missing values.
 
 Conversions:
 1 t = 1000 kg
-1 g = 0.001 kg
 1 km = 1000 m
 1 km/s = 1000 m/s
 """
@@ -768,21 +764,6 @@ resize();
 """
 
 
-
-def convert_to_si(value, unit):
-    conversions = {
-        "kg": 1.0,
-        "t": 1000.0,
-        "g": 0.001,
-        "m": 1.0,
-        "km": 1000.0,
-        "m/s": 1.0,
-        "km/s": 1000.0,
-    }
-
-    return float(value) * conversions[unit]
-
-
 def orbit_experiment():
     st.subheader("Gravity & Orbit")
 
@@ -791,11 +772,11 @@ def orbit_experiment():
     )
 
     defaults = {
-        "planet_mass": 5.972e24,
-        "planet_radius": 6371.0,
-        "satellite_mass": 1000.0,
-        "initial_altitude": 400.0,
-        "initial_velocity": 7.67,
+        "planet_mass": 5.972e21,       # tonnes
+        "planet_radius": 6371.0,       # km
+        "satellite_mass": 1.0,         # tonnes
+        "initial_altitude": 400.0,     # km
+        "initial_velocity": 7.67,      # km/s
         "angle_deg": 90.0,
     }
 
@@ -821,165 +802,95 @@ def orbit_experiment():
 
     ai_values = st.session_state.get("orbit_ai", {})
 
+    # AI parser returns SI units, so convert them back to the UI units.
+    planet_mass_default = (
+        float(ai_values["planet_mass"]) / 1000.0
+        if ai_values.get("planet_mass") is not None
+        else defaults["planet_mass"]
+    )
+
+    planet_radius_default = (
+        float(ai_values["planet_radius"]) / 1000.0
+        if ai_values.get("planet_radius") is not None
+        else defaults["planet_radius"]
+    )
+
+    satellite_mass_default = (
+        float(ai_values["satellite_mass"]) / 1000.0
+        if ai_values.get("satellite_mass") is not None
+        else defaults["satellite_mass"]
+    )
+
+    altitude_default = (
+        float(ai_values["initial_altitude"]) / 1000.0
+        if ai_values.get("initial_altitude") is not None
+        else defaults["initial_altitude"]
+    )
+
+    velocity_default = (
+        float(ai_values["initial_velocity"]) / 1000.0
+        if ai_values.get("initial_velocity") is not None
+        else defaults["initial_velocity"]
+    )
+
+    angle_default = (
+        float(ai_values["angle_deg"])
+        if ai_values.get("angle_deg") is not None
+        else defaults["angle_deg"]
+    )
+
     st.markdown("### Parameters")
 
     c1, c2, c3 = st.columns(3)
 
     with c1:
-        planet_mass_value = st.number_input(
-            "Planet Mass",
+        planet_mass_t = st.number_input(
+            "Planet Mass (t)",
             min_value=1.0,
-            value=float(
-                ai_values.get("planet_mass")
-                if ai_values.get("planet_mass") is not None
-                else defaults["planet_mass"]
-            ),
+            value=planet_mass_default,
             format="%.4e",
         )
 
-        planet_mass_unit = st.selectbox(
-            "Planet Mass Unit",
-            ["kg", "t"],
-            index=0,
-        )
-
-        planet_radius_value = st.number_input(
-            "Planet Radius",
+        planet_radius_km = st.number_input(
+            "Planet Radius (km)",
             min_value=1.0,
-            value=float(
-                ai_values.get("planet_radius") / 1000.0
-                if ai_values.get("planet_radius") is not None
-                else defaults["planet_radius"]
-            ),
-        )
-
-        planet_radius_unit = st.selectbox(
-            "Planet Radius Unit",
-            ["km", "m"],
-            index=0,
+            value=planet_radius_default,
         )
 
     with c2:
-        satellite_mass_value = st.number_input(
-            "Satellite Mass",
+        satellite_mass_t = st.number_input(
+            "Satellite Mass (t)",
             min_value=0.001,
-            value=float(
-                ai_values.get("satellite_mass") / 1000.0
-                if ai_values.get("satellite_mass") is not None
-                else 1.0
-            ),
+            value=satellite_mass_default,
         )
 
-        satellite_mass_unit = st.selectbox(
-            "Satellite Mass Unit",
-            ["kg", "t", "g"],
-            index=1,
-        )
-
-        altitude_value = st.number_input(
-            "Initial Altitude",
+        initial_altitude_km = st.number_input(
+            "Initial Altitude (km)",
             min_value=0.0,
-            value=float(
-                ai_values.get("initial_altitude") / 1000.0
-                if ai_values.get("initial_altitude") is not None
-                else defaults["initial_altitude"]
-            ),
-        )
-
-        altitude_unit = st.selectbox(
-            "Initial Altitude Unit",
-            ["km", "m"],
-            index=0,
+            value=altitude_default,
         )
 
     with c3:
-        velocity_value = st.number_input(
-            "Initial Velocity",
+        initial_velocity_kms = st.number_input(
+            "Initial Velocity (km/s)",
             min_value=0.0,
-            value=float(
-                ai_values.get("initial_velocity") / 1000.0
-                if ai_values.get("initial_velocity") is not None
-                else defaults["initial_velocity"]
-            ),
-        )
-
-        velocity_unit = st.selectbox(
-            "Initial Velocity Unit",
-            ["km/s", "m/s"],
-            index=0,
+            value=velocity_default,
         )
 
         angle_deg = st.slider(
             "Velocity Direction (degrees)",
             min_value=0.0,
             max_value=360.0,
-            value=float(
-                ai_values.get("angle_deg")
-                if ai_values.get("angle_deg") is not None
-                else defaults["angle_deg"]
-            ),
+            value=angle_default,
             step=1.0,
         )
 
-    # Convert every selected input to SI units before the physics engine.
-    planet_mass_si = convert_to_si(
-        planet_mass_value,
-        planet_mass_unit,
-    )
-
-    planet_radius_si = convert_to_si(
-        planet_radius_value,
-        planet_radius_unit,
-    )
-
-    satellite_mass_si = convert_to_si(
-        satellite_mass_value,
-        satellite_mass_unit,
-    )
-
-    altitude_si = convert_to_si(
-        altitude_value,
-        altitude_unit,
-    )
-
-    velocity_si = convert_to_si(
-        velocity_value,
-        velocity_unit,
-    )
-
-    st.markdown("### SI Values Used by Physics Engine")
-
-    si1, si2, si3, si4, si5 = st.columns(5)
-
-    with si1:
-        st.metric(
-            "Planet Mass",
-            f"{planet_mass_si:.4e} kg",
-        )
-
-    with si2:
-        st.metric(
-            "Planet Radius",
-            f"{planet_radius_si:.3e} m",
-        )
-
-    with si3:
-        st.metric(
-            "Satellite Mass",
-            f"{satellite_mass_si:.3e} kg",
-        )
-
-    with si4:
-        st.metric(
-            "Altitude",
-            f"{altitude_si:.3e} m",
-        )
-
-    with si5:
-        st.metric(
-            "Velocity",
-            f"{velocity_si:.3e} m/s",
-        )
+    # Convert fixed UI units to SI units for the physics engine.
+    planet_mass_si = planet_mass_t * 1000.0
+    planet_radius_si = planet_radius_km * 1000.0
+    satellite_mass_si = satellite_mass_t * 1000.0
+    initial_altitude_si = initial_altitude_km * 1000.0
+    initial_velocity_si = initial_velocity_kms * 1000.0
 
     st.markdown("### Experiment Duration")
 
@@ -1007,8 +918,8 @@ def orbit_experiment():
                 planet_mass=planet_mass_si,
                 planet_radius=planet_radius_si,
                 satellite_mass=satellite_mass_si,
-                initial_altitude=altitude_si,
-                initial_velocity=velocity_si,
+                initial_altitude=initial_altitude_si,
+                initial_velocity=initial_velocity_si,
                 angle_deg=angle_deg,
                 duration=float(duration),
                 dt=float(dt),
@@ -1048,19 +959,19 @@ def orbit_experiment():
         with m2:
             st.metric(
                 "Circular Velocity",
-                f'{result["circular_velocity"]:.1f} m/s',
+                f'{result["circular_velocity"] / 1000:.2f} km/s',
             )
 
         with m3:
             st.metric(
                 "Escape Velocity",
-                f'{result["escape_velocity"]:.1f} m/s',
+                f'{result["escape_velocity"] / 1000:.2f} km/s',
             )
 
         with m4:
             st.metric(
                 "Final Speed",
-                f'{result["speed"][-1]:.1f} m/s',
+                f'{result["speed"][-1] / 1000:.2f} km/s',
             )
 
         st.markdown("### Energy")
