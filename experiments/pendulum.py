@@ -152,90 +152,21 @@ def create_pendulum_figure(result):
 
         x = result["x"][i]
         y = result["y"][i]
+
         angle = result["angle"][i]
         omega = result["angular_velocity"][i]
 
         vx = (
             omega
             * length
-            * math.cos(
-                math.radians(angle)
-            )
+            * math.cos(math.radians(angle))
         )
 
         vy = (
             -omega
             * length
-            * math.sin(
-                math.radians(angle)
-            )
+            * math.sin(math.radians(angle))
         )
-
-        metric_index = round(
-            result["time"][i] / 0.5
-        ) * 50
-
-        metric_index = min(
-            metric_index,
-            len(result["time"]) - 1
-        )
-
-        annotations = [
-            dict(
-                x=0.01,
-                y=0.98,
-                xref="paper",
-                yref="paper",
-                text=(
-                    f"Time: "
-                    f"{result['time'][metric_index]:.2f} s"
-                ),
-                showarrow=False,
-                font=dict(
-                    size=16,
-                    color="white"
-                )
-            ),
-            dict(
-                x=0.02,
-                y=0.91,
-                xref="paper",
-                yref="paper",
-                text=(
-                    f"Angle: "
-                    f"{result['angle'][metric_index]:.2f}°"
-                    f"　 "
-                    f"Angular Velocity: "
-                    f"{result['angular_velocity'][metric_index]:.2f} rad/s"
-                    f"　 "
-                    f"Velocity: "
-                    f"{result['velocity'][metric_index]:.2f} m/s"
-                ),
-                showarrow=False,
-                font=dict(
-                    size=13,
-                    color="white"
-                )
-            ),
-            dict(
-                x=0.02,
-                y=0.85,
-                xref="paper",
-                yref="paper",
-                text=(
-                    f"Tension: "
-                    f"{result['tension'][metric_index]:.2f} N"
-                    f"　 "
-                    f"Total Energy: "
-                    f"{result['total_energy'][metric_index]:.2f} J"
-                ),
-                showarrow=False,
-                font=dict(
-                    size=13,
-                    color="white"
-                )
-            )
-        ]
 
         frames.append(
             go.Frame(
@@ -272,10 +203,7 @@ def create_pendulum_figure(result):
                         ]
                     )
                 ],
-                traces=[1, 3, 4],
-                layout=go.Layout(
-                    annotations=annotations
-                )
+                traces=[1, 3, 4]
             )
         )
 
@@ -409,14 +337,7 @@ def create_pendulum_figure(result):
                 backgroundcolor="#0d1117",
                 gridcolor="#30363d"
             ),
-            aspectmode="cube",
-            camera=dict(
-                eye=dict(
-                    x=1.4,
-                    y=1.4,
-                    z=0.9
-                )
-            )
+            aspectmode="cube"
         ),
 
         updatemenus=[
@@ -443,22 +364,6 @@ def create_pendulum_figure(result):
                                 ),
                                 fromcurrent=False,
                                 mode="immediate"
-                            )
-                        ]
-                    ),
-                    dict(
-                        label="⏹ Stop",
-                        method="animate",
-                        args=[
-                            [None],
-                            dict(
-                                frame=dict(
-                                    duration=0,
-                                    redraw=False
-                                ),
-                                transition=dict(
-                                    duration=0
-                                )
                             )
                         ]
                     )
