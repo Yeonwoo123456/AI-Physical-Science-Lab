@@ -233,7 +233,7 @@ body {
 #wrap {
     border: 2px solid #FFFFFF;
     border-radius: 10px;
-    overflow: hidden;
+    overflow: visible;
     background: #0E1117;
 }
 #canvas {
@@ -788,7 +788,7 @@ def friction_experiment():
                 np.array([0.0]),
                 max_static
             ),
-            height=590,
+            height=700,
             scrolling=False
         )
 
@@ -813,7 +813,7 @@ def friction_experiment():
                 net_force,
                 result["max_static_friction"]
             ),
-            height=590,
+            height=700,
             scrolling=False
         )
 
