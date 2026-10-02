@@ -8,10 +8,6 @@ import plotly.graph_objects as go
 from app_modules import client
 
 
-# =========================================================
-# 1. Spring Simulation
-# =========================================================
-
 @st.cache_data
 def simulate_spring(
     mass,
@@ -22,14 +18,6 @@ def simulate_spring(
     duration=10.0,
     dt=0.02
 ):
-    """
-    Damped spring-mass simulation.
-
-    Physics:
-        F = -kx
-        a = -kx/m - damping*v
-    """
-
     n = int(duration / dt) + 1
 
     time = np.linspace(
@@ -67,7 +55,6 @@ def simulate_spring(
         - damping * v[-1]
     )
 
-    # Energy
     kinetic_energy = (
         0.5
         * mass
@@ -95,10 +82,6 @@ def simulate_spring(
         total_energy
     )
 
-
-# =========================================================
-# 2. AI Parser
-# =========================================================
 
 def parse_ai_spring(user_text):
 
@@ -163,10 +146,6 @@ If a value is not explicitly given, return null.
     except Exception:
         data = {}
 
-    # -----------------------------------------------------
-    # Explicit numerical overrides
-    # -----------------------------------------------------
-
     patterns = {
 
         "mass": [
@@ -214,10 +193,6 @@ If a value is not explicitly given, return null.
 
     return data
 
-
-# =========================================================
-# 3. 3D Geometry Helpers
-# =========================================================
 
 def create_box(
     center_x,
@@ -309,7 +284,6 @@ def create_cylinder_z(
     y = []
     z = []
 
-    # Bottom
     for t in theta:
         x.append(
             center_x + radius * np.cos(t)
@@ -321,7 +295,6 @@ def create_cylinder_z(
             center_z - height / 2
         )
 
-    # Top
     for t in theta:
         x.append(
             center_x + radius * np.cos(t)
@@ -345,7 +318,6 @@ def create_cylinder_z(
 
         nxt = (n + 1) % segments
 
-        # Side
         faces_i.append(n)
         faces_j.append(nxt)
         faces_k.append(
@@ -371,10 +343,6 @@ def create_cylinder_z(
     )
 
 
-# =========================================================
-# 4. Spring Coil
-# =========================================================
-
 def create_spring_coil(
     start_z,
     end_z,
@@ -382,10 +350,6 @@ def create_spring_coil(
     turns=12,
     tube_radius=0.035
 ):
-
-    length = abs(
-        end_z - start_z
-    )
 
     points_per_turn = 12
 
@@ -409,10 +373,6 @@ def create_spring_coil(
     x = radius * np.cos(theta)
     y = radius * np.sin(theta)
 
-    # -----------------------------------------------------
-    # Use a simple line instead of expensive tube geometry
-    # -----------------------------------------------------
-
     return go.Scatter3d(
         x=x,
         y=y,
@@ -423,10 +383,6 @@ def create_spring_coil(
         )
     )
 
-
-# =========================================================
-# 5. Spring 3D Figure
-# =========================================================
 
 def create_spring_figure(
     displacement,
@@ -447,10 +403,6 @@ def create_spring_figure(
 
     fig = go.Figure()
 
-    # -----------------------------------------------------
-    # Ceiling
-    # -----------------------------------------------------
-
     fig.add_trace(
         create_box(
             0,
@@ -461,10 +413,6 @@ def create_spring_figure(
             0.35
         )
     )
-
-    # -----------------------------------------------------
-    # Mount
-    # -----------------------------------------------------
 
     fig.add_trace(
         create_box(
@@ -477,10 +425,6 @@ def create_spring_figure(
         )
     )
 
-    # -----------------------------------------------------
-    # Spring
-    # -----------------------------------------------------
-
     fig.add_trace(
         create_spring_coil(
             spring_start,
@@ -489,10 +433,6 @@ def create_spring_figure(
             turns=12
         )
     )
-
-    # -----------------------------------------------------
-    # Mass
-    # -----------------------------------------------------
 
     fig.add_trace(
         create_cylinder_z(
@@ -504,10 +444,6 @@ def create_spring_figure(
             segments=16
         )
     )
-
-    # -----------------------------------------------------
-    # Reference line
-    # -----------------------------------------------------
 
     fig.add_trace(
         go.Scatter3d(
@@ -589,35 +525,11 @@ def create_spring_figure(
     return fig
 
 
-# =========================================================
-# 6. Spring Experiment
-# =========================================================
-
 def spring_experiment():
-
-    # -----------------------------------------------------
-    # Back button
-    # -----------------------------------------------------
-
-    if st.button(
-        "Back to Experiments",
-        key="spring_back_button"
-    ):
-
-        st.session_state.page = "select"
-        st.session_state.experiment = None
-
-        st.query_params.clear()
-
-        st.rerun()
 
     st.subheader(
         "Spring Experiment"
     )
-
-    # -----------------------------------------------------
-    # Session defaults
-    # -----------------------------------------------------
 
     defaults = {
         "spring_mass": 1.0,
@@ -631,10 +543,6 @@ def spring_experiment():
 
         if key not in st.session_state:
             st.session_state[key] = value
-
-    # -----------------------------------------------------
-    # AI Input
-    # -----------------------------------------------------
 
     st.markdown(
         "### Describe Your Experiment"
@@ -685,10 +593,6 @@ def spring_experiment():
             st.success(
                 "Experiment parameters updated."
             )
-
-    # -----------------------------------------------------
-    # Manual Controls
-    # -----------------------------------------------------
 
     st.markdown(
         "### Parameters"
@@ -749,10 +653,6 @@ def spring_experiment():
             key="spring_damping_input"
         )
 
-    # -----------------------------------------------------
-    # Simulate
-    # -----------------------------------------------------
-
     if st.button(
         "Run Experiment",
         type="primary",
@@ -775,9 +675,27 @@ def spring_experiment():
             damping
         )
 
-        # =================================================
-        # Metrics
-        # =================================================
+        st.session_state.spring_result = (
+            time,
+            x,
+            velocity,
+            acceleration,
+            kinetic_energy,
+            elastic_energy,
+            total_energy
+        )
+
+    if "spring_result" in st.session_state:
+
+        (
+            time,
+            x,
+            velocity,
+            acceleration,
+            kinetic_energy,
+            elastic_energy,
+            total_energy
+        ) = st.session_state.spring_result
 
         col1, col2, col3 = st.columns(3)
 
@@ -799,19 +717,14 @@ def spring_experiment():
                 f"{np.max(total_energy):.3f} J"
             )
 
-        # =================================================
-        # 3D Animation
-        # =================================================
-
         st.markdown(
             "### 3D Spring"
         )
 
-        # Only 40 frames instead of ~100
         frame_indices = np.linspace(
             0,
             len(time) - 1,
-            40,
+            100,
             dtype=int
         )
 
@@ -841,29 +754,22 @@ def spring_experiment():
             updatemenus=[
                 {
                     "type": "buttons",
-
                     "showactive": False,
-
                     "buttons": [
                         {
                             "label": "▶ Play",
-
                             "method": "animate",
-
                             "args": [
                                 None,
                                 {
                                     "frame": {
-                                        "duration": 250,
+                                        "duration": 100,
                                         "redraw": True
                                     },
-
                                     "transition": {
                                         "duration": 0
                                     },
-
                                     "fromcurrent": True,
-
                                     "mode": "immediate"
                                 }
                             ]
@@ -878,10 +784,6 @@ def spring_experiment():
             use_container_width=True,
             key="spring_3d"
         )
-
-        # =================================================
-        # Displacement Graph
-        # =================================================
 
         st.markdown(
             "### Displacement vs Time"
@@ -910,13 +812,8 @@ def spring_experiment():
             key="spring_displacement_graph"
         )
 
-        # =================================================
-        # Energy Graph
-        # =================================================
-
         st.markdown(
             "### Energy"
-
         )
 
         energy_fig = go.Figure()
@@ -959,3 +856,83 @@ def spring_experiment():
             use_container_width=True,
             key="spring_energy_graph"
         )
+
+    else:
+
+        st.info(
+            "Set the parameters and run the experiment."
+        )
+
+    st.divider()
+
+    if st.button(
+        "← Back to Experiments",
+        key="spring_back_bottom"
+    ):
+
+        st.session_state.page = "select"
+        st.session_state.experiment = None
+
+        st.session_state.pop(
+            "spring_result",
+            None
+        )
+
+        st.session_state.pop(
+            "spring_ai_input",
+            None
+        )
+
+        st.session_state.pop(
+            "spring_mass_input",
+            None
+        )
+
+        st.session_state.pop(
+            "spring_k_input",
+            None
+        )
+
+        st.session_state.pop(
+            "spring_displacement_input",
+            None
+        )
+
+        st.session_state.pop(
+            "spring_gravity_input",
+            None
+        )
+
+        st.session_state.pop(
+            "spring_damping_input",
+            None
+        )
+
+        st.session_state.pop(
+            "spring_mass",
+            None
+        )
+
+        st.session_state.pop(
+            "spring_k",
+            None
+        )
+
+        st.session_state.pop(
+            "spring_displacement",
+            None
+        )
+
+        st.session_state.pop(
+            "spring_gravity",
+            None
+        )
+
+        st.session_state.pop(
+            "spring_damping",
+            None
+        )
+
+        st.query_params.clear()
+
+        st.rerun()
