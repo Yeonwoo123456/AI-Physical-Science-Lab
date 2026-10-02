@@ -8,10 +8,6 @@ import plotly.graph_objects as go
 from app_modules import client
 
 
-# =========================================================
-# 1. Spring Simulation
-# =========================================================
-
 @st.cache_data
 def simulate_spring(
     mass,
@@ -38,26 +34,85 @@ def simulate_spring(
     x[0] = initial_displacement
     v[0] = 0.0
 
-    for i in range(n - 1):
+    def acceleration(position, velocity):
 
-        a[i] = (
-            -k * x[i] / mass
-            - damping * v[i]
+        return (
+            gravity
+            - (k * position / mass)
+            - damping * velocity
         )
 
-        v[i + 1] = (
-            v[i]
-            + a[i] * dt
+    for i in range(n - 1):
+
+        xi = x[i]
+        vi = v[i]
+
+        k1_x = vi
+        k1_v = acceleration(
+            xi,
+            vi
+        )
+
+        k2_x = (
+            vi
+            + 0.5 * dt * k1_v
+        )
+
+        k2_v = acceleration(
+            xi + 0.5 * dt * k1_x,
+            vi + 0.5 * dt * k1_v
+        )
+
+        k3_x = (
+            vi
+            + 0.5 * dt * k2_v
+        )
+
+        k3_v = acceleration(
+            xi + 0.5 * dt * k2_x,
+            vi + 0.5 * dt * k2_v
+        )
+
+        k4_x = (
+            vi
+            + dt * k3_v
+        )
+
+        k4_v = acceleration(
+            xi + dt * k3_x,
+            vi + dt * k3_v
         )
 
         x[i + 1] = (
-            x[i]
-            + v[i] * dt
+            xi
+            + (dt / 6.0)
+            * (
+                k1_x
+                + 2 * k2_x
+                + 2 * k3_x
+                + k4_x
+            )
         )
 
-    a[-1] = (
-        -k * x[-1] / mass
-        - damping * v[-1]
+        v[i + 1] = (
+            vi
+            + (dt / 6.0)
+            * (
+                k1_v
+                + 2 * k2_v
+                + 2 * k3_v
+                + k4_v
+            )
+        )
+
+        a[i] = acceleration(
+            x[i],
+            v[i]
+        )
+
+    a[-1] = acceleration(
+        x[-1],
+        v[-1]
     )
 
     kinetic_energy = (
@@ -72,9 +127,16 @@ def simulate_spring(
         * x ** 2
     )
 
+    gravitational_energy = (
+        -mass
+        * gravity
+        * x
+    )
+
     total_energy = (
         kinetic_energy
         + elastic_energy
+        + gravitational_energy
     )
 
     return (
@@ -87,10 +149,6 @@ def simulate_spring(
         total_energy
     )
 
-
-# =========================================================
-# 2. AI Parser
-# =========================================================
 
 def parse_ai_spring(user_text):
 
@@ -131,8 +189,8 @@ Do NOT guess missing values.
 If a value is not explicitly given, return null.
 
 If the user says:
-- "compress" or "압축" → displacement should be negative.
-- "stretch", "pull", "당겨", or "늘려" → displacement should be positive.
+- compress or 압축: displacement is negative.
+- stretch, pull, 당겨, or 늘려: displacement is positive.
 """
 
     try:
@@ -169,24 +227,24 @@ If the user says:
     patterns = {
 
         "mass": [
-            r"(\d+(?:\.\d+)?)\s*(?:kg|킬로그램)"
+            r"([-+]?\d+(?:\.\d+)?)\s*(?:kg|킬로그램)"
         ],
 
         "k": [
-            r"(\d+(?:\.\d+)?)\s*(?:N/m|n/m)"
+            r"([-+]?\d+(?:\.\d+)?)\s*(?:N/m|n/m)"
         ],
 
         "displacement": [
-            r"(\d+(?:\.\d+)?)\s*(?:m|미터)"
+            r"([-+]?\d+(?:\.\d+)?)\s*(?:m|미터)(?!\s*/)"
         ],
 
         "gravity": [
-            r"(\d+(?:\.\d+)?)\s*(?:m/s\^?2|m/s²)"
+            r"([-+]?\d+(?:\.\d+)?)\s*(?:m/s\^?2|m/s²)"
         ],
 
         "damping": [
             r"(?:damping|감쇠)\s*(?:=|은|는)?\s*"
-            r"(\d+(?:\.\d+)?)"
+            r"([-+]?\d+(?:\.\d+)?)"
         ]
     }
 
@@ -234,10 +292,6 @@ If the user says:
     return data
 
 
-# =========================================================
-# 3. 3D Geometry Helpers
-# =========================================================
-
 def create_box(
     center_x,
     center_y,
@@ -270,19 +324,14 @@ def create_box(
     faces = [
         (0, 1, 2),
         (0, 2, 3),
-
         (4, 5, 6),
         (4, 6, 7),
-
         (0, 1, 5),
         (0, 5, 4),
-
         (1, 2, 6),
         (1, 6, 5),
-
         (2, 3, 7),
         (2, 7, 6),
-
         (3, 0, 4),
         (3, 4, 7)
     ]
@@ -398,10 +447,6 @@ def create_cylinder_z(
     )
 
 
-# =========================================================
-# 4. Spring Coil
-# =========================================================
-
 def create_spring_coil(
     start_z,
     end_z,
@@ -447,13 +492,9 @@ def create_spring_coil(
     )
 
 
-# =========================================================
-# 5. Spring 3D Figure
-# =========================================================
-
 def create_spring_figure(
     displacement,
-    spring_length=2.65
+    natural_length=1.8
 ):
 
     ceiling_z = 1.8
@@ -463,15 +504,20 @@ def create_spring_figure(
     mass_height = 0.45
     mass_radius = 0.32
 
-    equilibrium_mass_center = (
-        spring_start
-        - spring_length
-        - mass_height / 2
+    current_spring_length = (
+        natural_length
+        + displacement
+    )
+
+    current_spring_length = max(
+        current_spring_length,
+        0.4
     )
 
     mass_center = (
-        equilibrium_mass_center
-        - displacement
+        spring_start
+        - current_spring_length
+        - mass_height / 2
     )
 
     spring_end = (
@@ -480,8 +526,6 @@ def create_spring_figure(
     )
 
     fig = go.Figure()
-
-    # Ceiling
 
     fig.add_trace(
         create_box(
@@ -494,8 +538,6 @@ def create_spring_figure(
         )
     )
 
-    # Mount
-
     fig.add_trace(
         create_box(
             0,
@@ -507,8 +549,6 @@ def create_spring_figure(
         )
     )
 
-    # Spring
-
     fig.add_trace(
         create_spring_coil(
             spring_start,
@@ -517,8 +557,6 @@ def create_spring_figure(
             turns=12
         )
     )
-
-    # Mass
 
     fig.add_trace(
         create_cylinder_z(
@@ -530,8 +568,6 @@ def create_spring_figure(
             segments=16
         )
     )
-
-    # Reference line
 
     fig.add_trace(
         go.Scatter3d(
@@ -614,19 +650,11 @@ def create_spring_figure(
     return fig
 
 
-# =========================================================
-# 6. Spring Experiment
-# =========================================================
-
 def spring_experiment():
 
     st.subheader(
         "Spring Experiment"
     )
-
-    # =====================================================
-    # Session Defaults
-    # =====================================================
 
     defaults = {
 
@@ -649,39 +677,18 @@ def spring_experiment():
 
             st.session_state[key] = value
 
-    # =====================================================
-    # AI Assistant
-    # =====================================================
-
     st.markdown(
         "### AI Assistant"
     )
 
-    with st.chat_message("assistant"):
-
-        st.markdown(
-            """
-You can describe your spring experiment naturally.
-
-For example:
-
-**User:**  
-"질량 2kg인 물체를 스프링 상수 50 N/m인 스프링에 0.3m 당겨서 놓아줘."
-
-You can also specify values such as:
-
-- Mass: kg
-- Spring constant: N/m
-- Displacement: m
-- Gravity: m/s²
-- Damping: numerical coefficient
-
-I will extract the values and apply them to the experiment.
-"""
-        )
-
-    ai_text = st.text_input(
+    ai_text = st.text_area(
         "Describe your experiment",
+        placeholder=(
+            "Example: A 1 kg mass is attached to a spring "
+            "with a spring constant of 50 N/m and pulled "
+            "0.3 m before being released."
+        ),
+        height=100,
         key="spring_ai_input"
     )
 
@@ -731,10 +738,6 @@ I will extract the values and apply them to the experiment.
             )
 
             st.rerun()
-
-    # =====================================================
-    # Manual Controls
-    # =====================================================
 
     st.markdown(
         "### Parameters"
@@ -795,10 +798,6 @@ I will extract the values and apply them to the experiment.
             key="spring_damping_input"
         )
 
-    # =====================================================
-    # Run Experiment
-    # =====================================================
-
     if st.button(
         "Run Experiment",
         type="primary",
@@ -815,10 +814,6 @@ I will extract the values and apply them to the experiment.
             )
         )
 
-    # =====================================================
-    # Results
-    # =====================================================
-
     if st.session_state.spring_result is not None:
 
         (
@@ -830,10 +825,6 @@ I will extract the values and apply them to the experiment.
             elastic_energy,
             total_energy
         ) = st.session_state.spring_result
-
-        # =================================================
-        # Metrics
-        # =================================================
 
         col1, col2, col3 = st.columns(3)
 
@@ -857,10 +848,6 @@ I will extract the values and apply them to the experiment.
                 "Maximum Energy",
                 f"{np.max(total_energy):.3f} J"
             )
-
-        # =================================================
-        # 3D Animation
-        # =================================================
 
         st.markdown(
             "### 3D Spring"
@@ -941,10 +928,6 @@ I will extract the values and apply them to the experiment.
             key="spring_3d"
         )
 
-        # =================================================
-        # Displacement Graph
-        # =================================================
-
         st.markdown(
             "### Displacement vs Time"
         )
@@ -971,10 +954,6 @@ I will extract the values and apply them to the experiment.
             use_container_width=True,
             key="spring_displacement_graph"
         )
-
-        # =================================================
-        # Energy Graph
-        # =================================================
 
         st.markdown(
             "### Energy"
@@ -1020,10 +999,6 @@ I will extract the values and apply them to the experiment.
             use_container_width=True,
             key="spring_energy_graph"
         )
-
-    # =====================================================
-    # Back Button
-    # =====================================================
 
     st.divider()
 
