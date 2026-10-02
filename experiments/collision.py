@@ -295,12 +295,12 @@ def run_collision(
         scene=dict(
 
             xaxis=dict(
-                title="X Position (m)",
-                range=[
-                    -10,
-                    10
-                ]
-            ),
+    title="X Position (m)",
+    range=[
+        min(positions1 + positions2) - 3,
+        max(positions1 + positions2) + 3
+    ]
+),
 
             yaxis=dict(
                 title="Y Position (m)",
