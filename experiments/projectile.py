@@ -1,6 +1,9 @@
 import math
+
 import streamlit as st
 import plotly.graph_objects as go
+
+from components.vector_controller import vector_controller
 
 
 def projectile_experiment():
@@ -10,52 +13,124 @@ def projectile_experiment():
         <div class="selection-header">
             <div class="section-title">Projectile Motion</div>
             <div class="selection-description">
-                Explore how speed, angle, height, and gravity affect projectile motion.
+                Drag the arrow to adjust the launch speed and angle.
             </div>
         </div>
         """,
         unsafe_allow_html=True
     )
 
-    left, right = st.columns(2)
+    if "projectile_velocity" not in st.session_state:
+        st.session_state.projectile_velocity = 20.0
 
-    with left:
+    if "projectile_angle" not in st.session_state:
+        st.session_state.projectile_angle = 45.0
+
+    st.markdown(
+        "### Launch Vector"
+    )
+
+    result = vector_controller(
+        velocity=st.session_state.projectile_velocity,
+        angle=st.session_state.projectile_angle,
+        key="projectile_vector"
+    )
+
+    if result is not None:
+
+        new_velocity = result.get(
+            "velocity",
+            st.session_state.projectile_velocity
+        )
+
+        new_angle = result.get(
+            "angle",
+            st.session_state.projectile_angle
+        )
+
+        st.session_state.projectile_velocity = new_velocity
+        st.session_state.projectile_angle = new_angle
+
+    st.markdown(
+        "### Parameters"
+    )
+
+    col1, col2, col3 = st.columns(3)
+
+    with col1:
+
         velocity = st.number_input(
             "Initial Speed (m/s)",
-            min_value=0.0,
-            value=20.0,
-            step=1.0
+            min_value=0.1,
+            max_value=100.0,
+            value=float(
+                st.session_state.projectile_velocity
+            ),
+            step=1.0,
+            key="projectile_velocity_input"
         )
 
+    with col2:
+
         angle = st.number_input(
-            "Launch Angle (degrees)",
+            "Launch Angle (°)",
             min_value=0.0,
             max_value=90.0,
-            value=45.0,
-            step=1.0
+            value=float(
+                st.session_state.projectile_angle
+            ),
+            step=1.0,
+            key="projectile_angle_input"
         )
+
+    with col3:
 
         height = st.number_input(
             "Initial Height (m)",
             min_value=0.0,
+            max_value=500.0,
             value=0.0,
             step=1.0
         )
 
-    with right:
+    col1, col2 = st.columns(2)
+
+    with col1:
+
         gravity = st.number_input(
             "Gravity (m/s²)",
             min_value=0.01,
+            max_value=30.0,
             value=9.81,
             step=0.1
         )
 
+    with col2:
+
         mass = st.number_input(
             "Mass (kg)",
             min_value=0.01,
+            max_value=1000.0,
             value=1.0,
             step=0.1
         )
+
+    if (
+        abs(
+            velocity -
+            st.session_state.projectile_velocity
+        ) > 0.001
+        or
+        abs(
+            angle -
+            st.session_state.projectile_angle
+        ) > 0.001
+    ):
+
+        st.session_state.projectile_velocity = velocity
+        st.session_state.projectile_angle = angle
+
+        st.rerun()
 
     st.markdown("<br>", unsafe_allow_html=True)
 
@@ -64,9 +139,10 @@ def projectile_experiment():
         type="primary",
         use_container_width=True
     ):
-        run_projectile_simulation(
-            velocity,
-            angle,
+
+        run_simulation(
+            st.session_state.projectile_velocity,
+            st.session_state.projectile_angle,
             height,
             gravity,
             mass
@@ -75,47 +151,62 @@ def projectile_experiment():
     st.markdown("<br>", unsafe_allow_html=True)
 
     if st.button("Back to Experiments"):
+
         st.session_state.page = "select"
+
         st.query_params.clear()
+
         st.rerun()
 
 
-def run_projectile_simulation(
+def run_simulation(
     velocity,
     angle,
     height,
     gravity,
     mass
 ):
-    angle_rad = math.radians(angle)
 
-    vx0 = velocity * math.cos(angle_rad)
-    vy0 = velocity * math.sin(angle_rad)
+    theta = math.radians(angle)
 
-    # Time until the projectile reaches the ground.
+    vx = (
+        velocity *
+        math.cos(theta)
+    )
+
+    vy = (
+        velocity *
+        math.sin(theta)
+    )
+
     total_time = (
-        vy0 + math.sqrt(
-            vy0 ** 2 + 2 * gravity * height
+        vy +
+        math.sqrt(
+            vy ** 2 +
+            2 * gravity * height
         )
     ) / gravity
 
-    # Time required to reach maximum height.
-    time_to_peak = vy0 / gravity
-
-    # Maximum height.
-    max_height = (
-        height +
-        (vy0 ** 2) / (2 * gravity)
+    time_to_peak = (
+        vy / gravity
     )
 
-    # Horizontal range.
-    horizontal_range = vx0 * total_time
+    max_height = (
+        height +
+        vy ** 2 /
+        (2 * gravity)
+    )
 
-    # Generate trajectory points.
-    point_count = 200
+    horizontal_range = (
+        vx *
+        total_time
+    )
+
+    point_count = 250
 
     times = [
-        total_time * i / (point_count - 1)
+        total_time * i /
+        (point_count - 1)
         for i in range(point_count)
     ]
 
@@ -123,14 +214,22 @@ def run_projectile_simulation(
     y_values = []
 
     for t in times:
-        x = vx0 * t
-        y = height + vy0 * t - 0.5 * gravity * t ** 2
+
+        x = vx * t
+
+        y = (
+            height +
+            vy * t -
+            0.5 *
+            gravity *
+            t ** 2
+        )
 
         if y >= 0:
+
             x_values.append(x)
             y_values.append(y)
 
-    # Create trajectory graph.
     fig = go.Figure()
 
     fig.add_trace(
@@ -138,29 +237,33 @@ def run_projectile_simulation(
             x=x_values,
             y=y_values,
             mode="lines",
-            name="Trajectory"
+            name="Trajectory",
+            line=dict(width=4)
         )
     )
 
-    # Mark launch point.
     fig.add_trace(
         go.Scatter(
             x=[0],
             y=[height],
             mode="markers",
-            name="Launch"
+            name="Launch Point",
+            marker=dict(size=12)
         )
     )
 
-    # Mark maximum height.
-    peak_x = vx0 * time_to_peak
+    peak_x = (
+        vx *
+        time_to_peak
+    )
 
     fig.add_trace(
         go.Scatter(
             x=[peak_x],
             y=[max_height],
             mode="markers",
-            name="Maximum Height"
+            name="Maximum Height",
+            marker=dict(size=10)
         )
     )
 
@@ -169,13 +272,7 @@ def run_projectile_simulation(
         xaxis_title="Horizontal Distance (m)",
         yaxis_title="Height (m)",
         template="plotly_dark",
-        height=500,
-        margin=dict(
-            l=40,
-            r=40,
-            t=60,
-            b=40
-        )
+        height=500
     )
 
     st.plotly_chart(
@@ -212,13 +309,13 @@ def run_projectile_simulation(
     with col1:
         st.metric(
             "Horizontal Velocity",
-            f"{vx0:.2f} m/s"
+            f"{vx:.2f} m/s"
         )
 
     with col2:
         st.metric(
             "Vertical Velocity",
-            f"{vy0:.2f} m/s"
+            f"{vy:.2f} m/s"
         )
 
     with col3:
