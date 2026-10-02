@@ -277,10 +277,8 @@ def create_box(
 ):
     x0 = center_x - size_x / 2
     x1 = center_x + size_x / 2
-
     y0 = center_y - size_y / 2
     y1 = center_y + size_y / 2
-
     z0 = center_z - size_z / 2
     z1 = center_z + size_z / 2
 
@@ -637,7 +635,8 @@ def reset_spring_state():
         "spring_gravity",
         "spring_damping",
         "spring_ai_input",
-        "spring_result"
+        "spring_result",
+        "spring_initialized"
     ]
 
     for key in keys:
@@ -913,7 +912,7 @@ def spring_experiment():
             frame_indices = np.linspace(
                 0,
                 len(time) - 1,
-                60,
+                90,
                 dtype=int
             )
 
@@ -960,7 +959,7 @@ def spring_experiment():
                                     None,
                                     {
                                         "frame": {
-                                            "duration": 70,
+                                            "duration": 120,
                                             "redraw": True
                                         },
                                         "transition": {
@@ -1064,7 +1063,10 @@ def spring_experiment():
                 key="spring_energy_graph"
             )
 
-    st.markdown("<br>", unsafe_allow_html=True)
+    st.markdown(
+        "<br><br>",
+        unsafe_allow_html=True
+    )
 
     back_col, _, _ = st.columns(
         [1, 5, 1]
