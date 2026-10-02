@@ -34,85 +34,26 @@ def simulate_spring(
     x[0] = initial_displacement
     v[0] = 0.0
 
-    def acceleration(position, velocity):
-
-        return (
-            gravity
-            - (k * position / mass)
-            - damping * velocity
-        )
-
     for i in range(n - 1):
 
-        xi = x[i]
-        vi = v[i]
-
-        k1_x = vi
-        k1_v = acceleration(
-            xi,
-            vi
-        )
-
-        k2_x = (
-            vi
-            + 0.5 * dt * k1_v
-        )
-
-        k2_v = acceleration(
-            xi + 0.5 * dt * k1_x,
-            vi + 0.5 * dt * k1_v
-        )
-
-        k3_x = (
-            vi
-            + 0.5 * dt * k2_v
-        )
-
-        k3_v = acceleration(
-            xi + 0.5 * dt * k2_x,
-            vi + 0.5 * dt * k2_v
-        )
-
-        k4_x = (
-            vi
-            + dt * k3_v
-        )
-
-        k4_v = acceleration(
-            xi + dt * k3_x,
-            vi + dt * k3_v
-        )
-
-        x[i + 1] = (
-            xi
-            + (dt / 6.0)
-            * (
-                k1_x
-                + 2 * k2_x
-                + 2 * k3_x
-                + k4_x
-            )
+        a[i] = (
+            -k * x[i] / mass
+            - damping * v[i]
         )
 
         v[i + 1] = (
-            vi
-            + (dt / 6.0)
-            * (
-                k1_v
-                + 2 * k2_v
-                + 2 * k3_v
-                + k4_v
-            )
-        )
-
-        a[i] = acceleration(
-            x[i],
             v[i]
+            + a[i] * dt
         )
 
-    a[-1] = acceleration(
-        x[-1],
-        v[-1]
+        x[i + 1] = (
+            x[i]
+            + v[i] * dt
+        )
+
+    a[-1] = (
+        -k * x[-1] / mass
+        - damping * v[-1]
     )
 
     kinetic_energy = (
@@ -127,16 +68,9 @@ def simulate_spring(
         * x ** 2
     )
 
-    gravitational_energy = (
-        -mass
-        * gravity
-        * x
-    )
-
     total_energy = (
         kinetic_energy
         + elastic_energy
-        + gravitational_energy
     )
 
     return (
@@ -494,30 +428,20 @@ def create_spring_coil(
 
 def create_spring_figure(
     displacement,
-    natural_length=1.8
+    spring_length=3.0
 ):
 
     ceiling_z = 1.8
     spring_start = 1.45
 
+    mass_center = (
+        ceiling_z
+        - spring_length
+        - displacement
+    )
+
     mass_height = 0.45
     mass_radius = 0.32
-
-    current_spring_length = (
-        natural_length
-        + displacement
-    )
-
-    current_spring_length = max(
-        current_spring_length,
-        0.4
-    )
-
-    mass_center = (
-        spring_start
-        - current_spring_length
-        - mass_height / 2
-    )
 
     spring_end = (
         mass_center
@@ -590,10 +514,10 @@ def create_spring_figure(
         height=500,
 
         margin=dict(
-            l=15,
-            r=15,
-            t=15,
-            b=15
+            l=12,
+            r=12,
+            t=12,
+            b=12
         ),
 
         paper_bgcolor="#0E1117",
@@ -628,7 +552,6 @@ def create_spring_figure(
             ),
 
             camera=dict(
-
                 eye=dict(
                     x=0,
                     y=3.0,
@@ -888,27 +811,16 @@ def spring_experiment():
 
         frames = []
 
-        for frame_number, index in enumerate(
-            frame_indices
-        ):
+        for i in frame_indices:
 
             frame_fig = create_spring_figure(
-                x[index]
+                x[i]
             )
 
             frames.append(
                 go.Frame(
-                    data=list(
-                        frame_fig.data
-                    ),
-                    name=f"frame_{frame_number}",
-                    traces=[
-                        0,
-                        1,
-                        2,
-                        3,
-                        4
-                    ]
+                    data=frame_fig.data,
+                    name=f"{time[i]:.2f}"
                 )
             )
 
@@ -921,14 +833,6 @@ def spring_experiment():
                     "type": "buttons",
 
                     "showactive": False,
-
-                    "x": 0.02,
-
-                    "y": 0.98,
-
-                    "xanchor": "left",
-
-                    "yanchor": "top",
 
                     "buttons": [
 
