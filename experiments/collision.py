@@ -204,12 +204,20 @@ def run_collision(
     html = f"""
     <style>
 
-        #display {{
-            width: 88%;
-            margin: 0 auto;
-            padding: 10px;
+        html, body {{
+            margin: 0;
+            padding: 0;
+            background: transparent;
+            overflow: hidden;
+        }}
 
-            border: 1px solid #b8b8b8;
+        #display {{
+            width: 75%;
+            margin: 0 auto;
+
+            padding: 8px;
+
+            border: 1px solid #6b7280;
             border-radius: 10px;
 
             box-sizing: border-box;
@@ -217,15 +225,16 @@ def run_collision(
 
         #plot {{
             width: 100%;
-            height: 600px;
+            height: 420px;
         }}
 
         #play {{
             display: block;
-            margin: 14px auto 5px auto;
 
-            padding: 14px 42px;
-            min-width: 150px;
+            margin: 10px auto 4px auto;
+
+            padding: 10px 32px;
+            min-width: 120px;
 
             border: 1px solid #888;
             border-radius: 8px;
@@ -233,7 +242,7 @@ def run_collision(
             background: white;
             color: #111;
 
-            font-size: 20px;
+            font-size: 18px;
             font-weight: 600;
 
             cursor: pointer;
@@ -264,6 +273,7 @@ def run_collision(
 
     <script src="https://cdn.plot.ly/plotly-2.35.2.min.js"></script>
 
+
     <script>
 
         const p1 = {p1};
@@ -281,6 +291,7 @@ def run_collision(
         function sphere(x, color, name) {{
 
             return {{
+
                 type: "scatter3d",
 
                 x: [x],
@@ -295,6 +306,7 @@ def run_collision(
                 }},
 
                 name: name
+
             }};
 
         }}
@@ -404,6 +416,8 @@ def run_collision(
 
             title: "3D Collision Simulation",
 
+            autosize: true,
+
             scene: {{
 
                 dragmode: "orbit",
@@ -453,14 +467,14 @@ def run_collision(
 
             }},
 
-            height: 600,
+            height: 420,
 
             margin: {{
 
                 l: 0,
                 r: 0,
-                t: 60,
-                b: 10
+                t: 50,
+                b: 0
 
             }},
 
@@ -614,7 +628,7 @@ def run_collision(
 
     components.html(
         html,
-        height=740,
+        height=540,
         scrolling=False
     )
 
