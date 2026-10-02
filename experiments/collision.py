@@ -145,8 +145,8 @@ def run_collision(
     start1 = -6.0
     start2 = 6.0
 
-    initial_velocity1 = velocity1
-    initial_velocity2 = -velocity2
+    v1 = velocity1
+    v2 = -velocity2
 
     dt = 1 / 240
     simulation_time = 6.0
@@ -157,9 +157,6 @@ def run_collision(
 
     x1 = start1
     x2 = start2
-
-    v1 = initial_velocity1
-    v2 = initial_velocity2
 
     collision_cooldown = 0.0
 
@@ -177,22 +174,18 @@ def run_collision(
         next_x2 = x2 + v2 * dt
 
         if next_x1 <= center_left:
-
             next_x1 = center_left
             v1 = 0.0
 
         elif next_x1 >= center_right:
-
             next_x1 = center_right
             v1 = 0.0
 
         if next_x2 <= center_left:
-
             next_x2 = center_left
             v2 = 0.0
 
         elif next_x2 >= center_right:
-
             next_x2 = center_right
             v2 = 0.0
 
@@ -212,44 +205,37 @@ def run_collision(
             and abs(v1 - v2) > 0.001
         ):
 
-            contact_center = (
-                x1 + x2
-            ) / 2
+            center = (x1 + x2) / 2
 
-            x1 = contact_center - radius
-            x2 = contact_center + radius
+            x1 = center - radius
+            x2 = center + radius
 
             relative_velocity = v1 - v2
 
-            v1_new = (
-                (
-                    mass1 - elasticity * mass2
-                ) * v1
-                +
-                (
-                    (1 + elasticity) * mass2
-                ) * v2
-            ) / (mass1 + mass2)
-
-            v2_new = (
-                (
-                    (1 + elasticity) * mass1
-                ) * v1
-                +
-                (
-                    mass2 - elasticity * mass1
-                ) * v2
-            ) / (mass1 + mass2)
-
             if relative_velocity > 0:
 
-                v1 = v1_new
-                v2 = v2_new
+                new_v1 = (
+                    (
+                        mass1 - elasticity * mass2
+                    ) * v1
+                    + (
+                        1 + elasticity
+                    ) * mass2 * v2
+                ) / (mass1 + mass2)
+
+                new_v2 = (
+                    (
+                        1 + elasticity
+                    ) * mass1 * v1
+                    + (
+                        mass2 - elasticity * mass1
+                    ) * v2
+                ) / (mass1 + mass2)
+
+                v1 = new_v1
+                v2 = new_v2
 
             collision_cooldown = 0.08
-
-    xmin = wall_left
-    xmax = wall_right
 
     p1 = json.dumps(positions1)
     p2 = json.dumps(positions2)
@@ -329,7 +315,6 @@ def run_collision(
 
         const s1 = "{shape1}";
         const s2 = "{shape2}";
-
         const SPEED = {speed};
 
         const plot = document.getElementById("plot");
@@ -352,8 +337,7 @@ def run_collision(
 
             for (let r = 0; r <= rings; r++) {{
 
-                const phi =
-                    Math.PI * r / rings;
+                const phi = Math.PI * r / rings;
 
                 for (let s = 0; s < segments; s++) {{
 
@@ -411,32 +395,26 @@ def run_collision(
 
             return {{
                 type: "mesh3d",
-
                 x: X,
                 y: Y,
                 z: Z,
-
                 i: I,
                 j: J,
                 k: K,
-
                 color: color,
                 opacity: 1,
                 flatshading: false,
-
                 lighting: {{
-                    ambient: 0.4,
-                    diffuse: 0.8,
-                    specular: 0.5,
-                    roughness: 0.3
+                    ambient: 0.25,
+                    diffuse: 0.85,
+                    specular: 1.0,
+                    roughness: 0.12
                 }},
-
                 lightposition: {{
                     x: 100,
                     y: 100,
                     z: 200
                 }},
-
                 name: name
             }};
         }}
@@ -447,7 +425,6 @@ def run_collision(
             const s = 1.25;
 
             return {{
-
                 type: "mesh3d",
 
                 x: [
@@ -515,18 +492,13 @@ def run_collision(
             name
         ) {{
 
-            if (shape === "Sphere") {{
-                return sphere(x, color, name);
-            }}
-
-            return cube(x, color, name);
+            return shape === "Sphere"
+                ? sphere(x, color, name)
+                : cube(x, color, name);
         }}
 
 
-        function updateSphere(
-            objectIndex,
-            x
-        ) {{
+        function updateSphere(objectIndex, x) {{
 
             const radius = 1.25;
             const segments = 32;
@@ -561,10 +533,7 @@ def run_collision(
         }}
 
 
-        function updateCube(
-            objectIndex,
-            x
-        ) {{
+        function updateCube(objectIndex, x) {{
 
             const s = 1.25;
 
@@ -601,13 +570,11 @@ def run_collision(
             time
         ) {{
 
-            if (time <= times[0]) {{
+            if (time <= times[0])
                 return values[0];
-            }}
 
-            if (time >= times[times.length - 1]) {{
+            if (time >= times[times.length - 1])
                 return values[values.length - 1];
-            }}
 
             let low = 0;
             let high = times.length - 1;
@@ -617,27 +584,22 @@ def run_collision(
                 const mid =
                     Math.floor((low + high) / 2);
 
-                if (times[mid] < time) {{
+                if (times[mid] < time)
                     low = mid + 1;
-                }} else {{
+                else
                     high = mid;
-                }}
             }}
 
             const i = Math.max(0, low - 1);
 
-            const t1 = times[i];
-            const t2 = times[i + 1];
-
-            const pStart = values[i];
-            const pEnd = values[i + 1];
-
             const ratio =
-                (time - t1) / (t2 - t1);
+                (time - times[i]) /
+                (times[i + 1] - times[i]);
 
             return (
-                pStart +
-                (pEnd - pStart) * ratio
+                values[i] +
+                (values[i + 1] - values[i]) *
+                ratio
             );
         }}
 
@@ -672,80 +634,49 @@ def run_collision(
                 dragmode: "orbit",
 
                 camera: {{
-
                     projection: {{
                         type: "orthographic"
                     }}
-
                 }},
 
                 xaxis: {{
-
                     title: "X Position (m)",
-
-                    range: [
-                        {xmin},
-                        {xmax}
-                    ],
-
+                    range: [-9, 9],
                     autorange: false
-
                 }},
 
                 yaxis: {{
-
                     title: "Y Position (m)",
-
-                    range: [
-                        -5,
-                        5
-                    ],
-
+                    range: [-5, 5],
                     autorange: false
-
                 }},
 
                 zaxis: {{
-
                     title: "Z Position (m)",
-
-                    range: [
-                        -5,
-                        5
-                    ],
-
+                    range: [-5, 5],
                     autorange: false
-
                 }},
 
                 aspectmode: "manual",
 
                 aspectratio: {{
-
                     x: 1.6,
                     y: 1,
                     z: 1
-
                 }}
-
             }},
 
             height: 420,
 
             margin: {{
-
                 l: 0,
                 r: 0,
                 t: 50,
                 b: 0
-
             }},
 
-            paper_bgcolor:
-                "rgba(0,0,0,0)",
-
-            plot_bgcolor:
-                "rgba(0,0,0,0)"
+            paper_bgcolor: "rgba(0,0,0,0)",
+            plot_bgcolor: "rgba(0,0,0,0)"
         }};
 
 
@@ -763,9 +694,8 @@ def run_collision(
 
         play.onclick = function() {{
 
-            if (play.disabled) {{
+            if (play.disabled)
                 return;
-            }}
 
             play.disabled = true;
 
@@ -797,36 +727,27 @@ def run_collision(
                         totalTime
                     );
 
-                const x1 =
+                updateObject(
+                    0,
                     interpolate(
                         p1,
                         pt,
                         simulationTime
-                    );
-
-                const x2 =
-                    interpolate(
-                        p2,
-                        pt,
-                        simulationTime
-                    );
-
-                updateObject(
-                    0,
-                    x1,
+                    ),
                     s1
                 );
 
                 updateObject(
                     1,
-                    x2,
+                    interpolate(
+                        p2,
+                        pt,
+                        simulationTime
+                    ),
                     s2
                 );
 
-                if (
-                    simulationTime <
-                    totalTime
-                ) {{
+                if (simulationTime < totalTime) {{
 
                     requestAnimationFrame(
                         animate
@@ -844,7 +765,6 @@ def run_collision(
                     play.disabled = false;
                 }}
             }}
-
 
             requestAnimationFrame(
                 animate
