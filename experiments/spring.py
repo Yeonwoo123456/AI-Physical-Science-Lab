@@ -210,122 +210,417 @@ Rules:
 # -----------------------------
 # 3D Spring
 # -----------------------------
-def create_spring_figure(
-    displacement,
-    spring_length=3.0,
-    turns=14
+
+def create_box(x0, x1, y0, y1, z0, z1):
+    vertices = [
+        [x0, y0, z0],
+        [x1, y0, z0],
+        [x1, y1, z0],
+        [x0, y1, z0],
+        [x0, y0, z1],
+        [x1, y0, z1],
+        [x1, y1, z1],
+        [x0, y1, z1],
+    ]
+
+    faces = [
+        [0, 1, 2], [0, 2, 3],
+        [4, 6, 5], [4, 7, 6],
+        [0, 4, 5], [0, 5, 1],
+        [1, 5, 6], [1, 6, 2],
+        [2, 6, 7], [2, 7, 3],
+        [4, 0, 3], [4, 3, 7]
+    ]
+
+    x = [v[0] for v in vertices]
+    y = [v[1] for v in vertices]
+    z = [v[2] for v in vertices]
+
+    i = [f[0] for f in faces]
+    j = [f[1] for f in faces]
+    k = [f[2] for f in faces]
+
+    return go.Mesh3d(
+        x=x,
+        y=y,
+        z=z,
+        i=i,
+        j=j,
+        k=k,
+        flatshading=True,
+        opacity=1.0,
+        showscale=False
+    )
+
+
+def create_cylinder_x(x0, x1, radius, center_y=0, center_z=0, segments=32):
+    theta = np.linspace(
+        0,
+        2 * np.pi,
+        segments,
+        endpoint=False
+    )
+
+    y = center_y + radius * np.cos(theta)
+    z = center_z + radius * np.sin(theta)
+
+    x = np.concatenate([
+        np.full(segments, x0),
+        np.full(segments, x1)
+    ])
+
+    y = np.concatenate([y, y])
+    z = np.concatenate([z, z])
+
+    faces_i = []
+    faces_j = []
+    faces_k = []
+
+    for n in range(segments):
+        nxt = (n + 1) % segments
+
+        faces_i.append(n)
+        faces_j.append(nxt)
+        faces_k.append(segments + n)
+
+        faces_i.append(nxt)
+        faces_j.append(segments + nxt)
+        faces_k.append(segments + n)
+
+    # Front cap
+    center_front = len(x)
+    x = np.append(x, x0)
+    y = np.append(y, center_y)
+    z = np.append(z, center_z)
+
+    for n in range(segments):
+        nxt = (n + 1) % segments
+
+        faces_i.append(center_front)
+        faces_j.append(nxt)
+        faces_k.append(n)
+
+    # Back cap
+    center_back = len(x)
+    x = np.append(x, x1)
+    y = np.append(y, center_y)
+    z = np.append(z, center_z)
+
+    for n in range(segments):
+        nxt = (n + 1) % segments
+
+        faces_i.append(center_back)
+        faces_j.append(segments + n)
+        faces_k.append(segments + nxt)
+
+    return go.Mesh3d(
+        x=x,
+        y=y,
+        z=z,
+        i=faces_i,
+        j=faces_j,
+        k=faces_k,
+        flatshading=True,
+        opacity=1.0,
+        showscale=False
+    )
+
+
+def create_spring_coil(
+    start_x,
+    end_x,
+    radius=0.18,
+    turns=14,
+    tube_radius=0.035
 ):
-    base_x = 0.0
+    points_per_turn = 20
+    total_points = turns * points_per_turn
 
-    mass_x = spring_length + displacement
-
-    if mass_x < 0.8:
-        mass_x = 0.8
-
-    spring_start = 0.2
-    spring_end = mass_x - 0.35
-
-    if spring_end <= spring_start:
-        spring_end = spring_start + 0.2
+    t = np.linspace(
+        0,
+        turns * 2 * np.pi,
+        total_points
+    )
 
     x = np.linspace(
-        spring_start,
-        spring_end,
-        turns * 20
+        start_x,
+        end_x,
+        total_points
     )
 
-    y = 0.18 * np.sin(
-        np.linspace(0, turns * 2 * np.pi, len(x))
+    y = radius * np.cos(t)
+    z = radius * np.sin(t)
+
+    points = np.column_stack([x, y, z])
+
+    rings = 8
+
+    vertices = []
+
+    for p in range(total_points):
+
+        if p == 0:
+            tangent = points[1] - points[0]
+        elif p == total_points - 1:
+            tangent = points[-1] - points[-2]
+        else:
+            tangent = points[p + 1] - points[p - 1]
+
+        tangent = tangent / np.linalg.norm(tangent)
+
+        reference = np.array([0.0, 0.0, 1.0])
+
+        if abs(np.dot(tangent, reference)) > 0.9:
+            reference = np.array([0.0, 1.0, 0.0])
+
+        normal = np.cross(tangent, reference)
+        normal = normal / np.linalg.norm(normal)
+
+        binormal = np.cross(
+            tangent,
+            normal
+        )
+        binormal = binormal / np.linalg.norm(binormal)
+
+        for r in range(rings):
+
+            angle = (
+                2 * np.pi * r / rings
+            )
+
+            offset = (
+                tube_radius * np.cos(angle) * normal
+                + tube_radius * np.sin(angle) * binormal
+            )
+
+            vertex = points[p] + offset
+
+            vertices.append(vertex)
+
+    vertices = np.array(vertices)
+
+    faces_i = []
+    faces_j = []
+    faces_k = []
+
+    for p in range(total_points - 1):
+
+        for r in range(rings):
+
+            current = p * rings + r
+            next_ring = p * rings + (r + 1) % rings
+            next_point = (p + 1) * rings + r
+            next_point_ring = (
+                (p + 1) * rings
+                + (r + 1) % rings
+            )
+
+            faces_i.append(current)
+            faces_j.append(next_ring)
+            faces_k.append(next_point)
+
+            faces_i.append(next_ring)
+            faces_j.append(next_point_ring)
+            faces_k.append(next_point)
+
+    return go.Mesh3d(
+        x=vertices[:, 0],
+        y=vertices[:, 1],
+        z=vertices[:, 2],
+        i=faces_i,
+        j=faces_j,
+        k=faces_k,
+        flatshading=False,
+        opacity=1.0,
+        showscale=False
     )
 
-    z = np.zeros_like(x)
+
+def create_spring_figure(
+    displacement,
+    spring_length=3.0
+):
+    # --------------------------------
+    # Position
+    # --------------------------------
+
+    wall_x = 0.0
+
+    spring_start = 0.35
+
+    mass_center = (
+        spring_length + displacement
+    )
+
+    mass_length = 0.55
+
+    mass_front = (
+        mass_center - mass_length / 2
+    )
+
+    mass_back = (
+        mass_center + mass_length / 2
+    )
+
+    spring_end = mass_front - 0.08
+
+    if spring_end <= spring_start + 0.2:
+        spring_end = spring_start + 0.2
+
+    # --------------------------------
+    # Figure
+    # --------------------------------
 
     fig = go.Figure()
 
-    # Fixed wall
-    fig.add_trace(
-        go.Scatter3d(
-            x=[base_x, base_x],
-            y=[-0.45, 0.45],
-            z=[0, 0],
-            mode="lines",
-            line=dict(width=12),
-            showlegend=False
-        )
+    # --------------------------------
+    # 3D Wall
+    # --------------------------------
+
+    wall = create_box(
+        -0.18,
+        0.0,
+        -0.65,
+        0.65,
+        -0.65,
+        0.65
     )
 
+    fig.add_trace(wall)
+
+    # --------------------------------
+    # Wall support / mounting point
+    # --------------------------------
+
+    mount = create_cylinder_x(
+        0.0,
+        0.18,
+        0.12
+    )
+
+    fig.add_trace(mount)
+
+    # --------------------------------
     # Spring
-    fig.add_trace(
-        go.Scatter3d(
-            x=x,
-            y=y,
-            z=z,
-            mode="lines",
-            line=dict(width=6),
-            showlegend=False
-        )
+    # --------------------------------
+
+    spring = create_spring_coil(
+        spring_start,
+        spring_end,
+        radius=0.20,
+        turns=14,
+        tube_radius=0.035
     )
 
-    # Mass
-    fig.add_trace(
-        go.Scatter3d(
-            x=[mass_x],
-            y=[0],
-            z=[0],
-            mode="markers",
-            marker=dict(
-                size=28,
-                symbol="square"
-            ),
-            showlegend=False
-        )
+    fig.add_trace(spring)
+
+    # --------------------------------
+    # Connection rod
+    # --------------------------------
+
+    connection = create_cylinder_x(
+        spring_end,
+        mass_front,
+        0.045
     )
 
-    # Center line
+    fig.add_trace(connection)
+
+    # --------------------------------
+    # 3D Mass
+    # --------------------------------
+
+    mass = create_cylinder_x(
+        mass_front,
+        mass_back,
+        0.35
+    )
+
+    fig.add_trace(mass)
+
+    # --------------------------------
+    # Mass center detail
+    # --------------------------------
+
+    center_detail = create_cylinder_x(
+        mass_front - 0.02,
+        mass_front + 0.05,
+        0.17
+    )
+
+    fig.add_trace(center_detail)
+
+    # --------------------------------
+    # Ground / reference line
+    # --------------------------------
+
     fig.add_trace(
         go.Scatter3d(
-            x=[0, spring_length + 0.8],
+            x=[0, spring_length + 1.0],
             y=[0, 0],
-            z=[0, 0],
+            z=[-0.72, -0.72],
             mode="lines",
             line=dict(
-                width=2,
+                width=3,
                 dash="dash"
             ),
             showlegend=False
         )
     )
 
+    # --------------------------------
+    # Layout
+    # --------------------------------
+
     fig.update_layout(
-        height=500,
-        margin=dict(l=0, r=0, t=0, b=0),
+        height=550,
+        margin=dict(
+            l=0,
+            r=0,
+            t=0,
+            b=0
+        ),
         scene=dict(
             xaxis=dict(
-                range=[-0.5, spring_length + 1.0],
+                range=[
+                    -0.5,
+                    spring_length + 1.0
+                ],
                 title="",
-                showticklabels=False
+                showticklabels=False,
+                showgrid=False,
+                zeroline=False
             ),
             yaxis=dict(
-                range=[-1, 1],
+                range=[-1.0, 1.0],
                 title="",
-                showticklabels=False
+                showticklabels=False,
+                showgrid=False,
+                zeroline=False
             ),
             zaxis=dict(
-                range=[-1, 1],
+                range=[-1.0, 1.0],
                 title="",
-                showticklabels=False
+                showticklabels=False,
+                showgrid=False,
+                zeroline=False
             ),
             aspectmode="manual",
             aspectratio=dict(
-                x=2.5,
-                y=1,
-                z=1
+                x=3.0,
+                y=1.0,
+                z=1.0
             ),
             camera=dict(
                 eye=dict(
+                    x=1.8,
+                    y=1.4,
+                    z=1.1
+                ),
+                center=dict(
                     x=1.5,
                     y=0,
-                    z=0.8
+                    z=0
                 )
             )
         ),
@@ -333,7 +628,6 @@ def create_spring_figure(
     )
 
     return fig
-
 
 # -----------------------------
 # Main Experiment
