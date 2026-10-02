@@ -128,6 +128,7 @@ def selection_page():
     cards = ""
 
     for key, title, concept, params, color in experiments:
+
         image = get_image(
             f"assets/{key}.png"
         )
@@ -135,8 +136,10 @@ def selection_page():
         cards += f"""
         <a href="?experiment={key}"
            class="physics-card"
-           style="background-color:{color};
-                  background-image:url('data:image/png;base64,{image}');">
+           style="
+               background-color:{color};
+               background-image:url('data:image/png;base64,{image}');
+           ">
 
             <div class="card-text">
 
@@ -171,72 +174,88 @@ def selection_page():
     )
 
     if st.button("Back to Home"):
+
         st.session_state.page = "home"
         st.session_state.experiment = None
+
         st.query_params.clear()
+
         st.rerun()
 
 
 def experiment_page():
+
     experiment = st.session_state.experiment
 
-    # --------------------------------
+    # ----------------------------------------
     # Projectile Motion
-    # --------------------------------
+    # ----------------------------------------
     if experiment == "projectile":
+
         from experiments.projectile import projectile_experiment
 
         projectile_experiment()
+
         return
 
-    # --------------------------------
+    # ----------------------------------------
     # Collision
-    # --------------------------------
+    # ----------------------------------------
     if experiment == "collision":
+
         from experiments.collision import collision_experiment
 
         collision_experiment()
+
         return
 
-    # --------------------------------
+    # ----------------------------------------
     # Pendulum
-    # --------------------------------
+    # ----------------------------------------
     if experiment == "pendulum":
+
         from experiments.pendulum import pendulum_experiment
 
         pendulum_experiment()
+
         return
 
-    # --------------------------------
+    # ----------------------------------------
     # Spring
-    # --------------------------------
+    # ----------------------------------------
     if experiment == "spring":
+
         from experiments.spring import spring_experiment
 
         spring_experiment()
+
         return
 
-    # --------------------------------
+    # ----------------------------------------
     # Friction
-    # --------------------------------
+    # ----------------------------------------
     if experiment == "friction":
+
         from experiments.friction import friction_experiment
 
         friction_experiment()
+
         return
 
-    # --------------------------------
+    # ----------------------------------------
     # Gravity & Orbit
-    # --------------------------------
+    # ----------------------------------------
     if experiment == "orbit":
+
         from experiments.orbit import orbit_experiment
 
         orbit_experiment()
+
         return
 
-    # --------------------------------
+    # ----------------------------------------
     # Unknown experiment
-    # --------------------------------
+    # ----------------------------------------
     st.title("Physics Experiment")
 
     st.write(
@@ -244,14 +263,19 @@ def experiment_page():
     )
 
     if st.button("Back to Experiments"):
+
         st.session_state.page = "select"
         st.session_state.experiment = None
+
         st.query_params.clear()
+
         st.rerun()
 
 
 def render_app():
+
     load_css()
+
     init_state()
 
     experiment = st.query_params.get(
@@ -259,14 +283,18 @@ def render_app():
     )
 
     if experiment:
+
         st.session_state.experiment = experiment
         st.session_state.page = "experiment"
 
     if st.session_state.page == "home":
+
         home_page()
 
     elif st.session_state.page == "select":
+
         selection_page()
 
     else:
+
         experiment_page()
