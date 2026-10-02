@@ -749,7 +749,7 @@ def run_collision(
 
             paper_bgcolor: "#111827",
             plot_bgcolor: "#111827",
-            font: {color: "#E5E7EB"}
+            font: {{color: "#E5E7EB"}}
         }};
 
 
