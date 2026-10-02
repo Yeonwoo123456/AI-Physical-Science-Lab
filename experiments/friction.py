@@ -492,27 +492,31 @@ function draw() {
         )
     );
 
-    // Horizontal force vectors start from the left/right middle of the block.
-    // Applied Force is anchored to the right face.
-    // Friction is anchored to the left face.
+    // Horizontal force vectors use different vertical levels so they
+    // never overlap, even when Applied Force and Friction point in
+    // the same direction.
+    // Applied Force starts from the upper-right surface.
+    // Friction starts from the lower-left surface.
     const blockLeft = blockX - blockW / 2;
     const blockRight = blockX + blockW / 2;
-    const blockMidY = baseY;
+
+    const appliedY = baseY - blockH * 0.25;
+    const frictionY = baseY + blockH * 0.25;
 
     arrow(
         blockRight,
-        blockMidY,
+        appliedY,
         blockRight + applied * horizontalScale,
-        blockMidY,
+        appliedY,
         "#4DA6FF",
         "Applied " + Math.abs(applied).toFixed(1) + " N"
     );
 
     arrow(
         blockLeft,
-        blockMidY,
+        frictionY,
         blockLeft + friction * horizontalScale,
-        blockMidY,
+        frictionY,
         "#FF6B6B",
         "Friction " + Math.abs(friction).toFixed(1) + " N"
     );
