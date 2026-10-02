@@ -633,14 +633,14 @@ def run_collision(
                 p1[0],
                 "blue",
                 s1,
-                "Object 1"
+                "Object A"
             ),
 
             createObject(
                 p2[0],
                 "red",
                 s2,
-                "Object 2"
+                "Object B"
             )
 
         ];
@@ -803,40 +803,164 @@ def run_collision(
         scrolling=False
     )
 
-    initial_energy = (
-        0.5 * mass1 * velocity1 ** 2
-        + 0.5 * mass2 * velocity2 ** 2
+    initial_velocity1 = velocity1
+    initial_velocity2 = -velocity2
+
+    initial_momentum1 = (
+        mass1 * initial_velocity1
     )
 
-    post_collision_energy = (
-        0.5 * mass1 * collision_result_v1 ** 2
-        + 0.5 * mass2 * collision_result_v2 ** 2
+    initial_momentum2 = (
+        mass2 * initial_velocity2
+    )
+
+    final_momentum1 = (
+        mass1 * collision_result_v1
+    )
+
+    final_momentum2 = (
+        mass2 * collision_result_v2
+    )
+
+    initial_energy1 = (
+        0.5 *
+        mass1 *
+        initial_velocity1 ** 2
+    )
+
+    initial_energy2 = (
+        0.5 *
+        mass2 *
+        initial_velocity2 ** 2
+    )
+
+    final_energy1 = (
+        0.5 *
+        mass1 *
+        collision_result_v1 ** 2
+    )
+
+    final_energy2 = (
+        0.5 *
+        mass2 *
+        collision_result_v2 ** 2
     )
 
     st.markdown("### Results")
 
-    col1, col2 = st.columns(2)
+    results_html = f"""
+    <style>
 
-    with col1:
+        .collision-results {{
+            width: 100%;
+            max-width: 720px;
+            margin: 8px auto 30px auto;
+            font-family: monospace;
+        }}
 
-        st.metric(
-            "Object 1 Post-Collision Velocity",
-            f"{collision_result_v1:.2f} m/s"
-        )
+        .collision-results table {{
+            width: 100%;
+            border-collapse: collapse;
+        }}
 
-        st.metric(
-            "Initial Kinetic Energy",
-            f"{initial_energy:.2f} J"
-        )
+        .collision-results th {{
+            text-align: right;
+            font-size: 15px;
+            font-weight: 500;
+            padding: 4px 12px;
+        }}
 
-    with col2:
+        .collision-results th:first-child {{
+            text-align: left;
+        }}
 
-        st.metric(
-            "Object 2 Post-Collision Velocity",
-            f"{collision_result_v2:.2f} m/s"
-        )
+        .collision-results td {{
+            padding: 4px 12px;
+            font-size: 15px;
+            white-space: nowrap;
+        }}
 
-        st.metric(
-            "Post-Collision Kinetic Energy",
-            f"{post_collision_energy:.2f} J"
-        )
+        .collision-results td:first-child {{
+            text-align: left;
+            font-weight: 400;
+        }}
+
+        .collision-results td:not(:first-child) {{
+            text-align: right;
+        }}
+
+        .collision-results .object-title td {{
+            padding-top: 14px;
+            padding-bottom: 3px;
+            font-weight: 600;
+        }}
+
+    </style>
+
+    <div class="collision-results">
+
+        <table>
+
+            <tr>
+                <th></th>
+                <th>BEFORE</th>
+                <th>AFTER</th>
+            </tr>
+
+            <tr class="object-title">
+                <td>Object A</td>
+                <td></td>
+                <td></td>
+            </tr>
+
+            <tr>
+                <td>Velocity</td>
+                <td>{initial_velocity1:.2f} m/s</td>
+                <td>{collision_result_v1:.2f} m/s</td>
+            </tr>
+
+            <tr>
+                <td>Momentum</td>
+                <td>{initial_momentum1:.2f} kg·m/s</td>
+                <td>{final_momentum1:.2f} kg·m/s</td>
+            </tr>
+
+            <tr>
+                <td>Energy</td>
+                <td>{initial_energy1:.2f} J</td>
+                <td>{final_energy1:.2f} J</td>
+            </tr>
+
+            <tr class="object-title">
+                <td>Object B</td>
+                <td></td>
+                <td></td>
+            </tr>
+
+            <tr>
+                <td>Velocity</td>
+                <td>{initial_velocity2:.2f} m/s</td>
+                <td>{collision_result_v2:.2f} m/s</td>
+            </tr>
+
+            <tr>
+                <td>Momentum</td>
+                <td>{initial_momentum2:.2f} kg·m/s</td>
+                <td>{final_momentum2:.2f} kg·m/s</td>
+            </tr>
+
+            <tr>
+                <td>Energy</td>
+                <td>{initial_energy2:.2f} J</td>
+                <td>{final_energy2:.2f} J</td>
+            </tr>
+
+        </table>
+
+    </div>
+    """
+
+    st.markdown(
+        results_html,
+        unsafe_allow_html=True
+    )
