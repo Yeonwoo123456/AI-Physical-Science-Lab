@@ -1,4 +1,3 @@
-import math
 import json
 import re
 
@@ -9,9 +8,6 @@ import plotly.graph_objects as go
 from app_modules import client
 
 
-# -----------------------------
-# Spring Simulation
-# -----------------------------
 def simulate_spring(
     mass,
     spring_constant,
@@ -59,9 +55,6 @@ def simulate_spring(
     }
 
 
-# -----------------------------
-# AI Parser
-# -----------------------------
 def parse_ai_spring(user_text):
     result = {
         "mass": None,
@@ -71,7 +64,6 @@ def parse_ai_spring(user_text):
         "damping": None
     }
 
-    # AI parsing
     if client is not None:
         try:
             system_prompt = """
@@ -111,9 +103,7 @@ Rules:
             )
 
             content = response.choices[0].message.content.strip()
-
             content = re.sub(r"```json|```", "", content).strip()
-
             ai_result = json.loads(content)
 
             for key in result:
@@ -123,11 +113,6 @@ Rules:
         except Exception:
             pass
 
-    # --------------------------------
-    # Explicit numerical value parsing
-    # --------------------------------
-
-    # Mass
     match = re.search(
         r"(?:질량|mass)\s*(?:은|는|이|가|=|:)?\s*(-?\d+(?:\.\d+)?)\s*(?:kg|킬로그램)?",
         user_text,
@@ -137,7 +122,6 @@ Rules:
     if match:
         result["mass"] = float(match.group(1))
 
-    # Spring constant
     match = re.search(
         r"(?:스프링\s*상수|spring\s*constant|k)\s*(?:은|는|이|가|=|:)?\s*(-?\d+(?:\.\d+)?)\s*(?:N\s*/?\s*m|N/m)?",
         user_text,
@@ -147,7 +131,6 @@ Rules:
     if match:
         result["spring_constant"] = float(match.group(1))
 
-    # Initial displacement
     displacement_match = re.search(
         r"(?:처음|초기|initial)?\s*(?:변위|displacement)\s*(?:은|는|이|가|=|:)?\s*(-?\d+(?:\.\d+)?)\s*(?:m|미터)?",
         user_text,
@@ -159,11 +142,9 @@ Rules:
             displacement_match.group(1)
         )
 
-    # Pull / stretch / compress expressions
     if result["initial_displacement"] is None:
-
         match = re.search(
-            r"(?:당겨|늘려|늘어|pull|stretch)\s*(?:서|서)?\s*(-?\d+(?:\.\d+)?)\s*(?:m|미터)",
+            r"(?:당겨|늘려|늘어|pull|stretch)\s*(?:서)?\s*(-?\d+(?:\.\d+)?)\s*(?:m|미터)",
             user_text,
             re.IGNORECASE
         )
@@ -184,7 +165,6 @@ Rules:
                 float(match.group(1))
             )
 
-    # Gravity
     match = re.search(
         r"(?:중력|gravity|g)\s*(?:은|는|이|가|=|:)?\s*(-?\d+(?:\.\d+)?)\s*(?:m/s.?2|m/s²)?",
         user_text,
@@ -194,7 +174,6 @@ Rules:
     if match:
         result["gravity"] = float(match.group(1))
 
-    # Damping
     match = re.search(
         r"(?:감쇠|damping)\s*(?:은|는|이|가|=|:)?\s*(-?\d+(?:\.\d+)?)",
         user_text,
@@ -207,10 +186,6 @@ Rules:
     return result
 
 
-# -----------------------------
-# 3D Spring
-# -----------------------------
-
 def create_box(x0, x1, y0, y1, z0, z1):
     vertices = [
         [x0, y0, z0],
@@ -220,7 +195,7 @@ def create_box(x0, x1, y0, y1, z0, z1):
         [x0, y0, z1],
         [x1, y0, z1],
         [x1, y1, z1],
-        [x0, y1, z1],
+        [x0, y1, z1]
     ]
 
     faces = [
@@ -236,24 +211,27 @@ def create_box(x0, x1, y0, y1, z0, z1):
     y = [v[1] for v in vertices]
     z = [v[2] for v in vertices]
 
-    i = [f[0] for f in faces]
-    j = [f[1] for f in faces]
-    k = [f[2] for f in faces]
-
     return go.Mesh3d(
         x=x,
         y=y,
         z=z,
-        i=i,
-        j=j,
-        k=k,
+        i=[f[0] for f in faces],
+        j=[f[1] for f in faces],
+        k=[f[2] for f in faces],
         flatshading=True,
         opacity=1.0,
         showscale=False
     )
 
 
-def create_cylinder_x(x0, x1, radius, center_y=0, center_z=0, segments=32):
+def create_cylinder_x(
+    x0,
+    x1,
+    radius,
+    center_y=0,
+    center_z=0,
+    segments=32
+):
     theta = np.linspace(
         0,
         2 * np.pi,
@@ -279,15 +257,10 @@ def create_cylinder_x(x0, x1, radius, center_y=0, center_z=0, segments=32):
     for n in range(segments):
         nxt = (n + 1) % segments
 
-        faces_i.append(n)
-        faces_j.append(nxt)
-        faces_k.append(segments + n)
+        faces_i.extend([n, nxt])
+        faces_j.extend([nxt, segments + nxt])
+        faces_k.extend([segments + n, segments + n])
 
-        faces_i.append(nxt)
-        faces_j.append(segments + nxt)
-        faces_k.append(segments + n)
-
-    # Front cap
     center_front = len(x)
     x = np.append(x, x0)
     y = np.append(y, center_y)
@@ -295,12 +268,10 @@ def create_cylinder_x(x0, x1, radius, center_y=0, center_z=0, segments=32):
 
     for n in range(segments):
         nxt = (n + 1) % segments
-
         faces_i.append(center_front)
         faces_j.append(nxt)
         faces_k.append(n)
 
-    # Back cap
     center_back = len(x)
     x = np.append(x, x1)
     y = np.append(y, center_y)
@@ -308,7 +279,6 @@ def create_cylinder_x(x0, x1, radius, center_y=0, center_z=0, segments=32):
 
     for n in range(segments):
         nxt = (n + 1) % segments
-
         faces_i.append(center_back)
         faces_j.append(segments + n)
         faces_k.append(segments + nxt)
@@ -352,13 +322,10 @@ def create_spring_coil(
     z = radius * np.sin(t)
 
     points = np.column_stack([x, y, z])
-
     rings = 8
-
     vertices = []
 
     for p in range(total_points):
-
         if p == 0:
             tangent = points[1] - points[0]
         elif p == total_points - 1:
@@ -366,7 +333,7 @@ def create_spring_coil(
         else:
             tangent = points[p + 1] - points[p - 1]
 
-        tangent = tangent / np.linalg.norm(tangent)
+        tangent /= np.linalg.norm(tangent)
 
         reference = np.array([0.0, 0.0, 1.0])
 
@@ -374,28 +341,20 @@ def create_spring_coil(
             reference = np.array([0.0, 1.0, 0.0])
 
         normal = np.cross(tangent, reference)
-        normal = normal / np.linalg.norm(normal)
+        normal /= np.linalg.norm(normal)
 
-        binormal = np.cross(
-            tangent,
-            normal
-        )
-        binormal = binormal / np.linalg.norm(binormal)
+        binormal = np.cross(tangent, normal)
+        binormal /= np.linalg.norm(binormal)
 
         for r in range(rings):
-
-            angle = (
-                2 * np.pi * r / rings
-            )
+            angle = 2 * np.pi * r / rings
 
             offset = (
                 tube_radius * np.cos(angle) * normal
                 + tube_radius * np.sin(angle) * binormal
             )
 
-            vertex = points[p] + offset
-
-            vertices.append(vertex)
+            vertices.append(points[p] + offset)
 
     vertices = np.array(vertices)
 
@@ -404,9 +363,7 @@ def create_spring_coil(
     faces_k = []
 
     for p in range(total_points - 1):
-
         for r in range(rings):
-
             current = p * rings + r
             next_ring = p * rings + (r + 1) % rings
             next_point = (p + 1) * rings + r
@@ -415,13 +372,20 @@ def create_spring_coil(
                 + (r + 1) % rings
             )
 
-            faces_i.append(current)
-            faces_j.append(next_ring)
-            faces_k.append(next_point)
+            faces_i.extend([
+                current,
+                next_ring
+            ])
 
-            faces_i.append(next_ring)
-            faces_j.append(next_point_ring)
-            faces_k.append(next_point)
+            faces_j.extend([
+                next_ring,
+                next_point_ring
+            ])
+
+            faces_k.extend([
+                next_point,
+                next_point
+            ])
 
     return go.Mesh3d(
         x=vertices[:, 0],
@@ -440,42 +404,16 @@ def create_spring_figure(
     displacement,
     spring_length=3.0
 ):
-    # --------------------------------
-    # Position
-    # --------------------------------
-
-    wall_x = 0.0
-
     spring_start = 0.35
-
-    mass_center = (
-        spring_length + displacement
-    )
-
     mass_length = 0.55
+    mass_center = spring_length + displacement
 
-    mass_front = (
-        mass_center - mass_length / 2
-    )
-
-    mass_back = (
-        mass_center + mass_length / 2
-    )
-
+    mass_front = mass_center - mass_length / 2
+    mass_back = mass_center + mass_length / 2
     spring_end = mass_front - 0.08
 
     if spring_end <= spring_start + 0.2:
         spring_end = spring_start + 0.2
-
-    # --------------------------------
-    # Figure
-    # --------------------------------
-
-    fig = go.Figure()
-
-    # --------------------------------
-    # 3D Wall
-    # --------------------------------
 
     wall = create_box(
         -0.18,
@@ -486,23 +424,11 @@ def create_spring_figure(
         0.65
     )
 
-    fig.add_trace(wall)
-
-    # --------------------------------
-    # Wall support / mounting point
-    # --------------------------------
-
     mount = create_cylinder_x(
         0.0,
         0.18,
         0.12
     )
-
-    fig.add_trace(mount)
-
-    # --------------------------------
-    # Spring
-    # --------------------------------
 
     spring = create_spring_coil(
         spring_start,
@@ -512,23 +438,11 @@ def create_spring_figure(
         tube_radius=0.035
     )
 
-    fig.add_trace(spring)
-
-    # --------------------------------
-    # Connection rod
-    # --------------------------------
-
     connection = create_cylinder_x(
         spring_end,
         mass_front,
         0.045
     )
-
-    fig.add_trace(connection)
-
-    # --------------------------------
-    # 3D Mass
-    # --------------------------------
 
     mass = create_cylinder_x(
         mass_front,
@@ -536,27 +450,24 @@ def create_spring_figure(
         0.35
     )
 
-    fig.add_trace(mass)
-
-    # --------------------------------
-    # Mass center detail
-    # --------------------------------
-
     center_detail = create_cylinder_x(
         mass_front - 0.02,
         mass_front + 0.05,
         0.17
     )
 
-    fig.add_trace(center_detail)
+    fig = go.Figure()
 
-    # --------------------------------
-    # Ground / reference line
-    # --------------------------------
+    fig.add_trace(wall)
+    fig.add_trace(mount)
+    fig.add_trace(spring)
+    fig.add_trace(connection)
+    fig.add_trace(mass)
+    fig.add_trace(center_detail)
 
     fig.add_trace(
         go.Scatter3d(
-            x=[0, spring_length + 1.0],
+            x=[-0.2, spring_length + 0.8],
             y=[0, 0],
             z=[-0.72, -0.72],
             mode="lines",
@@ -568,9 +479,9 @@ def create_spring_figure(
         )
     )
 
-    # --------------------------------
-    # Layout
-    # --------------------------------
+    x_min = -0.5
+    x_max = spring_length + 0.65
+    x_center = (x_min + x_max) / 2
 
     fig.update_layout(
         height=550,
@@ -582,10 +493,7 @@ def create_spring_figure(
         ),
         scene=dict(
             xaxis=dict(
-                range=[
-                    -0.5,
-                    spring_length + 1.0
-                ],
+                range=[x_min, x_max],
                 title="",
                 showticklabels=False,
                 showgrid=False,
@@ -607,19 +515,24 @@ def create_spring_figure(
             ),
             aspectmode="manual",
             aspectratio=dict(
-                x=3.0,
-                y=1.0,
-                z=1.0
+                x=3.2,
+                y=1,
+                z=1
             ),
             camera=dict(
                 eye=dict(
-                    x=1.8,
-                    y=1.4,
-                    z=1.1
+                    x=0,
+                    y=0,
+                    z=2.2
                 ),
                 center=dict(
-                    x=1.5,
+                    x=x_center,
                     y=0,
+                    z=0
+                ),
+                up=dict(
+                    x=0,
+                    y=1,
                     z=0
                 )
             )
@@ -629,32 +542,22 @@ def create_spring_figure(
 
     return fig
 
-# -----------------------------
-# Main Experiment
-# -----------------------------
-def spring_experiment():
 
+def spring_experiment():
     st.subheader("Spring Experiment")
 
-    # -----------------------------
-    # Session State
-    # -----------------------------
     defaults = {
         "spring_mass": 1.00,
         "spring_k": 50.00,
         "spring_displacement": 0.30,
         "spring_gravity": 9.81,
-        "spring_damping": 0.02,
-        "spring_ai_text": ""
+        "spring_damping": 0.02
     }
 
     for key, value in defaults.items():
         if key not in st.session_state:
             st.session_state[key] = value
 
-    # -----------------------------
-    # AI Natural Language
-    # -----------------------------
     st.markdown("### AI Natural Language")
 
     ai_text = st.text_input(
@@ -662,10 +565,11 @@ def spring_experiment():
         placeholder="예: 질량 2kg, 스프링 상수 50N/m, 0.3m 당겨서 시작해"
     )
 
-    if st.button("Run AI Analysis", key="spring_ai_button"):
-
+    if st.button(
+        "Run AI Analysis",
+        key="spring_ai_button"
+    ):
         if ai_text.strip():
-
             parsed = parse_ai_spring(ai_text)
 
             if parsed["mass"] is not None:
@@ -675,9 +579,9 @@ def spring_experiment():
                 st.session_state.spring_k = parsed["spring_constant"]
 
             if parsed["initial_displacement"] is not None:
-                st.session_state.spring_displacement = parsed[
-                    "initial_displacement"
-                ]
+                st.session_state.spring_displacement = (
+                    parsed["initial_displacement"]
+                )
 
             if parsed["gravity"] is not None:
                 st.session_state.spring_gravity = parsed["gravity"]
@@ -687,9 +591,6 @@ def spring_experiment():
 
             st.rerun()
 
-    # -----------------------------
-    # Manual Parameters
-    # -----------------------------
     st.markdown("### Manual Parameters")
 
     col1, col2, col3 = st.columns(3)
@@ -741,9 +642,6 @@ def spring_experiment():
             key="spring_damping"
         )
 
-    # -----------------------------
-    # Simulation
-    # -----------------------------
     result = simulate_spring(
         mass=mass,
         spring_constant=spring_constant,
@@ -755,9 +653,6 @@ def spring_experiment():
     time = result["time"]
     displacement = result["x"]
 
-    # -----------------------------
-    # Current Values
-    # -----------------------------
     st.markdown("### Simulation")
 
     current_col1, current_col2, current_col3 = st.columns(3)
@@ -780,13 +675,9 @@ def spring_experiment():
             f"{initial_displacement:.2f} m"
         )
 
-    # -----------------------------
-    # 3D Animation
-    # -----------------------------
     frames = []
 
     for i in range(0, len(time), 5):
-
         frame_fig = create_spring_figure(
             displacement[i]
         )
@@ -840,9 +731,6 @@ def spring_experiment():
             use_container_width=True
         )
 
-    # -----------------------------
-    # Analysis
-    # -----------------------------
     st.markdown("### Analysis")
 
     displacement_fig = go.Figure()
@@ -868,9 +756,6 @@ def spring_experiment():
         use_container_width=True
     )
 
-    # -----------------------------
-    # Energy
-    # -----------------------------
     energy_fig = go.Figure()
 
     energy_fig.add_trace(
