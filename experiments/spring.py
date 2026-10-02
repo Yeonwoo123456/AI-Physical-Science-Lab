@@ -438,30 +438,22 @@ def create_spring_coil(
     )
 
 
-def create_spring_figure(
+def create_dynamic_traces(
     relative_displacement,
     equilibrium_displacement,
     natural_length=1.0
 ):
-    ceiling_z = 1.8
     spring_start = 1.45
 
-    visual_displacement = (
-        relative_displacement * 0.55
-    )
+    visual_displacement = relative_displacement * 0.55
 
     actual_displacement = (
         equilibrium_displacement
         + visual_displacement
     )
 
-    current_length = (
-        natural_length
-        + actual_displacement
-    )
-
     current_length = np.clip(
-        current_length,
+        natural_length + actual_displacement,
         0.55,
         1.85
     )
@@ -475,13 +467,52 @@ def create_spring_figure(
         - mass_height / 2
     )
 
-    equilibrium_length = (
-        natural_length
-        + equilibrium_displacement
+    spring_end = mass_center + mass_height / 2
+
+    spring_trace = create_spring_coil(
+        spring_start,
+        spring_end
     )
 
+    mass_trace = create_cylinder_z(
+        0,
+        0,
+        mass_center,
+        mass_radius,
+        mass_height
+    )
+
+    connector_trace = go.Scatter3d(
+        x=[0, 0],
+        y=[0, 0],
+        z=[spring_start, mass_center],
+        mode="lines",
+        line=dict(
+            width=2,
+            dash="dot"
+        ),
+        opacity=0.3,
+        showlegend=False
+    )
+
+    return [
+        spring_trace,
+        mass_trace,
+        connector_trace
+    ]
+
+
+def create_spring_figure(
+    relative_displacement,
+    equilibrium_displacement,
+    natural_length=1.0
+):
+    ceiling_z = 1.8
+    spring_start = 1.45
+    mass_height = 0.45
+
     equilibrium_length = np.clip(
-        equilibrium_length,
+        natural_length + equilibrium_displacement,
         0.55,
         1.85
     )
@@ -492,9 +523,10 @@ def create_spring_figure(
         - mass_height / 2
     )
 
-    spring_end = (
-        mass_center
-        + mass_height / 2
+    dynamic_traces = create_dynamic_traces(
+        relative_displacement,
+        equilibrium_displacement,
+        natural_length
     )
 
     fig = go.Figure()
@@ -521,40 +553,8 @@ def create_spring_figure(
         )
     )
 
-    fig.add_trace(
-        create_spring_coil(
-            spring_start,
-            spring_end
-        )
-    )
-
-    fig.add_trace(
-        create_cylinder_z(
-            0,
-            0,
-            mass_center,
-            mass_radius,
-            mass_height
-        )
-    )
-
-    fig.add_trace(
-        go.Scatter3d(
-            x=[0, 0],
-            y=[0, 0],
-            z=[
-                spring_start,
-                mass_center
-            ],
-            mode="lines",
-            line=dict(
-                width=2,
-                dash="dot"
-            ),
-            opacity=0.3,
-            showlegend=False
-        )
-    )
+    for trace in dynamic_traces:
+        fig.add_trace(trace)
 
     fig.add_trace(
         go.Scatter3d(
@@ -909,51 +909,61 @@ def spring_experiment():
 
     st.markdown("### 3D Spring")
 
+    frame_count = min(360, len(time))
+
     frame_indices = np.linspace(
         0,
         len(time) - 1,
-        100,
+        frame_count,
         dtype=int
     )
 
+    initial_index = frame_indices[0]
+
     initial_fig = create_spring_figure(
-        relative_displacement[
-            frame_indices[0]
-        ],
+        relative_displacement[initial_index],
         equilibrium_displacement
     )
 
     frames = []
 
     for i in frame_indices:
-        frame_fig = create_spring_figure(
+        dynamic_traces = create_dynamic_traces(
             relative_displacement[i],
             equilibrium_displacement
         )
 
         frames.append(
             go.Frame(
-                data=frame_fig.data,
-                name=f"{time[i]:.2f}"
+                data=dynamic_traces,
+                traces=[2, 3, 4],
+                name=f"frame_{i}"
             )
         )
 
     initial_fig.frames = frames
+
+    frame_names = [
+        frame.name
+        for frame in frames
+    ]
 
     initial_fig.update_layout(
         updatemenus=[
             {
                 "type": "buttons",
                 "showactive": False,
+                "x": 0.05,
+                "y": 0.05,
                 "buttons": [
                     {
                         "label": "▶ Play",
                         "method": "animate",
                         "args": [
-                            None,
+                            frame_names,
                             {
                                 "frame": {
-                                    "duration": 100,
+                                    "duration": 28,
                                     "redraw": True
                                 },
                                 "transition": {
@@ -966,7 +976,8 @@ def spring_experiment():
                     }
                 ]
             }
-        ]
+        ],
+        uirevision="spring"
     )
 
     st.plotly_chart(
