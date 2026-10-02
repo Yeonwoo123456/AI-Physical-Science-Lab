@@ -33,368 +33,95 @@ class ExperimentConfig(BaseModel):
 
 class NaturalLanguageParser:
 
-    DEFAULTS = {
-        "mass": 1.0,
-        "gravity": 9.81,
-        "height": 0.0,
-        "initial_velocity": 0.0,
-        "launch_angle": 0.0,
-        "friction": 0.0,
-        "tension": 0.0,
-        "elasticity": 1.0,
-        "air_resistance": 0.0,
-        "planet_mass": 5.972e24,
-        "planet_radius": 6371000.0
-    }
-
     SYSTEM_INSTRUCTION = """
-You are a physics experiment interpretation assistant.
+You are a physics parameter extraction system.
 
-Your job is to understand the user's physics experiment and return structured JSON.
+Read the user's sentence carefully and extract ONLY values explicitly stated by the user.
 
-IMPORTANT RULES:
+Rules:
 
-1. Extract values explicitly mentioned by the user.
-2. Convert units to SI units.
-3. NEVER invent or guess a value that the user did not mention.
-4. If a parameter is not mentioned, use the provided default value.
-5. Identify the experiment intent:
-   - free_fall
-   - projectile
-   - slanted_motion
-   - unknown
+1. Convert all values to SI units.
+   - g -> kg
+   - kg -> kg
+   - km/h -> m/s
+   - km -> m
+   - cm -> m
+   - degrees -> degrees
 
-Parameter meanings:
+2. NEVER invent or guess a value that the user did not mention.
 
-mass:
-kg
+3. If a value is not mentioned, use these defaults:
 
-gravity:
-m/s^2
+mass = 1.0
+gravity = 9.81
+height = 0.0
+initial_velocity = 0.0
+launch_angle = 0.0
+friction = 0.0
+tension = 0.0
+elasticity = 1.0
+air_resistance = 0.0
+planet_mass = 5.972e24
+planet_radius = 6371000.0
 
-height:
-m
-
-initial_velocity:
-m/s
-
-launch_angle:
-degrees
-
-friction:
-coefficient of friction
-
-tension:
-N
-
-elasticity:
-0 to 1
-
-air_resistance:
-coefficient
-
-planet_mass:
-kg
-
-planet_radius:
-m
-
-Examples:
-
-"Throw a ball at 20 m/s from 10 meters at 40 degrees"
-
-means:
-
-initial_velocity = 20
-height = 10
-launch_angle = 40
+4. Examples:
 
 "공이 10m 높이에서 40도로 날아가"
 
-means:
-
 height = 10
 launch_angle = 40
+initial_velocity = 0
 
-initial_velocity was NOT specified,
-so initial_velocity must remain 0.
+Do NOT guess the speed.
 
-"공을 2kg 질량으로 25m/s의 속도로 30도 방향으로 던진다"
-
-means:
+"2kg 공을 20m/s로 30도 던져"
 
 mass = 2
-initial_velocity = 25
+initial_velocity = 20
 launch_angle = 30
 
-"속도 36km/h"
-
-means:
+"36km/h로 공을 던져"
 
 initial_velocity = 10
 
-because 36 km/h = 10 m/s.
+5. Identify the experiment:
 
-Return ONLY valid JSON.
+projectile:
+throwing, launching, flying, projectile, 던지다, 던져, 발사, 날아가다, 포물선
 
-Schema:
+free_fall:
+drop, falling, free fall, 낙하, 떨어지다, 떨어뜨리다
+
+slanted_motion:
+incline, slope, sliding, 경사, 미끄러지다
+
+6. Do not modify parameters that are not explicitly mentioned.
+Use the default value instead.
+
+7. Return ONLY valid JSON.
 
 {
-    "intent": "free_fall | projectile | slanted_motion | unknown",
-    "parameters": {
-        "mass": 1.0,
-        "gravity": 9.81,
-        "height": 0.0,
-        "initial_velocity": 0.0,
-        "launch_angle": 0.0,
-        "friction": 0.0,
-        "tension": 0.0,
-        "elasticity": 1.0,
-        "air_resistance": 0.0,
-        "planet_mass": 5.972e24,
-        "planet_radius": 6371000.0
-    },
-    "needs_clarification": false,
-    "clarification_message": null
+  "intent": "free_fall | projectile | slanted_motion | unknown",
+  "parameters": {
+    "mass": 1.0,
+    "gravity": 9.81,
+    "height": 0.0,
+    "initial_velocity": 0.0,
+    "launch_angle": 0.0,
+    "friction": 0.0,
+    "tension": 0.0,
+    "elasticity": 1.0,
+    "air_resistance": 0.0,
+    "planet_mass": 5.972e24,
+    "planet_radius": 6371000.0
+  },
+  "needs_clarification": false,
+  "clarification_message": null
 }
 """
 
-    @staticmethod
-    def _number(text):
-        match = re.search(
-            r"[-+]?\d+(?:\.\d+)?",
-            text.replace(",", "")
-        )
-
-        if not match:
-            return None
-
-        try:
-            return float(match.group())
-        except ValueError:
-            return None
-
     @classmethod
-    def _extract_explicit_parameters(cls, prompt):
-
-        text = prompt.lower()
-        text = text.replace(",", "")
-
-        params = {}
-
-        # -------------------------------------------------
-        # HEIGHT
-        # -------------------------------------------------
-
-        patterns = [
-            r"(\d+(?:\.\d+)?)\s*(?:m|meter|meters|미터)\s*(?:높이|높은|위)",
-            r"(?:height|높이)\s*(?:가|은|는|:)?\s*(\d+(?:\.\d+)?)\s*(?:m|meter|meters|미터)?",
-            r"(?:from|at)\s*(\d+(?:\.\d+)?)\s*(?:m|meter|meters|미터)"
-        ]
-
-        for pattern in patterns:
-            match = re.search(pattern, text)
-
-            if match:
-                params["height"] = float(match.group(1))
-                break
-
-        # -------------------------------------------------
-        # LAUNCH ANGLE
-        # -------------------------------------------------
-
-        patterns = [
-            r"(\d+(?:\.\d+)?)\s*(?:도|degrees?|degree)",
-            r"(?:angle|각도)\s*(?:가|은|는|:)?\s*(\d+(?:\.\d+)?)",
-            r"(\d+(?:\.\d+)?)\s*(?:deg)"
-        ]
-
-        for pattern in patterns:
-            match = re.search(pattern, text)
-
-            if match:
-                params["launch_angle"] = float(match.group(1))
-                break
-
-        # -------------------------------------------------
-        # VELOCITY - m/s
-        # -------------------------------------------------
-
-        patterns = [
-            r"(\d+(?:\.\d+)?)\s*(?:m/s|mps|m/sec|미터/초)",
-            r"(?:속도|speed|velocity)\s*(?:가|은|는|:)?\s*(\d+(?:\.\d+)?)\s*(?:m/s|mps|m/sec)?"
-        ]
-
-        for pattern in patterns:
-            match = re.search(pattern, text)
-
-            if match:
-                params["initial_velocity"] = float(match.group(1))
-                break
-
-        # -------------------------------------------------
-        # VELOCITY - km/h
-        # -------------------------------------------------
-
-        if "initial_velocity" not in params:
-
-            patterns = [
-                r"(\d+(?:\.\d+)?)\s*(?:km/h|kmh)",
-                r"(?:시속)\s*(\d+(?:\.\d+)?)"
-            ]
-
-            for pattern in patterns:
-                match = re.search(pattern, text)
-
-                if match:
-                    kmh = float(match.group(1))
-                    params["initial_velocity"] = kmh / 3.6
-                    break
-
-        # -------------------------------------------------
-        # MASS
-        # -------------------------------------------------
-
-        patterns = [
-            r"(\d+(?:\.\d+)?)\s*(?:kg|kilograms?|킬로그램)",
-            r"(?:mass|질량)\s*(?:가|은|는|:)?\s*(\d+(?:\.\d+)?)"
-        ]
-
-        for pattern in patterns:
-            match = re.search(pattern, text)
-
-            if match:
-                params["mass"] = float(match.group(1))
-                break
-
-        # -------------------------------------------------
-        # GRAVITY
-        # -------------------------------------------------
-
-        patterns = [
-            r"(\d+(?:\.\d+)?)\s*(?:m/s\^?2|m/s²|m/s2)\s*(?:중력|gravity)?",
-            r"(?:gravity|중력)\s*(?:가|은|는|:)?\s*(\d+(?:\.\d+)?)"
-        ]
-
-        for pattern in patterns:
-            match = re.search(pattern, text)
-
-            if match:
-                params["gravity"] = float(match.group(1))
-                break
-
-        # -------------------------------------------------
-        # FRICTION
-        # -------------------------------------------------
-
-        patterns = [
-            r"(?:friction|마찰계수|마찰)\s*(?:가|은|는|:)?\s*(\d+(?:\.\d+)?)",
-            r"(?:mu|μ)\s*=?\s*(\d+(?:\.\d+)?)"
-        ]
-
-        for pattern in patterns:
-            match = re.search(pattern, text)
-
-            if match:
-                params["friction"] = float(match.group(1))
-                break
-
-        # -------------------------------------------------
-        # ELASTICITY
-        # -------------------------------------------------
-
-        patterns = [
-            r"(?:elasticity|탄성계수|반발계수)\s*(?:가|은|는|:)?\s*(\d+(?:\.\d+)?)",
-            r"(?:e)\s*=\s*(\d+(?:\.\d+)?)"
-        ]
-
-        for pattern in patterns:
-            match = re.search(pattern, text)
-
-            if match:
-                params["elasticity"] = float(match.group(1))
-                break
-
-        # -------------------------------------------------
-        # AIR RESISTANCE
-        # -------------------------------------------------
-
-        patterns = [
-            r"(?:air resistance|공기저항)\s*(?:가|은|는|:)?\s*(\d+(?:\.\d+)?)",
-            r"(?:drag|저항계수)\s*(?:가|은|는|:)?\s*(\d+(?:\.\d+)?)"
-        ]
-
-        for pattern in patterns:
-            match = re.search(pattern, text)
-
-            if match:
-                params["air_resistance"] = float(match.group(1))
-                break
-
-        return params
-
-    @classmethod
-    def _detect_intent(cls, prompt):
-
-        text = prompt.lower()
-
-        projectile_words = [
-            "projectile",
-            "projectile motion",
-            "throw",
-            "thrown",
-            "launch",
-            "launched",
-            "shoot",
-            "shot",
-            "fly",
-            "flies",
-            "날아",
-            "던져",
-            "던진",
-            "발사",
-            "쏘",
-            "포물선"
-        ]
-
-        free_fall_words = [
-            "free fall",
-            "freefall",
-            "drop",
-            "dropped",
-            "낙하",
-            "떨어",
-            "떨어뜨"
-        ]
-
-        slanted_words = [
-            "incline",
-            "inclined",
-            "slope",
-            "sliding",
-            "slide",
-            "경사",
-            "미끄러"
-        ]
-
-        if any(word in text for word in projectile_words):
-            return "projectile"
-
-        if any(word in text for word in free_fall_words):
-            return "free_fall"
-
-        if any(word in text for word in slanted_words):
-            return "slanted_motion"
-
-        return "unknown"
-
-    @classmethod
-    def parse(cls, prompt):
-
-        explicit_params = cls._extract_explicit_parameters(prompt)
-        detected_intent = cls._detect_intent(prompt)
-
-        ai_result = {}
+    def parse(cls, prompt: str) -> Dict[str, Any]:
 
         try:
 
@@ -411,72 +138,26 @@ Schema:
                     }
                 ],
                 response_format={"type": "json_object"},
-                temperature=0.0
+                temperature=0
             )
 
-            content = response.choices[0].message.content
+            result = json.loads(
+                response.choices[0].message.content
+            )
 
-            if content:
-                ai_result = json.loads(content)
+            return result
 
-        except Exception:
-            ai_result = {}
+        except Exception as e:
 
-        # -------------------------------------------------
-        # START WITH SAFE DEFAULTS
-        # -------------------------------------------------
-
-        final_params = cls.DEFAULTS.copy()
-
-        # -------------------------------------------------
-        # APPLY AI RESULT
-        # -------------------------------------------------
-
-        ai_params = ai_result.get("parameters", {})
-
-        if isinstance(ai_params, dict):
-
-            for key in final_params:
-
-                value = ai_params.get(key)
-
-                if isinstance(value, (int, float)):
-                    final_params[key] = float(value)
-
-        # -------------------------------------------------
-        # EXPLICIT VALUES ALWAYS OVERRIDE AI
-        # -------------------------------------------------
-
-        for key, value in explicit_params.items():
-            final_params[key] = value
-
-        # -------------------------------------------------
-        # INTENT
-        # -------------------------------------------------
-
-        ai_intent = ai_result.get("intent", "unknown")
-
-        if detected_intent != "unknown":
-            intent = detected_intent
-        elif ai_intent in [
-            "free_fall",
-            "projectile",
-            "slanted_motion"
-        ]:
-            intent = ai_intent
-        else:
-            intent = "unknown"
-
-        # -------------------------------------------------
-        # FINAL RESULT
-        # -------------------------------------------------
-
-        return {
-            "intent": intent,
-            "parameters": final_params,
-            "needs_clarification": False,
-            "clarification_message": None
-        }
+            return {
+                "intent": "unknown",
+                "parameters": {},
+                "needs_clarification": True,
+                "clarification_message": (
+                    "The AI could not understand the experiment. "
+                    "Please describe the experiment with more specific values."
+                )
+            }
 
 class ValidationResult(BaseModel):
     is_valid: bool
