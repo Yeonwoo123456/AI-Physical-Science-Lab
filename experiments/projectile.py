@@ -150,7 +150,7 @@ def projectile_experiment():
         angle = st.number_input(
             "Launch Angle (°)",
             min_value=0.0,
-            max_value=90.0,
+            max_value=180.0,
             step=1.0,
             key="projectile_angle"
         )
@@ -195,13 +195,21 @@ def projectile_experiment():
         use_container_width=True
     ):
 
-        run_projectile_simulation(
-            velocity,
-            angle,
-            height,
-            gravity,
-            mass
-        )
+        if angle > 90:
+
+            st.warning(
+                "Launch angle cannot be greater than 90°."
+            )
+
+        else:
+
+            run_projectile_simulation(
+                velocity,
+                angle,
+                height,
+                gravity,
+                mass
+            )
 
     st.markdown("<br>", unsafe_allow_html=True)
 
@@ -444,40 +452,27 @@ def run_projectile_simulation(
         updatemenus=[
             {
                 "type": "buttons",
-
                 "direction": "left",
-
                 "showactive": False,
-
                 "x": 0.5,
-
                 "xanchor": "center",
-
                 "y": -0.20,
-
                 "yanchor": "top",
-
                 "buttons": [
                     {
                         "label": "PLAY",
-
                         "method": "animate",
-
                         "args": [
                             None,
-
                             {
                                 "frame": {
                                     "duration": 30,
                                     "redraw": True
                                 },
-
                                 "transition": {
                                     "duration": 0
                                 },
-
                                 "fromcurrent": False,
-
                                 "mode": "immediate"
                             }
                         ]
