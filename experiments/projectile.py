@@ -35,33 +35,44 @@ def projectile_experiment():
         "Analyze with AI",
         use_container_width=True
     ):
+
         if not user_input.strip():
+
             st.warning("Please describe your experiment first.")
+
         else:
+
             with st.spinner("Analyzing your experiment..."):
+
                 result = NaturalLanguageParser.parse(user_input)
 
             if result.get("needs_clarification", False):
+
                 st.warning(
                     result.get(
                         "clarification_message",
                         "More information is needed."
                     )
                 )
+
             else:
+
                 validation = PhysicsValidator.validate(result)
 
                 if not validation.is_valid:
+
                     for error in validation.errors:
                         st.error(error)
+
                 else:
+
                     params = validation.validated_params
 
                     st.session_state.projectile_ai_params = {
                         "velocity": float(
                             params.get(
                                 "initial_velocity",
-                                0.0
+                                20.0
                             )
                         ),
                         "angle": float(
@@ -111,7 +122,7 @@ def projectile_experiment():
             value=float(
                 ai_params.get(
                     "velocity",
-                    0.0
+                    20.0
                 )
             ),
             step=1.0,
@@ -199,6 +210,12 @@ def projectile_experiment():
 
     if st.button("Back to Experiments"):
         st.session_state.projectile_ai_params = {}
+        st.session_state.projectile_velocity = 20.0
+        st.session_state.projectile_angle = 0.0
+        st.session_state.projectile_height = 0.0
+        st.session_state.projectile_gravity = 9.81
+        st.session_state.projectile_mass = 1.0
+
         st.session_state.page = "select"
         st.query_params.clear()
         st.rerun()
@@ -328,6 +345,7 @@ def run_projectile_simulation(
 
     fig.update_layout(
         title="Projectile Motion",
+
         xaxis=dict(
             title="Horizontal Distance (m)",
             range=[
@@ -335,6 +353,7 @@ def run_projectile_simulation(
                 x_max
             ]
         ),
+
         yaxis=dict(
             title="Height (m)",
             range=[
@@ -342,15 +361,18 @@ def run_projectile_simulation(
                 y_max
             ]
         ),
+
         template="plotly_dark",
         height=600,
         showlegend=True,
+
         margin=dict(
             l=70,
             r=40,
             t=80,
             b=130
         ),
+
         updatemenus=[
             {
                 "type": "buttons",
@@ -360,20 +382,25 @@ def run_projectile_simulation(
                 "xanchor": "center",
                 "y": -0.20,
                 "yanchor": "top",
+
                 "buttons": [
                     {
                         "label": "PLAY",
                         "method": "animate",
+
                         "args": [
                             None,
+
                             {
                                 "frame": {
                                     "duration": 30,
                                     "redraw": True
                                 },
+
                                 "transition": {
                                     "duration": 0
                                 },
+
                                 "fromcurrent": False,
                                 "mode": "immediate"
                             }
