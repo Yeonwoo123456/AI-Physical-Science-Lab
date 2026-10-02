@@ -475,20 +475,27 @@ function draw() {
         )
     );
 
+    // Horizontal force vectors start from the left/right middle of the block.
+    // Applied Force is anchored to the right face.
+    // Friction is anchored to the left face.
+    const blockLeft = blockX - blockW / 2;
+    const blockRight = blockX + blockW / 2;
+    const blockMidY = baseY;
+
     arrow(
-        blockX,
-        baseY - 38,
-        blockX + applied * horizontalScale,
-        baseY - 38,
+        blockRight,
+        blockMidY,
+        blockRight + applied * horizontalScale,
+        blockMidY,
         "#4DA6FF",
         "Applied " + Math.abs(applied).toFixed(1) + " N"
     );
 
     arrow(
-        blockX,
-        baseY + 38,
-        blockX + friction * horizontalScale,
-        baseY + 38,
+        blockLeft,
+        blockMidY,
+        blockLeft + friction * horizontalScale,
+        blockMidY,
         "#FF6B6B",
         "Friction " + Math.abs(friction).toFixed(1) + " N"
     );
