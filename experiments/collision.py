@@ -341,7 +341,6 @@ def run_collision(
             const X = [];
             const Y = [];
             const Z = [];
-
             const I = [];
             const J = [];
             const K = [];
@@ -406,23 +405,18 @@ def run_collision(
 
             return {{
                 type: "mesh3d",
-
                 x: X,
                 y: Y,
                 z: Z,
-
                 i: I,
                 j: J,
                 k: K,
-
                 color:
                     color === "blue"
                         ? "#4DA3FF"
                         : "#FF5C5C",
-
                 opacity: 1,
                 flatshading: false,
-
                 lighting: {{
                     ambient: 0.55,
                     diffuse: 1.0,
@@ -430,13 +424,11 @@ def run_collision(
                     fresnel: 0.45,
                     roughness: 0.05
                 }},
-
                 lightposition: {{
                     x: 100,
                     y: 150,
                     z: 300
                 }},
-
                 name: name
             }};
         }}
@@ -447,7 +439,6 @@ def run_collision(
             const s = 1.25;
 
             return {{
-
                 type: "mesh3d",
 
                 x: [
@@ -508,12 +499,7 @@ def run_collision(
         }}
 
 
-        function createObject(
-            x,
-            color,
-            shape,
-            name
-        ) {{
+        function createObject(x, color, shape, name) {{
 
             return shape === "Sphere"
                 ? sphere(x, color, name)
@@ -526,13 +512,11 @@ def run_collision(
             const radius = 1.25;
             const segments = 32;
             const rings = 20;
-
             const X = [];
 
             for (let r = 0; r <= rings; r++) {{
 
-                const phi =
-                    Math.PI * r / rings;
+                const phi = Math.PI * r / rings;
 
                 for (let s = 0; s < segments; s++) {{
 
@@ -573,25 +557,16 @@ def run_collision(
         }}
 
 
-        function updateObject(
-            objectIndex,
-            x,
-            shape
-        ) {{
+        function updateObject(objectIndex, x, shape) {{
 
-            if (shape === "Sphere") {{
+            if (shape === "Sphere")
                 updateSphere(objectIndex, x);
-            }} else {{
+            else
                 updateCube(objectIndex, x);
-            }}
         }}
 
 
-        function interpolate(
-            values,
-            times,
-            time
-        ) {{
+        function interpolate(values, times, time) {{
 
             if (time <= times[0])
                 return values[0];
@@ -621,28 +596,24 @@ def run_collision(
 
             return (
                 values[i] +
-                (values[i + 1] - values[i]) *
-                ratio
+                (values[i + 1] - values[i]) * ratio
             );
         }}
 
 
         const data = [
-
             createObject(
                 p1[0],
                 "blue",
                 s1,
                 "Object A"
             ),
-
             createObject(
                 p2[0],
                 "red",
                 s2,
                 "Object B"
             )
-
         ];
 
 
@@ -789,9 +760,7 @@ def run_collision(
                 }}
             }}
 
-            requestAnimationFrame(
-                animate
-            );
+            requestAnimationFrame(animate);
         }};
 
     </script>
@@ -806,161 +775,104 @@ def run_collision(
     initial_velocity1 = velocity1
     initial_velocity2 = -velocity2
 
-    initial_momentum1 = (
-        mass1 * initial_velocity1
-    )
+    initial_momentum1 = mass1 * initial_velocity1
+    initial_momentum2 = mass2 * initial_velocity2
 
-    initial_momentum2 = (
-        mass2 * initial_velocity2
-    )
-
-    final_momentum1 = (
-        mass1 * collision_result_v1
-    )
-
-    final_momentum2 = (
-        mass2 * collision_result_v2
-    )
+    final_momentum1 = mass1 * collision_result_v1
+    final_momentum2 = mass2 * collision_result_v2
 
     initial_energy1 = (
-        0.5 *
-        mass1 *
-        initial_velocity1 ** 2
+        0.5 * mass1 * initial_velocity1 ** 2
     )
 
     initial_energy2 = (
-        0.5 *
-        mass2 *
-        initial_velocity2 ** 2
+        0.5 * mass2 * initial_velocity2 ** 2
     )
 
     final_energy1 = (
-        0.5 *
-        mass1 *
-        collision_result_v1 ** 2
+        0.5 * mass1 * collision_result_v1 ** 2
     )
 
     final_energy2 = (
-        0.5 *
-        mass2 *
-        collision_result_v2 ** 2
+        0.5 * mass2 * collision_result_v2 ** 2
     )
 
     st.markdown("### Results")
 
-    results_html = f"""
-    <style>
+    header = st.columns([2, 2, 2])
 
-        .collision-results {{
-            width: 100%;
-            max-width: 720px;
-            margin: 8px auto 30px auto;
-            font-family: monospace;
-        }}
+    with header[1]:
+        st.markdown("**BEFORE**")
 
-        .collision-results table {{
-            width: 100%;
-            border-collapse: collapse;
-        }}
+    with header[2]:
+        st.markdown("**AFTER**")
 
-        .collision-results th {{
-            text-align: right;
-            font-size: 15px;
-            font-weight: 500;
-            padding: 4px 12px;
-        }}
+    st.markdown("**Object A**")
 
-        .collision-results th:first-child {{
-            text-align: left;
-        }}
+    row = st.columns([2, 2, 2])
 
-        .collision-results td {{
-            padding: 4px 12px;
-            font-size: 15px;
-            white-space: nowrap;
-        }}
+    with row[0]:
+        st.write("Velocity")
 
-        .collision-results td:first-child {{
-            text-align: left;
-            font-weight: 400;
-        }}
+    with row[1]:
+        st.write(f"{initial_velocity1:.2f} m/s")
 
-        .collision-results td:not(:first-child) {{
-            text-align: right;
-        }}
+    with row[2]:
+        st.write(f"{collision_result_v1:.2f} m/s")
 
-        .collision-results .object-title td {{
-            padding-top: 14px;
-            padding-bottom: 3px;
-            font-weight: 600;
-        }}
+    row = st.columns([2, 2, 2])
 
-    </style>
+    with row[0]:
+        st.write("Momentum")
 
-    <div class="collision-results">
+    with row[1]:
+        st.write(f"{initial_momentum1:.2f} kg·m/s")
 
-        <table>
+    with row[2]:
+        st.write(f"{final_momentum1:.2f} kg·m/s")
 
-            <tr>
-                <th></th>
-                <th>BEFORE</th>
-                <th>AFTER</th>
-            </tr>
+    row = st.columns([2, 2, 2])
 
-            <tr class="object-title">
-                <td>Object A</td>
-                <td></td>
-                <td></td>
-            </tr>
+    with row[0]:
+        st.write("Energy")
 
-            <tr>
-                <td>Velocity</td>
-                <td>{initial_velocity1:.2f} m/s</td>
-                <td>{collision_result_v1:.2f} m/s</td>
-            </tr>
+    with row[1]:
+        st.write(f"{initial_energy1:.2f} J")
 
-            <tr>
-                <td>Momentum</td>
-                <td>{initial_momentum1:.2f} kg·m/s</td>
-                <td>{final_momentum1:.2f} kg·m/s</td>
-            </tr>
+    with row[2]:
+        st.write(f"{final_energy1:.2f} J")
 
-            <tr>
-                <td>Energy</td>
-                <td>{initial_energy1:.2f} J</td>
-                <td>{final_energy1:.2f} J</td>
-            </tr>
+    st.markdown("**Object B**")
 
-            <tr class="object-title">
-                <td>Object B</td>
-                <td></td>
-                <td></td>
-            </tr>
+    row = st.columns([2, 2, 2])
 
-            <tr>
-                <td>Velocity</td>
-                <td>{initial_velocity2:.2f} m/s</td>
-                <td>{collision_result_v2:.2f} m/s</td>
-            </tr>
+    with row[0]:
+        st.write("Velocity")
 
-            <tr>
-                <td>Momentum</td>
-                <td>{initial_momentum2:.2f} kg·m/s</td>
-                <td>{final_momentum2:.2f} kg·m/s</td>
-            </tr>
+    with row[1]:
+        st.write(f"{initial_velocity2:.2f} m/s")
 
-            <tr>
-                <td>Energy</td>
-                <td>{initial_energy2:.2f} J</td>
-                <td>{final_energy2:.2f} J</td>
-            </tr>
+    with row[2]:
+        st.write(f"{collision_result_v2:.2f} m/s")
 
-        </table>
+    row = st.columns([2, 2, 2])
 
-    </div>
-    """
+    with row[0]:
+        st.write("Momentum")
 
-    st.markdown(
-        results_html,
-        unsafe_allow_html=True
-    )
+    with row[1]:
+        st.write(f"{initial_momentum2:.2f} kg·m/s")
+
+    with row[2]:
+        st.write(f"{final_momentum2:.2f} kg·m/s")
+
+    row = st.columns([2, 2, 2])
+
+    with row[0]:
+        st.write("Energy")
+
+    with row[1]:
+        st.write(f"{initial_energy2:.2f} J")
+
+    with row[2]:
+        st.write(f"{final_energy2:.2f} J")
