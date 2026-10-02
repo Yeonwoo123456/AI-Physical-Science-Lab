@@ -244,71 +244,74 @@ def run_collision(
             }};
         }}
 
-        function cube(x, color, name) {{
-            const s = 1.25;
+        function cube(x, color, name) {
+    const s = 1.25;
 
-            const X = [
-                x - s, x + s, x + s, x - s,
-                x - s, x + s, x + s, x - s
-            ];
+    const X = [
+        x - s, x + s, x + s, x - s,
+        x - s, x + s, x + s, x - s
+    ];
 
-            const Y = [
-                -s, -s, s, s,
-                -s, -s, s, s
-            ];
+    const Y = [
+        -s, -s, s, s,
+        -s, -s, s, s
+    ];
 
-            const Z = [
-                -s, -s, -s, -s,
-                s, s, s, s
-            ];
+    const Z = [
+        -s, -s, -s, -s,
+        s, s, s, s
+    ];
 
-            return {{
-                type: "mesh3d",
+    return {
+        type: "mesh3d",
 
-                x: X,
-                y: Y,
-                z: Z,
+        x: X,
+        y: Y,
+        z: Z,
 
-                i: [
-                    0, 0,
-                    4, 4,
-                    0, 0,
-                    1, 1,
-                    2, 2,
-                    3, 3
-                ],
+        i: [
+            0, 0,
+            4, 4,
+            0, 0,
+            1, 1,
+            2, 2,
+            3, 3
+        ],
 
-                j: [
-                    1, 2,
-                    5, 6,
-                    4, 5,
-                    5, 6,
-                    6, 7,
-                    7, 4
-                ],
+        j: [
+            1, 2,
+            6, 7,
+            4, 5,
+            5, 6,
+            6, 7,
+            7, 4
+        ],
 
-                k: [
-                    2, 3,
-                    6, 7,
-                    5, 1,
-                    6, 2,
-                    7, 3,
-                    4, 0
-                ],
+        k: [
+            2, 3,
+            5, 6,
+            5, 1,
+            6, 2,
+            7, 3,
+            4, 0
+        ],
 
-                color: color,
-                opacity: 1,
+        color: color,
 
-                lighting: {{
-                    ambient: 0.3,
-                    diffuse: 0.8,
-                    specular: 0.5,
-                    roughness: 0.3
-                }},
+        opacity: 1,
 
-                name: name
-            }};
-        }}
+        flatshading: true,
+
+        lighting: {
+            ambient: 0.3,
+            diffuse: 0.8,
+            specular: 0.5,
+            roughness: 0.3
+        },
+
+        name: name
+    };
+}
 
         function createObject(x, color, shape, name) {{
             if (shape === "Sphere") {{
