@@ -49,32 +49,44 @@ def projectile_experiment():
                     )
                 )
             else:
-                params = result.get("parameters", {})
-
                 validation = PhysicsValidator.validate(result)
 
                 if not validation.is_valid:
                     for error in validation.errors:
                         st.error(error)
                 else:
+                    params = validation.validated_params
+
                     st.session_state.projectile_ai_params = {
                         "velocity": float(
-                            params.get("initial_velocity", 20.0)
+                            params.get(
+                                "initial_velocity",
+                                0.0
+                            )
                         ),
                         "angle": float(
-                            params.get("launch_angle", 45.0)
+                            params.get(
+                                "launch_angle",
+                                0.0
+                            )
                         ),
                         "height": float(
-                            params.get("height", 0.0)
+                            params.get(
+                                "height",
+                                0.0
+                            )
                         ),
                         "gravity": float(
-                            validation.validated_params.get(
+                            params.get(
                                 "gravity",
                                 9.81
                             )
                         ),
                         "mass": float(
-                            params.get("mass", 1.0)
+                            params.get(
+                                "mass",
+                                1.0
+                            )
                         )
                     }
 
@@ -94,10 +106,13 @@ def projectile_experiment():
     with col1:
         velocity = st.number_input(
             "Initial Speed (m/s)",
-            min_value=0.1,
+            min_value=0.0,
             max_value=100.0,
             value=float(
-                ai_params.get("velocity", 20.0)
+                ai_params.get(
+                    "velocity",
+                    0.0
+                )
             ),
             step=1.0,
             key="projectile_velocity"
@@ -109,7 +124,10 @@ def projectile_experiment():
             min_value=0.0,
             max_value=90.0,
             value=float(
-                ai_params.get("angle", 45.0)
+                ai_params.get(
+                    "angle",
+                    0.0
+                )
             ),
             step=1.0,
             key="projectile_angle"
@@ -121,7 +139,10 @@ def projectile_experiment():
             min_value=0.0,
             max_value=500.0,
             value=float(
-                ai_params.get("height", 0.0)
+                ai_params.get(
+                    "height",
+                    0.0
+                )
             ),
             step=1.0,
             key="projectile_height"
@@ -135,7 +156,10 @@ def projectile_experiment():
             min_value=0.01,
             max_value=30.0,
             value=float(
-                ai_params.get("gravity", 9.81)
+                ai_params.get(
+                    "gravity",
+                    9.81
+                )
             ),
             step=0.1,
             key="projectile_gravity"
@@ -147,7 +171,10 @@ def projectile_experiment():
             min_value=0.01,
             max_value=1000.0,
             value=float(
-                ai_params.get("mass", 1.0)
+                ai_params.get(
+                    "mass",
+                    1.0
+                )
             ),
             step=0.1,
             key="projectile_mass"
@@ -171,6 +198,7 @@ def projectile_experiment():
     st.markdown("<br>", unsafe_allow_html=True)
 
     if st.button("Back to Experiments"):
+        st.session_state.projectile_ai_params = {}
         st.session_state.page = "select"
         st.query_params.clear()
         st.rerun()
@@ -199,15 +227,19 @@ def run_projectile_simulation(
 
     max_height = (
         height +
-        vy ** 2 / (2 * gravity)
+        vy ** 2 /
+        (2 * gravity)
     )
 
-    horizontal_range = vx * total_time
+    horizontal_range = (
+        vx * total_time
+    )
 
     point_count = 100
 
     times = [
-        total_time * i / (point_count - 1)
+        total_time * i /
+        (point_count - 1)
         for i in range(point_count)
     ]
 
@@ -298,11 +330,17 @@ def run_projectile_simulation(
         title="Projectile Motion",
         xaxis=dict(
             title="Horizontal Distance (m)",
-            range=[0, x_max]
+            range=[
+                0,
+                x_max
+            ]
         ),
         yaxis=dict(
             title="Height (m)",
-            range=[0, y_max]
+            range=[
+                0,
+                y_max
+            ]
         ),
         template="plotly_dark",
         height=600,
