@@ -120,7 +120,7 @@ def simulate_pendulum(
 
 def create_pendulum_figure(result):
 
-    frame_step = 5
+    animation_step = 5
     frames = []
 
     length = math.sqrt(
@@ -133,7 +133,7 @@ def create_pendulum_figure(result):
     for i in range(
         0,
         len(result["time"]),
-        frame_step
+        animation_step
     ):
         x = result["x"][i]
         y = result["y"][i]
@@ -153,6 +153,35 @@ def create_pendulum_figure(result):
             * math.sin(math.radians(angle))
         )
 
+        # 수치는 0.5초마다 갱신
+        display_index = int(
+            round(result["time"][i] / 0.5)
+            * 0.5
+            / 0.01
+        )
+
+        display_index = min(
+            display_index,
+            len(result["time"]) - 1
+        )
+
+        display_time = result["time"][display_index]
+
+        display_angle = result["angle"][display_index]
+        display_omega = result["angular_velocity"][display_index]
+        display_velocity = result["velocity"][display_index]
+        display_tension = result["tension"][display_index]
+        display_energy = result["total_energy"][display_index]
+
+        info_text = (
+            f"Time: {display_time:.1f} s<br>"
+            f"Angle: {display_angle:.2f}°<br>"
+            f"Angular Velocity: {display_omega:.2f} rad/s<br>"
+            f"Velocity: {display_velocity:.2f} m/s<br>"
+            f"Tension: {display_tension:.2f} N<br>"
+            f"Total Energy: {display_energy:.2f} J"
+        )
+
         frames.append(
             go.Frame(
                 name=f"frame{i}",
@@ -162,16 +191,18 @@ def create_pendulum_figure(result):
                         y=[0, y],
                         z=[0, 0]
                     ),
+
                     go.Scatter3d(
                         x=[x],
                         y=[y],
                         z=[0],
                         customdata=[[
-                            result["time"][i],
-                            angle,
-                            result["velocity"][i]
+                            display_time,
+                            display_angle,
+                            display_velocity
                         ]]
                     ),
+
                     go.Scatter3d(
                         x=[
                             x,
@@ -183,17 +214,40 @@ def create_pendulum_figure(result):
                         ],
                         z=[0, 0],
                         customdata=[
-                            omega,
-                            omega
+                            display_omega,
+                            display_omega
                         ]
+                    ),
+
+                    go.Scatter3d(
+                        x=[0],
+                        y=[ground * 0.55],
+                        z=[0.45],
+                        mode="text",
+                        text=[info_text],
+                        textfont=dict(
+                            size=14,
+                            color="white"
+                        ),
+                        hoverinfo="skip"
                     )
                 ],
-                traces=[1, 3, 4]
+                traces=[1, 3, 4, 5]
             )
         )
 
     first_x = result["x"][0]
     first_y = result["y"][0]
+
+    initial_info = (
+        f"Time: {result['time'][0]:.1f} s<br>"
+        f"Angle: {result['angle'][0]:.2f}°<br>"
+        f"Angular Velocity: "
+        f"{result['angular_velocity'][0]:.2f} rad/s<br>"
+        f"Velocity: {result['velocity'][0]:.2f} m/s<br>"
+        f"Tension: {result['tension'][0]:.2f} N<br>"
+        f"Total Energy: {result['total_energy'][0]:.2f} J"
+    )
 
     fig = go.Figure(
         data=[
@@ -286,6 +340,20 @@ def create_pendulum_figure(result):
                     result["angular_velocity"][0],
                     result["angular_velocity"][0]
                 ]
+            ),
+
+            go.Scatter3d(
+                x=[0],
+                y=[ground * 0.55],
+                z=[0.45],
+                mode="text",
+                text=[initial_info],
+                textfont=dict(
+                    size=14,
+                    color="white"
+                ),
+                hoverinfo="skip",
+                showlegend=False
             )
         ],
         frames=frames
@@ -293,12 +361,14 @@ def create_pendulum_figure(result):
 
     fig.update_layout(
         height=620,
+
         margin=dict(
             l=0,
             r=0,
             t=0,
             b=0
         ),
+
         paper_bgcolor="#0d1117",
         font=dict(color="white"),
 
@@ -308,11 +378,13 @@ def create_pendulum_figure(result):
                 backgroundcolor="#0d1117",
                 gridcolor="#30363d"
             ),
+
             yaxis=dict(
                 title="Y",
                 backgroundcolor="#0d1117",
                 gridcolor="#30363d"
             ),
+
             zaxis=dict(
                 title="Z",
                 backgroundcolor="#0d1117",
@@ -323,9 +395,9 @@ def create_pendulum_figure(result):
 
             camera=dict(
                 eye=dict(
-                    x=1.5,
-                    y=-2.2,
-                    z=1.1
+                    x=1.8,
+                    y=-2.8,
+                    z=0.35
                 ),
                 center=dict(
                     x=0,
@@ -348,20 +420,25 @@ def create_pendulum_figure(result):
                 y=1.02,
                 xanchor="left",
                 yanchor="bottom",
+
                 buttons=[
                     dict(
                         label="▶ Play",
                         method="animate",
+
                         args=[
                             None,
+
                             dict(
                                 frame=dict(
                                     duration=50,
-                                    redraw=False
+                                    redraw=True
                                 ),
+
                                 transition=dict(
                                     duration=0
                                 ),
+
                                 mode="immediate"
                             )
                         ]
