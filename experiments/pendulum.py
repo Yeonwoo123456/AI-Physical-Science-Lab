@@ -162,100 +162,42 @@ def parse_ai_pendulum(prompt):
 
     defaults = {
         "length": 2.0,
-        "initial_angle": -45.0,
         "mass": 1.0,
-        "damping": 0.02,
-        "gravity": 9.81
+        "gravity": 9.81,
+        "initial_angle": -45.0,
+        "damping": 0.02
     }
-
-    values = defaults.copy()
-
-    patterns = {
-        "length": [
-            r"(?:길이|length|rope|줄)\s*(?:은|는|이|을|=|:)?\s*(-?\d+(?:\.\d+)?)\s*(?:m(?![A-Za-z])|meters?|미터)",
-            r"(?<![\w.])(-?\d+(?:\.\d+)?)\s*(?:m(?![A-Za-z/])|meters?|미터)"
-        ],
-
-        "mass": [
-            r"(?:질량|mass|무게|weight)\s*(?:은|는|이|을|=|:)?\s*(-?\d+(?:\.\d+)?)\s*(?:kg(?![A-Za-z])|kilograms?|킬로그램)",
-            r"(?<![\w.])(-?\d+(?:\.\d+)?)\s*(?:kg(?![A-Za-z])|kilograms?|킬로그램)"
-        ],
-
-        "initial_angle": [
-            r"(?:처음\s*)?(?:각도|initial\s+angle|angle)\s*(?:은|는|이|을|=|:)?\s*(-?\d+(?:\.\d+)?)\s*(?:도|°|degrees?)?",
-            r"(?<![\w.])(-?\d+(?:\.\d+)?)\s*(?:도|°|degrees?)"
-        ],
-
-        "gravity": [
-            r"(?:중력|gravity)\s*(?:은|는|이|을|=|:)?\s*(-?\d+(?:\.\d+)?)\s*(?:m\s*/\s*s(?:\^?2|²)?|m/s²|m/s2)",
-            r"(?<![\w.])(-?\d+(?:\.\d+)?)\s*m\s*/\s*s(?:\^?2|²)?"
-        ],
-
-        "damping": [
-            r"(?:감쇠|damping)\s*(?:은|는|이|을|=|:)?\s*(-?\d+(?:\.\d+)?)"
-        ]
-    }
-
-    explicit = {}
-
-    for key, pattern_list in patterns.items():
-
-        for pattern in pattern_list:
-
-            match = re.search(
-                pattern,
-                prompt,
-                re.IGNORECASE
-            )
-
-            if match:
-                number = next(
-                    (
-                        group
-                        for group in match.groups()
-                        if group is not None
-                    ),
-                    None
-                )
-
-                if number is not None:
-                    explicit[key] = float(number)
-                    break
 
     try:
-
         response = client.chat.completions.create(
             model="openai/gpt-oss-120b",
             messages=[
                 {
                     "role": "system",
                     "content": """
-Extract pendulum parameters from the user's natural language.
+You are a pendulum parameter parser.
 
-Return JSON only.
+Convert the user's natural language into JSON.
 
-Keys:
-length
-initial_angle
-mass
-damping
-gravity
-
-Use only values explicitly stated by the user.
-If a value is not explicitly stated, return null.
-Never guess or calculate a missing value.
-
-Left / 왼쪽 = negative angle.
-Right / 오른쪽 = positive angle.
-
-Example:
+Return ONLY:
 {
-    "length": 3,
-    "initial_angle": 45,
-    "mass": 2,
-    "damping": null,
-    "gravity": null
+  "length": number or null,
+  "mass": number or null,
+  "gravity": number or null,
+  "initial_angle": number or null,
+  "damping": number or null
 }
+
+Rules:
+- Extract values explicitly stated by the user.
+- Never invent missing values.
+- Never change a stated number.
+- "왼쪽" or "left" means negative angle.
+- "오른쪽" or "right" means positive angle.
+- Length is meters.
+- Mass is kilograms.
+- Gravity is m/s².
+- Angle is degrees.
 """
                 },
                 {
@@ -276,21 +218,78 @@ Example:
     except Exception:
         ai_values = {}
 
+    values = defaults.copy()
+
     for key in values:
 
-        if key not in explicit:
+        value = ai_values.get(key)
 
-            value = ai_values.get(key)
+        if isinstance(value, (int, float)):
+            values[key] = float(value)
 
-            if isinstance(value, (int, float)):
+    def extract(pattern):
+        match = re.search(
+            pattern,
+            prompt,
+            re.IGNORECASE
+        )
 
-                values[key] = float(value)
+        if match:
+            return float(match.group(1))
 
-    for key, value in explicit.items():
-        values[key] = value
+        return None
+
+    explicit_length = extract(
+        r"(?:길이|length|줄|rope)"
+        r".*?"
+        r"(-?\d+(?:\.\d+)?)"
+        r"\s*(?:m|미터)\b"
+    )
+
+    explicit_mass = extract(
+        r"(?:질량|mass|무게|weight)"
+        r".*?"
+        r"(-?\d+(?:\.\d+)?)"
+        r"\s*(?:kg|킬로그램)\b"
+    )
+
+    explicit_angle = extract(
+        r"(?:각도|angle)"
+        r".*?"
+        r"(-?\d+(?:\.\d+)?)"
+        r"\s*(?:도|°|degrees?)"
+    )
+
+    explicit_gravity = extract(
+        r"(?:중력|gravity)"
+        r".*?"
+        r"(-?\d+(?:\.\d+)?)"
+        r"\s*(?:m/s²|m/s2|m/s\^2)"
+    )
+
+    explicit_damping = extract(
+        r"(?:감쇠|damping)"
+        r".*?"
+        r"(-?\d+(?:\.\d+)?)"
+    )
+
+    if explicit_length is not None:
+        values["length"] = explicit_length
+
+    if explicit_mass is not None:
+        values["mass"] = explicit_mass
+
+    if explicit_angle is not None:
+        values["initial_angle"] = explicit_angle
+
+    if explicit_gravity is not None:
+        values["gravity"] = explicit_gravity
+
+    if explicit_damping is not None:
+        values["damping"] = explicit_damping
 
     if re.search(
-        r"(왼쪽|left)",
+        r"왼쪽|left",
         prompt,
         re.IGNORECASE
     ):
@@ -299,7 +298,7 @@ Example:
         )
 
     elif re.search(
-        r"(오른쪽|right)",
+        r"오른쪽|right",
         prompt,
         re.IGNORECASE
     ):
@@ -307,20 +306,30 @@ Example:
             values["initial_angle"]
         )
 
-    if not 0.1 <= values["length"] <= 10:
-        values["length"] = defaults["length"]
+    values["length"] = min(
+        max(values["length"], 0.1),
+        10.0
+    )
 
-    if not 0.1 <= values["mass"] <= 20:
-        values["mass"] = defaults["mass"]
+    values["mass"] = min(
+        max(values["mass"], 0.1),
+        20.0
+    )
 
-    if not 0.01 <= values["gravity"] <= 1000:
-        values["gravity"] = defaults["gravity"]
+    values["gravity"] = min(
+        max(values["gravity"], 0.01),
+        1000.0
+    )
 
-    if not -89 <= values["initial_angle"] <= 89:
-        values["initial_angle"] = defaults["initial_angle"]
+    values["initial_angle"] = min(
+        max(values["initial_angle"], -89.0),
+        89.0
+    )
 
-    if not 0 <= values["damping"] <= 1:
-        values["damping"] = defaults["damping"]
+    values["damping"] = min(
+        max(values["damping"], 0.0),
+        1.0
+    )
 
     return values
 
@@ -361,7 +370,6 @@ def create_pendulum_figure(result):
     )
 
     frames = []
-
     animation_step = 5
 
     for i in range(
@@ -411,14 +419,12 @@ def create_pendulum_figure(result):
         frames.append(
             go.Frame(
                 name=f"frame{i}",
-
                 data=[
                     go.Scatter3d(
                         x=[0, x],
                         y=[0, y],
                         z=[0, 0]
                     ),
-
                     go.Scatter3d(
                         x=[x],
                         y=[y],
@@ -429,7 +435,6 @@ def create_pendulum_figure(result):
                             result["velocity"][display_index]
                         ]]
                     ),
-
                     go.Scatter3d(
                         x=[
                             x,
@@ -442,13 +447,7 @@ def create_pendulum_figure(result):
                         z=[0, 0]
                     )
                 ],
-
-                traces=[
-                    1,
-                    3,
-                    4
-                ],
-
+                traces=[1, 3, 4],
                 layout=go.Layout(
                     annotations=[
                         dict(
@@ -479,16 +478,9 @@ def create_pendulum_figure(result):
 
     fig = go.Figure(
         data=[
-
             go.Scatter3d(
-                x=[
-                    -ground,
-                    ground
-                ],
-                y=[
-                    -length,
-                    -length
-                ],
+                x=[-ground, ground],
+                y=[-length, -length],
                 z=[0, 0],
                 mode="lines",
                 line=dict(
@@ -499,14 +491,8 @@ def create_pendulum_figure(result):
             ),
 
             go.Scatter3d(
-                x=[
-                    0,
-                    first_x
-                ],
-                y=[
-                    0,
-                    first_y
-                ],
+                x=[0, first_x],
+                y=[0, first_y],
                 z=[0, 0],
                 mode="lines",
                 line=dict(
@@ -569,23 +555,15 @@ def create_pendulum_figure(result):
             ),
 
             go.Scatter3d(
-                x=[
-                    first_x,
-                    first_x
-                ],
-                y=[
-                    first_y,
-                    first_y
-                ],
+                x=[first_x, first_x],
+                y=[first_y, first_y],
                 z=[0, 0],
                 mode="lines+markers",
                 line=dict(
                     width=6,
                     color="#60A5FA"
                 ),
-                marker=dict(
-                    size=4
-                ),
+                marker=dict(size=4),
                 name="Velocity",
                 hovertemplate=(
                     "Angular Velocity: "
@@ -598,30 +576,22 @@ def create_pendulum_figure(result):
                 ]
             )
         ],
-
         frames=frames
     )
 
     fig.update_layout(
-
         height=520,
-
         margin=dict(
             l=5,
             r=5,
             t=5,
             b=0
         ),
-
         paper_bgcolor="#0d1117",
         plot_bgcolor="#0d1117",
-
-        font=dict(
-            color="white"
-        ),
+        font=dict(color="white"),
 
         scene=dict(
-
             domain=dict(
                 x=[0.04, 0.96],
                 y=[0.18, 1.0]
@@ -666,19 +636,16 @@ def create_pendulum_figure(result):
             ),
 
             camera=dict(
-
                 eye=dict(
                     x=0.15,
                     y=-0.05,
                     z=3.0
                 ),
-
                 center=dict(
                     x=0,
                     y=0.25,
                     z=0
                 ),
-
                 up=dict(
                     x=0,
                     y=1,
@@ -707,31 +674,24 @@ def create_pendulum_figure(result):
             dict(
                 type="buttons",
                 showactive=False,
-
                 x=0.035,
                 y=0.96,
-
                 xanchor="left",
                 yanchor="top",
-
                 buttons=[
                     dict(
                         label="▶ Play",
                         method="animate",
-
                         args=[
                             None,
-
                             dict(
                                 frame=dict(
                                     duration=50,
                                     redraw=True
                                 ),
-
                                 transition=dict(
                                     duration=0
                                 ),
-
                                 mode="immediate"
                             )
                         ]
@@ -754,7 +714,6 @@ def create_angle_graph(result):
             y=result["angle"],
             mode="lines",
             name="Angle",
-
             hovertemplate=(
                 "Time: %{x:.2f} s<br>"
                 "Angle: %{y:.2f}°"
@@ -779,18 +738,9 @@ def create_energy_graph(result):
     fig = go.Figure()
 
     for key, name in [
-        (
-            "kinetic_energy",
-            "Kinetic Energy"
-        ),
-        (
-            "potential_energy",
-            "Potential Energy"
-        ),
-        (
-            "total_energy",
-            "Total Energy"
-        )
+        ("kinetic_energy", "Kinetic Energy"),
+        ("potential_energy", "Potential Energy"),
+        ("total_energy", "Total Energy")
     ]:
 
         fig.add_trace(
@@ -799,7 +749,6 @@ def create_energy_graph(result):
                 y=result[key],
                 mode="lines",
                 name=name,
-
                 hovertemplate=(
                     "Time: %{x:.2f} s<br>"
                     f"{name}: "
@@ -832,7 +781,7 @@ def pendulum_experiment():
     ai_prompt = st.text_area(
         "AI Natural Language",
         placeholder=(
-            "Example: 처음 각도 45도에서 시작하고 "
+            "예: 처음 각도 45도에서 시작하고 "
             "길이는 3m, 질량은 2kg으로 해줘"
         ),
         height=80
@@ -846,29 +795,28 @@ def pendulum_experiment():
         if ai_prompt.strip():
 
             try:
-
                 params = parse_ai_pendulum(
                     ai_prompt
                 )
 
                 st.session_state[
-                    "length_slider"
+                    "length_value"
                 ] = params["length"]
 
                 st.session_state[
-                    "mass_slider"
+                    "mass_value"
                 ] = params["mass"]
 
                 st.session_state[
-                    "gravity_input"
+                    "gravity_value"
                 ] = params["gravity"]
 
                 st.session_state[
-                    "angle_slider"
+                    "angle_value"
                 ] = params["initial_angle"]
 
                 st.session_state[
-                    "damping_slider"
+                    "damping_value"
                 ] = params["damping"]
 
                 st.session_state[
@@ -885,20 +833,13 @@ def pendulum_experiment():
                     "ai_applied"
                 ] = True
 
+                st.rerun()
+
             except Exception as e:
 
                 st.error(
                     f"AI error: {e}"
                 )
-
-    if st.session_state.pop(
-        "ai_applied",
-        False
-    ):
-
-        st.success(
-            "AI parameters applied."
-        )
 
     left, right = st.columns(2)
 
@@ -908,27 +849,33 @@ def pendulum_experiment():
             "Length (m)",
             0.1,
             10.0,
-            2.0,
-            0.1,
-            key="length_slider"
+            st.session_state.get(
+                "length_value",
+                2.0
+            ),
+            0.1
         )
 
         mass = st.slider(
             "Mass (kg)",
             0.1,
             20.0,
-            1.0,
-            0.1,
-            key="mass_slider"
+            st.session_state.get(
+                "mass_value",
+                1.0
+            ),
+            0.1
         )
 
         gravity = st.number_input(
             "Gravity (m/s²)",
             0.01,
             1000.0,
-            9.81,
-            0.1,
-            key="gravity_input"
+            st.session_state.get(
+                "gravity_value",
+                9.81
+            ),
+            0.1
         )
 
     with right:
@@ -937,18 +884,31 @@ def pendulum_experiment():
             "Initial Angle (°)",
             -89.0,
             89.0,
-            45.0,
-            1.0,
-            key="angle_slider"
+            st.session_state.get(
+                "angle_value",
+                45.0
+            ),
+            1.0
         )
 
         damping = st.slider(
             "Damping",
             0.0,
             1.0,
-            0.02,
-            0.01,
-            key="damping_slider"
+            st.session_state.get(
+                "damping_value",
+                0.02
+            ),
+            0.01
+        )
+
+    if st.session_state.pop(
+        "ai_applied",
+        False
+    ):
+
+        st.success(
+            "AI parameters applied."
         )
 
     if st.button(
@@ -986,7 +946,6 @@ def pendulum_experiment():
         st.plotly_chart(
             create_pendulum_figure(result),
             use_container_width=True,
-
             config={
                 "displaylogo": False
             }
@@ -1029,27 +988,27 @@ def pendulum_experiment():
         )
 
         st.session_state.pop(
-            "length_slider",
+            "length_value",
             None
         )
 
         st.session_state.pop(
-            "mass_slider",
+            "mass_value",
             None
         )
 
         st.session_state.pop(
-            "gravity_input",
+            "gravity_value",
             None
         )
 
         st.session_state.pop(
-            "angle_slider",
+            "angle_value",
             None
         )
 
         st.session_state.pop(
-            "damping_slider",
+            "damping_value",
             None
         )
 
