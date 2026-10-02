@@ -727,9 +727,13 @@ def create_spring_figure(
 
 
 def spring_experiment():
-    st.subheader(
-        "Spring Experiment"
-    )
+    if st.button("Back to Experiments", key="spring_back_button"):
+        st.session_state.page = "select"
+        st.session_state.experiment = None
+        st.query_params.clear()
+        st.rerun()
+
+    st.subheader("Spring Experiment")
 
     defaults = {
         "spring_mass": 1.00,
