@@ -838,30 +838,35 @@ def run_collision(
         ]
     })
 
-    styled_results = results.style.set_properties(
-        **{
-            "text-align": "center",
-            "font-size": "18px",
-            "font-weight": "600"
-        }
-    ).set_table_styles([
-        {
-            "selector": "th",
-            "props": [
-                ("text-align", "center"),
-                ("font-size", "18px"),
-                ("font-weight", "700")
-            ]
-        },
-        {
-            "selector": "td",
-            "props": [
-                ("text-align", "center"),
-                ("font-size", "18px"),
-                ("font-weight", "600")
-            ]
-        }
-    ])
+    styled_results = (
+        results.style
+        .set_properties(
+            **{
+                "text-align": "center",
+                "font-size": "18px",
+                "font-weight": "600"
+            }
+        )
+        .set_table_styles([
+            {
+                "selector": "th",
+                "props": [
+                    ("text-align", "center"),
+                    ("font-size", "18px"),
+                    ("font-weight", "700")
+                ]
+            },
+            {
+                "selector": "td",
+                "props": [
+                    ("text-align", "center"),
+                    ("font-size", "18px"),
+                    ("font-weight", "600")
+                ]
+            }
+        ])
+        .hide(axis="index")
+    )
 
     st.markdown("### Results")
     st.table(styled_results)
