@@ -148,6 +148,9 @@ def run_collision(
     v1 = velocity1
     v2 = -velocity2
 
+    collision_result_v1 = None
+    collision_result_v2 = None
+
     dt = 1 / 240
     simulation_time = 6.0
 
@@ -235,7 +238,15 @@ def run_collision(
                 v1 = new_v1
                 v2 = new_v2
 
+                if collision_result_v1 is None:
+                    collision_result_v1 = v1
+                    collision_result_v2 = v2
+
             collision_cooldown = 0.08
+
+    if collision_result_v1 is None:
+        collision_result_v1 = v1
+        collision_result_v2 = v2
 
     p1 = json.dumps(positions1)
     p2 = json.dumps(positions2)
@@ -797,9 +808,9 @@ def run_collision(
         + 0.5 * mass2 * velocity2 ** 2
     )
 
-    final_energy = (
-        0.5 * mass1 * v1 ** 2
-        + 0.5 * mass2 * v2 ** 2
+    post_collision_energy = (
+        0.5 * mass1 * collision_result_v1 ** 2
+        + 0.5 * mass2 * collision_result_v2 ** 2
     )
 
     st.markdown("### Results")
@@ -809,8 +820,8 @@ def run_collision(
     with col1:
 
         st.metric(
-            "Object 1 Final Velocity",
-            f"{v1:.2f} m/s"
+            "Object 1 Post-Collision Velocity",
+            f"{collision_result_v1:.2f} m/s"
         )
 
         st.metric(
@@ -821,11 +832,11 @@ def run_collision(
     with col2:
 
         st.metric(
-            "Object 2 Final Velocity",
-            f"{v2:.2f} m/s"
+            "Object 2 Post-Collision Velocity",
+            f"{collision_result_v2:.2f} m/s"
         )
 
         st.metric(
-            "Final Kinetic Energy",
-            f"{final_energy:.2f} J"
+            "Post-Collision Kinetic Energy",
+            f"{post_collision_energy:.2f} J"
         )
