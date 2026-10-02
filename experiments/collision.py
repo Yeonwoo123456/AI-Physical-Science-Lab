@@ -222,7 +222,6 @@ def run_collision(
     <script>
         const p1 = {p1};
         const p2 = {p2};
-
         const s1 = "{shape1}";
         const s2 = "{shape2}";
 
@@ -244,74 +243,71 @@ def run_collision(
             }};
         }}
 
-        function cube(x, color, name) {
-    const s = 1.25;
+        function cube(x, color, name) {{
+            const s = 1.25;
 
-    const X = [
-        x - s, x + s, x + s, x - s,
-        x - s, x + s, x + s, x - s
-    ];
+            const X = [
+                x - s, x + s, x + s, x - s,
+                x - s, x + s, x + s, x - s
+            ];
 
-    const Y = [
-        -s, -s, s, s,
-        -s, -s, s, s
-    ];
+            const Y = [
+                -s, -s, s, s,
+                -s, -s, s, s
+            ];
 
-    const Z = [
-        -s, -s, -s, -s,
-        s, s, s, s
-    ];
+            const Z = [
+                -s, -s, -s, -s,
+                s, s, s, s
+            ];
 
-    return {
-        type: "mesh3d",
+            return {{
+                type: "mesh3d",
+                x: X,
+                y: Y,
+                z: Z,
 
-        x: X,
-        y: Y,
-        z: Z,
+                i: [
+                    0, 0,
+                    4, 4,
+                    0, 0,
+                    1, 1,
+                    2, 2,
+                    3, 3
+                ],
 
-        i: [
-            0, 0,
-            4, 4,
-            0, 0,
-            1, 1,
-            2, 2,
-            3, 3
-        ],
+                j: [
+                    1, 2,
+                    5, 6,
+                    1, 5,
+                    2, 6,
+                    3, 7,
+                    0, 4
+                ],
 
-        j: [
-            1, 2,
-            6, 7,
-            4, 5,
-            5, 6,
-            6, 7,
-            7, 4
-        ],
+                k: [
+                    2, 3,
+                    6, 7,
+                    5, 4,
+                    6, 5,
+                    7, 6,
+                    4, 7
+                ],
 
-        k: [
-            2, 3,
-            5, 6,
-            5, 1,
-            6, 2,
-            7, 3,
-            4, 0
-        ],
+                color: color,
+                opacity: 1,
+                flatshading: true,
 
-        color: color,
+                lighting: {{
+                    ambient: 0.3,
+                    diffuse: 0.8,
+                    specular: 0.5,
+                    roughness: 0.3
+                }},
 
-        opacity: 1,
-
-        flatshading: true,
-
-        lighting: {
-            ambient: 0.3,
-            diffuse: 0.8,
-            specular: 0.5,
-            roughness: 0.3
-        },
-
-        name: name
-    };
-}
+                name: name
+            }};
+        }}
 
         function createObject(x, color, shape, name) {{
             if (shape === "Sphere") {{
@@ -322,18 +318,8 @@ def run_collision(
         }}
 
         const initialData = [
-            createObject(
-                p1[0],
-                "blue",
-                s1,
-                "Object 1"
-            ),
-            createObject(
-                p2[0],
-                "red",
-                s2,
-                "Object 2"
-            )
+            createObject(p1[0], "blue", s1, "Object 1"),
+            createObject(p2[0], "red", s2, "Object 2")
         ];
 
         const layout = {{
