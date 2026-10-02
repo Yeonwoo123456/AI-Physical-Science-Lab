@@ -55,7 +55,7 @@ Rules:
 mass = 1.0
 gravity = 9.81
 height = 0.0
-initial_velocity = 0.0
+initial_velocity = 20.0
 launch_angle = 0.0
 friction = 0.0
 tension = 0.0
@@ -106,7 +106,7 @@ Use the default value instead.
     "mass": 1.0,
     "gravity": 9.81,
     "height": 0.0,
-    "initial_velocity": 0.0,
+    "initial_velocity": 20.0,
     "launch_angle": 0.0,
     "friction": 0.0,
     "tension": 0.0,
