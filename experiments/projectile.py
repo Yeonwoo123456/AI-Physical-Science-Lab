@@ -215,11 +215,16 @@ def projectile_experiment():
 
     if st.button("Back to Experiments"):
 
-        st.session_state.projectile_velocity = 20.0
-        st.session_state.projectile_angle = 0.0
-        st.session_state.projectile_height = 0.0
-        st.session_state.projectile_gravity = 9.81
-        st.session_state.projectile_mass = 1.0
+        for key in [
+            "projectile_velocity",
+            "projectile_angle",
+            "projectile_height",
+            "projectile_gravity",
+            "projectile_mass",
+            "projectile_ai_input"
+        ]:
+            if key in st.session_state:
+                del st.session_state[key]
 
         st.session_state.page = "select"
 
