@@ -898,11 +898,11 @@ def orbit_experiment():
 
     playback_ratio = st.slider(
         "Simulation Playback Speed (×)",
-        min_value=45,
-        max_value=200,
-        value=45,
+        min_value=100,
+        max_value=2000,
+        value=100,
         step=1,
-        help="Controls how many simulation seconds pass during 1 real second. 45× means 1 real second = 45 simulated seconds.",
+        help="Controls how many simulation seconds pass during 1 real second. 100× means 1 real second = 100 simulated seconds.",
     )
 
     if st.button(
@@ -1030,4 +1030,3 @@ def orbit_experiment():
         st.session_state.experiment = None
         st.query_params.clear()
         st.rerun()
-
