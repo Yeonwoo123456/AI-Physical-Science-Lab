@@ -502,13 +502,6 @@ requestAnimationFrame(animate);
 
 
 def spring_experiment():
-    if st.button("Back to Experiments", key="spring_back_button"):
-        st.session_state.page = "select"
-        st.session_state.experiment = None
-        st.session_state.pop("spring_result", None)
-        st.query_params.clear()
-        st.rerun()
-
     st.subheader("Spring Experiment")
 
     defaults = {
@@ -579,7 +572,7 @@ def spring_experiment():
         )
         displacement = st.number_input(
             "Initial Displacement from Equilibrium (m)",
-            min_value=-5.0, max_value=5.0, step=0.05,
+            min_value=-20.0, max_value=20.0, step=0.05,
             key="spring_displacement"
         )
 
@@ -699,3 +692,13 @@ def spring_experiment():
         use_container_width=True,
         key="spring_energy_graph"
     )
+
+    st.markdown("<br>", unsafe_allow_html=True)
+
+    if st.button("Back to Experiments", key="spring_back_button"):
+        st.session_state.page = "select"
+        st.session_state.experiment = None
+        st.session_state.pop("spring_result", None)
+        st.query_params.clear()
+        st.rerun()
+
