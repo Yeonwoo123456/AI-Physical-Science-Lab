@@ -228,6 +228,7 @@ Rules:
             values[key] = float(value)
 
     def extract(pattern):
+
         match = re.search(
             pattern,
             prompt,
@@ -489,7 +490,6 @@ def create_pendulum_figure(result):
                 ),
                 hoverinfo="skip"
             ),
-
             go.Scatter3d(
                 x=[0, first_x],
                 y=[0, first_y],
@@ -510,7 +510,6 @@ def create_pendulum_figure(result):
                     length
                 ]
             ),
-
             go.Scatter3d(
                 x=[0],
                 y=[0],
@@ -523,7 +522,6 @@ def create_pendulum_figure(result):
                 name="Pivot",
                 hoverinfo="skip"
             ),
-
             go.Scatter3d(
                 x=[first_x],
                 y=[first_y],
@@ -553,7 +551,6 @@ def create_pendulum_figure(result):
                     result["velocity"][0]
                 ]]
             ),
-
             go.Scatter3d(
                 x=[first_x, first_x],
                 y=[first_y, first_y],
@@ -590,13 +587,11 @@ def create_pendulum_figure(result):
         paper_bgcolor="#0d1117",
         plot_bgcolor="#0d1117",
         font=dict(color="white"),
-
         scene=dict(
             domain=dict(
                 x=[0.04, 0.96],
                 y=[0.18, 1.0]
             ),
-
             xaxis=dict(
                 title="X",
                 backgroundcolor="#0d1117",
@@ -606,7 +601,6 @@ def create_pendulum_figure(result):
                     ground
                 ]
             ),
-
             yaxis=dict(
                 title="Y",
                 backgroundcolor="#0d1117",
@@ -616,7 +610,6 @@ def create_pendulum_figure(result):
                     length * 0.35
                 ]
             ),
-
             zaxis=dict(
                 title="Z",
                 backgroundcolor="#0d1117",
@@ -626,15 +619,12 @@ def create_pendulum_figure(result):
                     0.7
                 ]
             ),
-
             aspectmode="manual",
-
             aspectratio=dict(
                 x=1.7,
                 y=1.7,
                 z=0.65
             ),
-
             camera=dict(
                 eye=dict(
                     x=0.15,
@@ -653,7 +643,6 @@ def create_pendulum_figure(result):
                 )
             )
         ),
-
         annotations=[
             dict(
                 x=0.5,
@@ -669,7 +658,6 @@ def create_pendulum_figure(result):
                 )
             )
         ],
-
         updatemenus=[
             dict(
                 type="buttons",
@@ -771,15 +759,6 @@ def create_energy_graph(result):
 
 def pendulum_experiment():
 
-    if st.button(
-        "Back to Experiments",
-        key="pendulum_back_button"
-    ):
-        st.session_state.page = "select"
-        st.session_state.experiment = None
-        st.query_params.clear()
-        st.rerun()
-
     st.subheader(
         "Pendulum Experiment"
     )
@@ -808,6 +787,7 @@ def pendulum_experiment():
         if ai_prompt.strip():
 
             try:
+
                 params = parse_ai_pendulum(
                     ai_prompt
                 )
@@ -946,50 +926,51 @@ def pendulum_experiment():
             "Set the parameters and run the experiment."
         )
 
-        return
+    else:
 
-    result = st.session_state[
-        "pendulum_result"
-    ]
+        result = st.session_state[
+            "pendulum_result"
+        ]
 
-    st.subheader("3D Simulation")
+        st.subheader("3D Simulation")
 
-    with st.container(border=True):
+        with st.container(border=True):
 
-        st.plotly_chart(
-            create_pendulum_figure(result),
-            use_container_width=True,
-            config={
-                "displaylogo": False
-            }
+            st.plotly_chart(
+                create_pendulum_figure(result),
+                use_container_width=True,
+                config={
+                    "displaylogo": False
+                }
+            )
+
+        st.divider()
+
+        st.subheader("Analysis")
+
+        tab1, tab2 = st.tabs(
+            ["Angle", "Energy"]
         )
 
-    st.divider()
+        with tab1:
 
-    st.subheader("Analysis")
+            st.plotly_chart(
+                create_angle_graph(result),
+                use_container_width=True
+            )
 
-    tab1, tab2 = st.tabs(
-        ["Angle", "Energy"]
-    )
+        with tab2:
 
-    with tab1:
-
-        st.plotly_chart(
-            create_angle_graph(result),
-            use_container_width=True
-        )
-
-    with tab2:
-
-        st.plotly_chart(
-            create_energy_graph(result),
-            use_container_width=True
-        )
+            st.plotly_chart(
+                create_energy_graph(result),
+                use_container_width=True
+            )
 
     st.divider()
 
     if st.button(
-        "← Back to Experiments"
+        "← Back to Experiments",
+        key="pendulum_back_bottom"
     ):
 
         st.session_state.page = "select"
