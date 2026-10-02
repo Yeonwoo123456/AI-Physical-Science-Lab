@@ -638,9 +638,11 @@ function draw() {{
     const distancePx = Math.hypot(dx, dy);
 
     if (distancePx > planetR + 15) {{
+        const gravity = data.acceleration[i];
+
         const arrowLength = Math.min(
-            65,
-            Math.max(18, data.acceleration[i] * 10)
+            140,
+            Math.max(12, 12 + gravity * 12)
         );
 
         const ux = dx / distancePx;
