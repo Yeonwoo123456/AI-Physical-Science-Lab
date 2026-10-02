@@ -203,6 +203,12 @@ def experiment_page():
 
         spring_experiment()
         return
+        
+    if experiment == "friction":
+    from experiments.friction import friction_experiment
+
+    friction_experiment()
+    return
 
     names = {
         "friction": "Friction",
