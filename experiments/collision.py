@@ -123,7 +123,6 @@ def collision_experiment():
         st.query_params.clear()
         st.rerun()
 
-
 def run_collision(
     shape1,
     shape2,
@@ -135,7 +134,9 @@ def run_collision(
 ):
 
     start_distance = 12.0
-    contact_distance = 3.0
+
+    # 두 물체의 중심 사이 최소 거리
+    contact_distance = 3.5
 
     closing_speed = velocity1 + velocity2
 
@@ -156,20 +157,21 @@ def run_collision(
         0.1
     )
 
-    after_collision_time = 3.0
+    after_collision_time = 3.5
 
     total_time = (
         collision_time +
         after_collision_time
     )
 
-    points = 120
+    # 프레임 수 증가
+    points = 240
 
     times = [
         total_time * i / (points - 1)
         for i in range(points)
     ]
-
+    
     u1 = velocity1
     u2 = -velocity2
 
@@ -205,6 +207,7 @@ def run_collision(
 
     for t in times:
 
+        # Before collision
         if t < collision_time:
 
             x1 = (
@@ -219,6 +222,7 @@ def run_collision(
                 velocity2 * t
             )
 
+        # After collision
         else:
 
             dt = t - collision_time
@@ -246,35 +250,99 @@ def run_collision(
     positions1_json = json.dumps(positions1)
     positions2_json = json.dumps(positions2)
 
-    collision_index = min(
-        range(points),
-        key=lambda i: abs(
-            times[i] - collision_time
-        )
-    )
-
     html = f"""
-    <div id="collision-container"
-         style="width:100%; height:650px;">
+    <style>
+
+    #collision-wrapper {{
+        width: 100%;
+        height: 720px;
+        position: relative;
+    }}
+
+    #collision-container {{
+        width: 100%;
+        height: 620px;
+    }}
+
+    #play-button {{
+        display: block;
+
+        margin: 14px auto 0 auto;
+
+        padding: 14px 42px;
+
+        min-width: 150px;
+
+        border-radius: 8px;
+
+        border: 1px solid #888;
+
+        background: #ffffff;
+
+        color: #111111;
+
+        font-size: 20px;
+
+        font-weight: 600;
+
+        cursor: pointer;
+
+        box-shadow: 0 2px 6px rgba(0,0,0,0.25);
+
+        transition:
+            background 0.15s ease,
+            transform 0.1s ease;
+    }}
+
+    #play-button:hover {{
+        background: #eeeeee;
+    }}
+
+    #play-button:active {{
+        transform: scale(0.97);
+    }}
+
+    #play-button:disabled {{
+        opacity: 0.55;
+        cursor: default;
+    }}
+
+    </style>
+
+
+    <div id="collision-wrapper">
+
+        <div id="collision-container"></div>
+
+        <button id="play-button">
+            PLAY
+        </button>
+
     </div>
+
 
     <script src="https://cdn.plot.ly/plotly-2.35.2.min.js"></script>
 
     <script>
 
     const positions1 = {positions1_json};
+
     const positions2 = {positions2_json};
 
     const shape1 = "{shape1}";
+
     const shape2 = "{shape2}";
 
-    const collisionIndex = {collision_index};
-
-    const xMin = {x_min};
-    const xMax = {x_max};
-
     const container =
-        document.getElementById("collision-container");
+        document.getElementById(
+            "collision-container"
+        );
+
+    const playButton =
+        document.getElementById(
+            "play-button"
+        );
+
 
     function markerSymbol(shape) {{
 
@@ -287,6 +355,7 @@ def run_collision(
         return "diamond";
     }}
 
+
     function createObject(
         position,
         color,
@@ -295,8 +364,11 @@ def run_collision(
     ) {{
 
         return {{
+
             x: [position],
+
             y: [0],
+
             z: [0],
 
             mode: "markers",
@@ -304,22 +376,34 @@ def run_collision(
             type: "scatter3d",
 
             marker: {{
+
                 size: 20,
+
                 color: color,
-                symbol: markerSymbol(shape),
+
+                symbol:
+                    markerSymbol(shape),
+
                 opacity: 1
+
             }},
 
             name: name,
 
             hovertemplate:
+
                 name +
+
                 "<br>X: %{{x:.2f}} m" +
+
                 "<br>Y: %{{y:.2f}} m" +
+
                 "<br>Z: %{{z:.2f}} m" +
+
                 "<extra></extra>"
         }};
     }}
+
 
     const initialData = [
 
@@ -339,37 +423,6 @@ def run_collision(
 
     ];
 
-    const frames = [];
-
-    for (
-        let i = 0;
-        i < positions1.length;
-        i++
-    ) {{
-
-        frames.push({{
-            name: "frame" + i,
-
-            data: [
-
-                createObject(
-                    positions1[i],
-                    "blue",
-                    shape1,
-                    "Object 1"
-                ),
-
-                createObject(
-                    positions2[i],
-                    "red",
-                    shape2,
-                    "Object 2"
-                )
-
-            ]
-        }});
-
-    }}
 
     const layout = {{
 
@@ -380,106 +433,235 @@ def run_collision(
             dragmode: "orbit",
 
             xaxis: {{
+
                 title: "X Position (m)",
-                range: [xMin, xMax]
+
+                range: [
+                    {x_min},
+                    {x_max}
+                ]
+
             }},
 
             yaxis: {{
+
                 title: "Y Position (m)",
+
                 range: [-5, 5]
+
             }},
 
             zaxis: {{
+
                 title: "Z Position (m)",
+
                 range: [-5, 5]
+
             }},
 
             aspectmode: "cube"
+
         }},
 
-        height: 600,
+        height: 620,
 
         margin: {{
+
             l: 0,
+
             r: 0,
+
             t: 60,
-            b: 20
+
+            b: 10
+
         }},
 
-        paper_bgcolor: "rgba(0,0,0,0)",
+        paper_bgcolor:
+            "rgba(0,0,0,0)",
 
-        plot_bgcolor: "rgba(0,0,0,0)"
+        plot_bgcolor:
+            "rgba(0,0,0,0)"
     }};
 
+
     Plotly.newPlot(
+
         container,
+
         initialData,
+
         layout,
+
         {{
+
             responsive: true,
+
             scrollZoom: true,
+
             displaylogo: false
+
         }}
-    );
 
-    let playing = false;
+    ).then(() => {{
 
-    async function playAnimation() {{
+        setupAnimation();
 
-        if (playing)
-            return;
+    }});
 
-        playing = true;
 
-        for (
-            let i = 0;
-            i < frames.length;
-            i++
-        ) {{
+    function setupAnimation() {{
+
+        playButton.onclick = async function() {{
+
+            if (playButton.disabled)
+                return;
+
+
+            const currentCamera =
+                container.layout.scene.camera
+                ?
+                JSON.parse(
+                    JSON.stringify(
+                        container.layout.scene.camera
+                    )
+                )
+                :
+                null;
+
+
+            playButton.disabled = true;
+
+
+            const frames = [];
+
+
+            for (
+                let i = 0;
+                i < positions1.length;
+                i++
+            ) {{
+
+                const frame = {{
+
+                    name: "frame" + i,
+
+                    data: [
+
+                        createObject(
+                            positions1[i],
+                            "blue",
+                            shape1,
+                            "Object 1"
+                        ),
+
+                        createObject(
+                            positions2[i],
+                            "red",
+                            shape2,
+                            "Object 2"
+                        )
+
+                    ]
+
+                }};
+
+
+                if (currentCamera) {{
+
+                    frame.layout = {{
+
+                        scene: {{
+
+                            camera:
+                                currentCamera
+
+                        }}
+
+                    }};
+
+                }}
+
+
+                frames.push(frame);
+
+            }}
+
+
+            await Plotly.deleteFrames(
+                container
+            );
+
+
+            await Plotly.addFrames(
+                container,
+                frames
+            );
+
 
             await Plotly.animate(
+
                 container,
-                [frames[i]],
+
+                frames.map(
+                    frame => frame.name
+                ),
+
                 {{
+
                     transition: {{
+
                         duration: 0
+
                     }},
 
                     frame: {{
-                        duration: 35,
+
+                        duration: 20,
+
                         redraw: true
+
                     }},
 
-                    mode: "immediate"
+                    mode: "immediate",
+
+                    fromcurrent: false
+
                 }}
+
             );
 
-        }}
 
-        playing = false;
+            if (currentCamera) {{
+
+                await Plotly.relayout(
+
+                    container,
+
+                    {{
+
+                        "scene.camera":
+                            currentCamera
+
+                    }}
+
+                );
+
+            }}
+
+
+            playButton.disabled = false;
+
+        }};
+
     }}
-
-    const button = document.createElement("button");
-
-    button.innerText = "PLAY";
-
-    button.style.display = "block";
-    button.style.margin = "10px auto";
-    button.style.padding = "8px 28px";
-    button.style.borderRadius = "6px";
-    button.style.border = "none";
-    button.style.cursor = "pointer";
-
-    button.onclick = playAnimation;
-
-    container.parentNode.appendChild(button);
 
     </script>
     """
 
     components.html(
         html,
-        height=680,
+        height=750,
         scrolling=False
     )
 
