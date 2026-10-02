@@ -182,49 +182,31 @@ def experiment_page():
 
     if experiment == "projectile":
         from experiments.projectile import projectile_experiment
-
         projectile_experiment()
         return
 
     if experiment == "collision":
         from experiments.collision import collision_experiment
-
         collision_experiment()
         return
 
     if experiment == "pendulum":
         from experiments.pendulum import pendulum_experiment
-
         pendulum_experiment()
         return
 
     if experiment == "spring":
         from experiments.spring import spring_experiment
-
         spring_experiment()
         return
-        
+
     if experiment == "friction":
-    from experiments.friction import friction_experiment
+        from experiments.friction import friction_experiment
+        friction_experiment()
+        return
 
-    friction_experiment()
-    return
-
-    names = {
-        "friction": "Friction",
-        "orbit": "Gravity & Orbit"
-    }
-
-    name = names.get(
-        experiment,
-        "Physics Experiment"
-    )
-
-    st.title(name)
-
-    st.write(
-        "This experiment is currently under development."
-    )
+    st.title("Gravity & Orbit")
+    st.write("This experiment is currently under development.")
 
     if st.button("Back to Experiments"):
         st.session_state.page = "select"
