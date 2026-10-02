@@ -346,15 +346,22 @@ Conversions:
         }
 
 
-def orbit_animation_html(data, planet_radius, playback_ratio=45.0):
+def orbit_animation_html(data, planet_radius, playback_ratio=100.0, planet_mass=0.0, initial_altitude=0.0, initial_velocity=0.0, angle_deg=90.0):
+    """
+    Browser-side continuous orbit animation.
+
+    The Python RK4 simulation is still used for analysis/graphs, but the
+    animation itself integrates the orbit continuously in JavaScript. This
+    removes the old 20,000-second playback limit and prevents the animation
+    from jumping back to the initial position when the precomputed data ends.
+    """
     payload = json.dumps(
         {
-            "time": data["time"],
             "x": data["x"],
             "y": data["y"],
-            "speed": data["speed"],
             "distance": data["distance"],
             "acceleration": data["acceleration"],
+            "speed": data["speed"],
             "orbit_type": data["orbit_type"],
         }
     )
@@ -445,8 +452,7 @@ button:hover {{
 
     <div class="controls">
         <button id="play">▶ Play</button>
-        <span id="status"
-              style="margin-left:auto;font-weight:bold;">
+        <span id="status" style="margin-left:auto;font-weight:bold;">
             {data["orbit_type"]}
         </span>
     </div>
@@ -456,17 +462,14 @@ button:hover {{
             <div class="label">Time</div>
             <div class="value" id="time">0.00 s</div>
         </div>
-
         <div class="card">
             <div class="label">Speed</div>
             <div class="value" id="speed">0 m/s</div>
         </div>
-
         <div class="card">
             <div class="label">Distance</div>
             <div class="value" id="distance">0 m</div>
         </div>
-
         <div class="card">
             <div class="label">Gravity</div>
             <div class="value" id="gravity">0 m/s²</div>
@@ -475,31 +478,57 @@ button:hover {{
 </div>
 
 <script>
-const data = {payload};
+const referenceData = {payload};
+const G = 6.67430e-11;
+const planetMass = {planet_mass};
 const planetRadius = {planet_radius};
+const initialAltitude = {initial_altitude};
+const initialVelocity = {initial_velocity};
+const angleDeg = {angle_deg};
 const playbackRatio = {playback_ratio};
+const physicsDt = 0.75;
 
 const canvas = document.getElementById("canvas");
 const ctx = canvas.getContext("2d");
-
 const playButton = document.getElementById("play");
+const statusEl = document.getElementById("status");
 const timeEl = document.getElementById("time");
 const speedEl = document.getElementById("speed");
 const distanceEl = document.getElementById("distance");
 const gravityEl = document.getElementById("gravity");
 
-let index = 0;
+const mu = G * planetMass;
+const r0 = planetRadius + initialAltitude;
+const theta = angleDeg * Math.PI / 180;
+
+let state = [
+    r0,
+    0,
+    initialVelocity * Math.cos(theta),
+    initialVelocity * Math.sin(theta)
+];
+
+let simulationTime = 0;
 let playing = false;
 let lastTimestamp = 0;
-let simulationTime = 0;
+let accumulator = 0;
+let collision = false;
+
+// Keep a browser-side trail so the orbit can continue indefinitely.
+const trail = [];
+const MAX_TRAIL_POINTS = 9000;
+
+// Use the precomputed trajectory only to choose a useful initial display scale.
+let displayMaxRadius = Math.max(
+    planetRadius * 2.5,
+    ...referenceData.distance
+) * 1.12;
 
 function resize() {{
     const dpr = window.devicePixelRatio || 1;
     const rect = canvas.getBoundingClientRect();
-
     canvas.width = rect.width * dpr;
     canvas.height = rect.height * dpr;
-
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
     draw();
 }}
@@ -515,7 +544,6 @@ function drawArrow(x1, y1, x2, y2, color) {{
     const dx = x2 - x1;
     const dy = y2 - y1;
     const len = Math.hypot(dx, dy);
-
     if (len < 1) return;
 
     const ux = dx / len;
@@ -545,57 +573,93 @@ function drawArrow(x1, y1, x2, y2, color) {{
     ctx.fill();
 }}
 
+function acceleration(px, py) {{
+    const r2 = px * px + py * py;
+    const r = Math.sqrt(Math.max(r2, 1e-30));
+    const factor = -mu / (r * r * r);
+    return [factor * px, factor * py];
+}}
+
+function deriv(s) {{
+    const a = acceleration(s[0], s[1]);
+    return [s[2], s[3], a[0], a[1]];
+}}
+
+function rk4Step(s, h) {{
+    const k1 = deriv(s);
+    const s2 = s.map((v, j) => v + 0.5 * h * k1[j]);
+    const k2 = deriv(s2);
+    const s3 = s.map((v, j) => v + 0.5 * h * k2[j]);
+    const k3 = deriv(s3);
+    const s4 = s.map((v, j) => v + h * k3[j]);
+    const k4 = deriv(s4);
+
+    return s.map((v, j) =>
+        v + h * (k1[j] + 2 * k2[j] + 2 * k3[j] + k4[j]) / 6
+    );
+}}
+
+function physicsStep() {{
+    if (collision) return;
+
+    state = rk4Step(state, physicsDt);
+    simulationTime += physicsDt;
+
+    const r = Math.hypot(state[0], state[1]);
+
+    if (r <= planetRadius) {{
+        const scale = planetRadius / Math.max(r, 1e-30);
+        state[0] *= scale;
+        state[1] *= scale;
+        state[2] = 0;
+        state[3] = 0;
+        collision = true;
+        playing = false;
+        playButton.textContent = "▶ Play";
+        statusEl.textContent = "Collision";
+    }}
+
+    trail.push([state[0], state[1]]);
+    if (trail.length > MAX_TRAIL_POINTS) trail.shift();
+}}
+
 function draw() {{
     const w = canvas.clientWidth;
     const h = canvas.clientHeight;
-
     ctx.clearRect(0, 0, w, h);
-
-    const i = Math.min(index, data.x.length - 1);
-
-    const x = data.x[i];
-    const y = data.y[i];
 
     const margin = 70;
     const availableW = w - margin * 2;
     const availableH = h - margin * 2;
 
-    const maxX = Math.max(
-        planetRadius * 2,
-        ...data.x.map(Math.abs)
-    );
-    const maxY = Math.max(
-        planetRadius * 2,
-        ...data.y.map(Math.abs)
-    );
+    // If the satellite reaches a new distance, expand the view smoothly.
+    const currentRadius = Math.hypot(state[0], state[1]);
+    if (currentRadius * 1.15 > displayMaxRadius) {{
+        displayMaxRadius = currentRadius * 1.15;
+    }}
 
     const scale = Math.min(
-        availableW / (maxX * 2),
-        availableH / (maxY * 2)
+        availableW / (displayMaxRadius * 2),
+        availableH / (displayMaxRadius * 2)
     );
 
     const cx = w / 2;
     const cy = h / 2;
+    const planetR = Math.max(22, planetRadius * scale);
 
-    const planetR = Math.max(
-        22,
-        planetRadius * scale
-    );
-
-    // Orbit trail
-    ctx.strokeStyle = "#596273";
-    ctx.lineWidth = 1.8;
-    ctx.beginPath();
-
-    for (let j = 0; j <= i; j++) {{
-        const tx = cx + data.x[j] * scale;
-        const ty = cy - data.y[j] * scale;
-
-        if (j === 0) ctx.moveTo(tx, ty);
-        else ctx.lineTo(tx, ty);
+    // Trail
+    if (trail.length > 1) {{
+        ctx.strokeStyle = "#596273";
+        ctx.lineWidth = 1.8;
+        ctx.beginPath();
+        trail.forEach((p, i) => {{
+            const tx = cx + p[0] * scale;
+            const ty = cy - p[1] * scale;
+            if (i === 0) ctx.moveTo(tx, ty);
+            else ctx.lineTo(tx, ty);
+        }});
+        ctx.stroke();
     }}
-
-    ctx.stroke();
 
     // Planet
     const gradient = ctx.createRadialGradient(
@@ -606,7 +670,6 @@ function draw() {{
         cy,
         planetR
     );
-
     gradient.addColorStop(0, "#69A7FF");
     gradient.addColorStop(1, "#2451A6");
 
@@ -620,31 +683,29 @@ function draw() {{
     ctx.stroke();
 
     // Satellite
-    const sx = cx + x * scale;
-    const sy = cy - y * scale;
+    const sx = cx + state[0] * scale;
+    const sy = cy - state[1] * scale;
 
     ctx.fillStyle = "#F4D35E";
     ctx.strokeStyle = "#FFFFFF";
     ctx.lineWidth = 2;
-
     ctx.beginPath();
     ctx.arc(sx, sy, 8, 0, Math.PI * 2);
     ctx.fill();
     ctx.stroke();
 
-    // Gravity vector: points toward planet.
+    // Gravity vector. Length is based on the actual current gravity.
     const dx = cx - sx;
     const dy = cy - sy;
     const distancePx = Math.hypot(dx, dy);
+    const r = Math.hypot(state[0], state[1]);
+    const gravity = mu / Math.max(r * r, 1e-30);
 
     if (distancePx > planetR + 15) {{
-        const gravity = data.acceleration[i];
-
         const arrowLength = Math.min(
             140,
             Math.max(12, 12 + gravity * 12)
         );
-
         const ux = dx / distancePx;
         const uy = dy / distancePx;
 
@@ -661,75 +722,59 @@ function draw() {{
     ctx.fillStyle = "#FFFFFF";
     ctx.font = "bold 14px Arial";
     ctx.textAlign = "center";
-
-    ctx.fillText(
-        "PLANET",
-        cx,
-        cy + 5
-    );
+    ctx.fillText("PLANET", cx, cy + 5);
 
     ctx.textAlign = "left";
-    ctx.fillText(
-        "🛰 Satellite",
-        sx + 12,
-        sy - 12
-    );
+    ctx.fillText("🛰 Satellite", sx + 12, sy - 12);
 
     ctx.fillStyle = "#FF8A8A";
-    ctx.fillText(
-        "Gravity",
-        sx + 12,
-        sy + 25
-    );
+    ctx.fillText("Gravity", sx + 12, sy + 25);
 
-    timeEl.textContent =
-        data.time[i].toFixed(1) + " s";
+    const speed = Math.hypot(state[2], state[3]);
 
-    speedEl.textContent =
-        data.speed[i].toFixed(1) + " m/s";
-
-    distanceEl.textContent =
-        formatDistance(data.distance[i]);
-
-    gravityEl.textContent =
-        data.acceleration[i].toFixed(3) + " m/s²";
+    timeEl.textContent = simulationTime.toFixed(1) + " s";
+    speedEl.textContent = speed.toFixed(1) + " m/s";
+    distanceEl.textContent = formatDistance(r);
+    gravityEl.textContent = gravity.toFixed(3) + " m/s²";
 }}
 
 function animate(timestamp) {{
     if (!playing) return;
 
-    if (!lastTimestamp) {{
-        lastTimestamp = timestamp;
-    }}
+    if (!lastTimestamp) lastTimestamp = timestamp;
 
-    const deltaSeconds = Math.min(0.05, (timestamp - lastTimestamp) / 1000);
+    const deltaSeconds = Math.min(
+        0.05,
+        Math.max(0, (timestamp - lastTimestamp) / 1000)
+    );
     lastTimestamp = timestamp;
 
-    // playbackRatio means simulated seconds per real second.
-    simulationTime += deltaSeconds * playbackRatio;
+    accumulator += deltaSeconds * playbackRatio;
 
-    const dt = data.time.length > 1
-        ? data.time[1] - data.time[0]
-        : 1;
+    // Run the fixed 0.75 s physics steps until the requested playback time
+    // has been caught up. There is deliberately no simulation-time endpoint.
+    let steps = 0;
+    const MAX_STEPS_PER_FRAME = 120;
 
-    index = Math.floor(simulationTime / dt);
-
-    if (index >= data.time.length - 1) {{
-        // Keep the model running until Pause is pressed.
-        // The precomputed trajectory is replayed from the beginning
-        // when the end of the available trajectory is reached.
-        index = 0;
-        simulationTime = 0;
+    while (accumulator >= physicsDt && steps < MAX_STEPS_PER_FRAME) {{
+        physicsStep();
+        accumulator -= physicsDt;
+        steps += 1;
+        if (collision) break;
     }}
 
     draw();
 
-    if (playing) {{
-        requestAnimationFrame(animate);
-    }}
+    if (playing) requestAnimationFrame(animate);
 }}
 
 playButton.addEventListener("click", () => {{
+    if (collision) {{
+        // Collision is a physical endpoint. A fresh Run Experiment is needed
+        // to create a new initial condition.
+        return;
+    }}
+
     playing = !playing;
 
     if (playing) {{
@@ -738,12 +783,13 @@ playButton.addEventListener("click", () => {{
         requestAnimationFrame(animate);
     }} else {{
         playButton.textContent = "▶ Play";
+        lastTimestamp = 0;
     }}
 }});
 
-
 window.addEventListener("resize", resize);
 resize();
+draw();
 </script>
 </body>
 </html>
@@ -899,9 +945,10 @@ def orbit_experiment():
     initial_altitude_si = float(initial_altitude_km) * 1000.0
     initial_velocity_si = float(initial_velocity_kms) * 1000.0
 
-    # Fixed physics settings.
-    # The physics engine always uses a 0.75-second time step and
-    # a 20,000-second simulation. Only the playback speed is adjustable.
+    # Physics settings. The animation uses the same fixed 0.75-second
+    # physics step, but it is integrated continuously in the browser with
+    # no playback time limit. 20,000 s is kept only as the analysis/graph
+    # window and is not an animation endpoint.
     duration = 20000.0
     dt = 0.75
 
@@ -968,6 +1015,10 @@ def orbit_experiment():
             result,
             planet_radius_si,
             playback_ratio=float(playback_ratio),
+            planet_mass=planet_mass_si,
+            initial_altitude=initial_altitude_si,
+            initial_velocity=initial_velocity_si,
+            angle_deg=angle_deg,
         )
 
         components.html(
@@ -1062,4 +1113,3 @@ def orbit_experiment():
         st.session_state.experiment = None
         st.query_params.clear()
         st.rerun()
-
