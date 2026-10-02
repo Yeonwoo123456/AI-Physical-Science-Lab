@@ -1,4 +1,5 @@
 import json
+import pandas as pd
 import streamlit as st
 import streamlit.components.v1 as components
 
@@ -806,45 +807,61 @@ def run_collision(
         0.5 * mass2 * collision_result_v2 ** 2
     )
 
-    st.markdown("### Results")
+    results = pd.DataFrame({
+        "Object": [
+            "Object A",
+            "Object B"
+        ],
+        "Velocity BEFORE": [
+            f"{initial_velocity1:.2f} m/s",
+            f"{initial_velocity2:.2f} m/s"
+        ],
+        "Velocity AFTER": [
+            f"{collision_result_v1:.2f} m/s",
+            f"{collision_result_v2:.2f} m/s"
+        ],
+        "Momentum BEFORE": [
+            f"{initial_momentum1:.2f} kg·m/s",
+            f"{initial_momentum2:.2f} kg·m/s"
+        ],
+        "Momentum AFTER": [
+            f"{final_momentum1:.2f} kg·m/s",
+            f"{final_momentum2:.2f} kg·m/s"
+        ],
+        "Energy BEFORE": [
+            f"{initial_energy1:.2f} J",
+            f"{initial_energy2:.2f} J"
+        ],
+        "Energy AFTER": [
+            f"{final_energy1:.2f} J",
+            f"{final_energy2:.2f} J"
+        ]
+    })
 
-    results = [
-        {
-            "Object": "Object A",
-            "Quantity": "Velocity",
-            "BEFORE": f"{initial_velocity1:.2f} m/s",
-            "AFTER": f"{collision_result_v1:.2f} m/s"
-        },
-        {
-            "Object": "Object A",
-            "Quantity": "Momentum",
-            "BEFORE": f"{initial_momentum1:.2f} kg·m/s",
-            "AFTER": f"{final_momentum1:.2f} kg·m/s"
-        },
-        {
-            "Object": "Object A",
-            "Quantity": "Energy",
-            "BEFORE": f"{initial_energy1:.2f} J",
-            "AFTER": f"{final_energy1:.2f} J"
-        },
-        {
-            "Object": "Object B",
-            "Quantity": "Velocity",
-            "BEFORE": f"{initial_velocity2:.2f} m/s",
-            "AFTER": f"{collision_result_v2:.2f} m/s"
-        },
-        {
-            "Object": "Object B",
-            "Quantity": "Momentum",
-            "BEFORE": f"{initial_momentum2:.2f} kg·m/s",
-            "AFTER": f"{final_momentum2:.2f} kg·m/s"
-        },
-        {
-            "Object": "Object B",
-            "Quantity": "Energy",
-            "BEFORE": f"{initial_energy2:.2f} J",
-            "AFTER": f"{final_energy2:.2f} J"
+    styled_results = results.style.set_properties(
+        **{
+            "text-align": "center",
+            "font-size": "18px",
+            "font-weight": "600"
         }
-    ]
+    ).set_table_styles([
+        {
+            "selector": "th",
+            "props": [
+                ("text-align", "center"),
+                ("font-size", "18px"),
+                ("font-weight", "700")
+            ]
+        },
+        {
+            "selector": "td",
+            "props": [
+                ("text-align", "center"),
+                ("font-size", "18px"),
+                ("font-weight", "600")
+            ]
+        }
+    ])
 
-    st.table(results)
+    st.markdown("### Results")
+    st.table(styled_results)
