@@ -7,6 +7,21 @@ from app_modules import NaturalLanguageParser, PhysicsValidator
 
 def projectile_experiment():
 
+    if "projectile_velocity" not in st.session_state:
+        st.session_state.projectile_velocity = 20.0
+
+    if "projectile_angle" not in st.session_state:
+        st.session_state.projectile_angle = 0.0
+
+    if "projectile_height" not in st.session_state:
+        st.session_state.projectile_height = 0.0
+
+    if "projectile_gravity" not in st.session_state:
+        st.session_state.projectile_gravity = 9.81
+
+    if "projectile_mass" not in st.session_state:
+        st.session_state.projectile_mass = 1.0
+
     st.markdown(
         """
         <div class="selection-header">
@@ -38,15 +53,22 @@ def projectile_experiment():
 
         if not user_input.strip():
 
-            st.warning("Please describe your experiment first.")
+            st.warning(
+                "Please describe your experiment first."
+            )
 
         else:
 
             with st.spinner("Analyzing your experiment..."):
 
-                result = NaturalLanguageParser.parse(user_input)
+                result = NaturalLanguageParser.parse(
+                    user_input
+                )
 
-            if result.get("needs_clarification", False):
+            if result.get(
+                "needs_clarification",
+                False
+            ):
 
                 st.warning(
                     result.get(
@@ -57,7 +79,9 @@ def projectile_experiment():
 
             else:
 
-                validation = PhysicsValidator.validate(result)
+                validation = PhysicsValidator.validate(
+                    result
+                )
 
                 if not validation.is_valid:
 
@@ -68,93 +92,75 @@ def projectile_experiment():
 
                     params = validation.validated_params
 
-                    st.session_state.projectile_ai_params = {
-                        "velocity": float(
-                            params.get(
-                                "initial_velocity",
-                                20.0
-                            )
-                        ),
-                        "angle": float(
-                            params.get(
-                                "launch_angle",
-                                0.0
-                            )
-                        ),
-                        "height": float(
-                            params.get(
-                                "height",
-                                0.0
-                            )
-                        ),
-                        "gravity": float(
-                            params.get(
-                                "gravity",
-                                9.81
-                            )
-                        ),
-                        "mass": float(
-                            params.get(
-                                "mass",
-                                1.0
-                            )
+                    st.session_state.projectile_velocity = float(
+                        params.get(
+                            "initial_velocity",
+                            20.0
                         )
-                    }
+                    )
+
+                    st.session_state.projectile_angle = float(
+                        params.get(
+                            "launch_angle",
+                            0.0
+                        )
+                    )
+
+                    st.session_state.projectile_height = float(
+                        params.get(
+                            "height",
+                            0.0
+                        )
+                    )
+
+                    st.session_state.projectile_gravity = float(
+                        params.get(
+                            "gravity",
+                            9.81
+                        )
+                    )
+
+                    st.session_state.projectile_mass = float(
+                        params.get(
+                            "mass",
+                            1.0
+                        )
+                    )
 
                     st.success(
                         "The AI converted your description into physical parameters."
                     )
-
-    ai_params = st.session_state.get(
-        "projectile_ai_params",
-        {}
-    )
 
     st.markdown("### Parameters")
 
     col1, col2, col3 = st.columns(3)
 
     with col1:
+
         velocity = st.number_input(
             "Initial Speed (m/s)",
             min_value=0.0,
             max_value=100.0,
-            value=float(
-                ai_params.get(
-                    "velocity",
-                    20.0
-                )
-            ),
             step=1.0,
             key="projectile_velocity"
         )
 
     with col2:
+
         angle = st.number_input(
             "Launch Angle (°)",
             min_value=0.0,
             max_value=90.0,
-            value=float(
-                ai_params.get(
-                    "angle",
-                    0.0
-                )
-            ),
             step=1.0,
             key="projectile_angle"
         )
 
     with col3:
+
         height = st.number_input(
             "Initial Height (m)",
             min_value=0.0,
             max_value=500.0,
-            value=float(
-                ai_params.get(
-                    "height",
-                    0.0
-                )
-            ),
             step=1.0,
             key="projectile_height"
         )
@@ -162,31 +168,21 @@ def projectile_experiment():
     col1, col2 = st.columns(2)
 
     with col1:
+
         gravity = st.number_input(
             "Gravity (m/s²)",
             min_value=0.01,
             max_value=30.0,
-            value=float(
-                ai_params.get(
-                    "gravity",
-                    9.81
-                )
-            ),
             step=0.1,
             key="projectile_gravity"
         )
 
     with col2:
+
         mass = st.number_input(
             "Mass (kg)",
             min_value=0.01,
             max_value=1000.0,
-            value=float(
-                ai_params.get(
-                    "mass",
-                    1.0
-                )
-            ),
             step=0.1,
             key="projectile_mass"
         )
@@ -198,6 +194,7 @@ def projectile_experiment():
         type="primary",
         use_container_width=True
     ):
+
         run_projectile_simulation(
             velocity,
             angle,
@@ -209,7 +206,7 @@ def projectile_experiment():
     st.markdown("<br>", unsafe_allow_html=True)
 
     if st.button("Back to Experiments"):
-        st.session_state.projectile_ai_params = {}
+
         st.session_state.projectile_velocity = 20.0
         st.session_state.projectile_angle = 0.0
         st.session_state.projectile_height = 0.0
@@ -217,7 +214,9 @@ def projectile_experiment():
         st.session_state.projectile_mass = 1.0
 
         st.session_state.page = "select"
+
         st.query_params.clear()
+
         st.rerun()
 
 
@@ -232,6 +231,7 @@ def run_projectile_simulation(
     theta = math.radians(angle)
 
     vx = velocity * math.cos(theta)
+
     vy = velocity * math.sin(theta)
 
     total_time = (
@@ -261,6 +261,7 @@ def run_projectile_simulation(
     ]
 
     x_values = []
+
     y_values = []
 
     for t in times:
@@ -274,7 +275,10 @@ def run_projectile_simulation(
         )
 
         x_values.append(x)
-        y_values.append(max(0.0, y))
+
+        y_values.append(
+            max(0.0, y)
+        )
 
     x_max = max(
         horizontal_range * 1.1,
@@ -328,6 +332,7 @@ def run_projectile_simulation(
                             width=4
                         )
                     ),
+
                     go.Scatter(
                         x=[x_values[i]],
                         y=[y_values[i]],
@@ -344,6 +349,7 @@ def run_projectile_simulation(
     fig.frames = frames
 
     fig.update_layout(
+
         title="Projectile Motion",
 
         xaxis=dict(
@@ -363,7 +369,9 @@ def run_projectile_simulation(
         ),
 
         template="plotly_dark",
+
         height=600,
+
         showlegend=True,
 
         margin=dict(
@@ -376,16 +384,23 @@ def run_projectile_simulation(
         updatemenus=[
             {
                 "type": "buttons",
+
                 "direction": "left",
+
                 "showactive": False,
+
                 "x": 0.5,
+
                 "xanchor": "center",
+
                 "y": -0.20,
+
                 "yanchor": "top",
 
                 "buttons": [
                     {
                         "label": "PLAY",
+
                         "method": "animate",
 
                         "args": [
@@ -402,6 +417,7 @@ def run_projectile_simulation(
                                 },
 
                                 "fromcurrent": False,
+
                                 "mode": "immediate"
                             }
                         ]
@@ -426,18 +442,21 @@ def run_projectile_simulation(
     col1, col2, col3 = st.columns(3)
 
     with col1:
+
         st.metric(
             "Flight Time",
             f"{total_time:.2f} s"
         )
 
     with col2:
+
         st.metric(
             "Maximum Height",
             f"{max_height:.2f} m"
         )
 
     with col3:
+
         st.metric(
             "Horizontal Range",
             f"{horizontal_range:.2f} m"
@@ -448,18 +467,21 @@ def run_projectile_simulation(
     col1, col2, col3 = st.columns(3)
 
     with col1:
+
         st.metric(
             "Initial Speed",
             f"{velocity:.2f} m/s"
         )
 
     with col2:
+
         st.metric(
             "Horizontal Velocity",
             f"{vx:.2f} m/s"
         )
 
     with col3:
+
         st.metric(
             "Vertical Velocity",
             f"{vy:.2f} m/s"
@@ -470,18 +492,21 @@ def run_projectile_simulation(
     col1, col2, col3 = st.columns(3)
 
     with col1:
+
         st.metric(
             "Launch Angle",
             f"{angle:.1f}°"
         )
 
     with col2:
+
         st.metric(
             "Gravity",
             f"{gravity:.2f} m/s²"
         )
 
     with col3:
+
         st.metric(
             "Mass",
             f"{mass:.2f} kg"
