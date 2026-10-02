@@ -282,12 +282,23 @@ initial_altitude: m
 initial_velocity: m/s
 angle_deg: degrees
 
+The user may write:
+- planet mass in kg or t
+- planet radius in m or km
+- satellite mass in kg, t, or g
+- altitude in m or km
+- velocity in m/s or km/s
+
+Convert all values to SI units before returning JSON.
+
 Only use values explicitly stated by the user.
 Do not invent missing values.
-Useful conversions:
-km -> 1000 m
-km/s -> 1000 m/s
-g -> 0.001 kg
+
+Conversions:
+1 t = 1000 kg
+1 g = 0.001 kg
+1 km = 1000 m
+1 km/s = 1000 m/s
 """
 
     try:
@@ -757,6 +768,21 @@ resize();
 """
 
 
+
+def convert_to_si(value, unit):
+    conversions = {
+        "kg": 1.0,
+        "t": 1000.0,
+        "g": 0.001,
+        "m": 1.0,
+        "km": 1000.0,
+        "m/s": 1.0,
+        "km/s": 1000.0,
+    }
+
+    return float(value) * conversions[unit]
+
+
 def orbit_experiment():
     st.subheader("Gravity & Orbit")
 
@@ -766,17 +792,17 @@ def orbit_experiment():
 
     defaults = {
         "planet_mass": 5.972e24,
-        "planet_radius": 6.371e6,
+        "planet_radius": 6371.0,
         "satellite_mass": 1000.0,
-        "initial_altitude": 400e3,
-        "initial_velocity": 7670.0,
+        "initial_altitude": 400.0,
+        "initial_velocity": 7.67,
         "angle_deg": 90.0,
     }
 
     ai_prompt = st.text_input(
         "Describe your orbit experiment",
         placeholder=(
-            "Example: Put a 1000 kg satellite 400 km above Earth "
+            "Example: Put a 1 t satellite 400 km above Earth "
             "with an initial velocity of 7.67 km/s."
         ),
     )
@@ -800,70 +826,87 @@ def orbit_experiment():
     c1, c2, c3 = st.columns(3)
 
     with c1:
-        planet_mass = st.number_input(
-            "Planet Mass (kg)",
+        planet_mass_value = st.number_input(
+            "Planet Mass",
             min_value=1.0,
             value=float(
-                ai_values.get(
-                    "planet_mass",
-                    defaults["planet_mass"]
-                )
-                or defaults["planet_mass"]
+                ai_values.get("planet_mass")
+                if ai_values.get("planet_mass") is not None
+                else defaults["planet_mass"]
             ),
             format="%.4e",
         )
 
-        planet_radius = st.number_input(
-            "Planet Radius (m)",
+        planet_mass_unit = st.selectbox(
+            "Planet Mass Unit",
+            ["kg", "t"],
+            index=0,
+        )
+
+        planet_radius_value = st.number_input(
+            "Planet Radius",
             min_value=1.0,
             value=float(
-                ai_values.get(
-                    "planet_radius",
-                    defaults["planet_radius"]
-                )
-                or defaults["planet_radius"]
+                ai_values.get("planet_radius") / 1000.0
+                if ai_values.get("planet_radius") is not None
+                else defaults["planet_radius"]
             ),
-            format="%.4e",
+        )
+
+        planet_radius_unit = st.selectbox(
+            "Planet Radius Unit",
+            ["km", "m"],
+            index=0,
         )
 
     with c2:
-        satellite_mass = st.number_input(
-            "Satellite Mass (kg)",
+        satellite_mass_value = st.number_input(
+            "Satellite Mass",
             min_value=0.001,
             value=float(
-                ai_values.get(
-                    "satellite_mass",
-                    defaults["satellite_mass"]
-                )
-                or defaults["satellite_mass"]
+                ai_values.get("satellite_mass") / 1000.0
+                if ai_values.get("satellite_mass") is not None
+                else 1.0
             ),
         )
 
-        initial_altitude = st.number_input(
-            "Initial Altitude (m)",
+        satellite_mass_unit = st.selectbox(
+            "Satellite Mass Unit",
+            ["kg", "t", "g"],
+            index=1,
+        )
+
+        altitude_value = st.number_input(
+            "Initial Altitude",
             min_value=0.0,
             value=float(
-                ai_values.get(
-                    "initial_altitude",
-                    defaults["initial_altitude"]
-                )
+                ai_values.get("initial_altitude") / 1000.0
                 if ai_values.get("initial_altitude") is not None
                 else defaults["initial_altitude"]
             ),
         )
 
+        altitude_unit = st.selectbox(
+            "Initial Altitude Unit",
+            ["km", "m"],
+            index=0,
+        )
+
     with c3:
-        initial_velocity = st.number_input(
-            "Initial Velocity (m/s)",
+        velocity_value = st.number_input(
+            "Initial Velocity",
             min_value=0.0,
             value=float(
-                ai_values.get(
-                    "initial_velocity",
-                    defaults["initial_velocity"]
-                )
+                ai_values.get("initial_velocity") / 1000.0
                 if ai_values.get("initial_velocity") is not None
                 else defaults["initial_velocity"]
             ),
+        )
+
+        velocity_unit = st.selectbox(
+            "Initial Velocity Unit",
+            ["km/s", "m/s"],
+            index=0,
         )
 
         angle_deg = st.slider(
@@ -871,14 +914,71 @@ def orbit_experiment():
             min_value=0.0,
             max_value=360.0,
             value=float(
-                ai_values.get(
-                    "angle_deg",
-                    defaults["angle_deg"]
-                )
+                ai_values.get("angle_deg")
                 if ai_values.get("angle_deg") is not None
                 else defaults["angle_deg"]
             ),
             step=1.0,
+        )
+
+    # Convert every selected input to SI units before the physics engine.
+    planet_mass_si = convert_to_si(
+        planet_mass_value,
+        planet_mass_unit,
+    )
+
+    planet_radius_si = convert_to_si(
+        planet_radius_value,
+        planet_radius_unit,
+    )
+
+    satellite_mass_si = convert_to_si(
+        satellite_mass_value,
+        satellite_mass_unit,
+    )
+
+    altitude_si = convert_to_si(
+        altitude_value,
+        altitude_unit,
+    )
+
+    velocity_si = convert_to_si(
+        velocity_value,
+        velocity_unit,
+    )
+
+    st.markdown("### SI Values Used by Physics Engine")
+
+    si1, si2, si3, si4, si5 = st.columns(5)
+
+    with si1:
+        st.metric(
+            "Planet Mass",
+            f"{planet_mass_si:.4e} kg",
+        )
+
+    with si2:
+        st.metric(
+            "Planet Radius",
+            f"{planet_radius_si:.3e} m",
+        )
+
+    with si3:
+        st.metric(
+            "Satellite Mass",
+            f"{satellite_mass_si:.3e} kg",
+        )
+
+    with si4:
+        st.metric(
+            "Altitude",
+            f"{altitude_si:.3e} m",
+        )
+
+    with si5:
+        st.metric(
+            "Velocity",
+            f"{velocity_si:.3e} m/s",
         )
 
     st.markdown("### Experiment Duration")
@@ -904,11 +1004,11 @@ def orbit_experiment():
     ):
         try:
             result = simulate_orbit(
-                planet_mass=planet_mass,
-                planet_radius=planet_radius,
-                satellite_mass=satellite_mass,
-                initial_altitude=initial_altitude,
-                initial_velocity=initial_velocity,
+                planet_mass=planet_mass_si,
+                planet_radius=planet_radius_si,
+                satellite_mass=satellite_mass_si,
+                initial_altitude=altitude_si,
+                initial_velocity=velocity_si,
                 angle_deg=angle_deg,
                 duration=float(duration),
                 dt=float(dt),
@@ -926,7 +1026,7 @@ def orbit_experiment():
 
         html = orbit_animation_html(
             result,
-            planet_radius,
+            planet_radius_si,
         )
 
         components.html(
@@ -1021,3 +1121,4 @@ def orbit_experiment():
         st.session_state.experiment = None
         st.query_params.clear()
         st.rerun()
+
