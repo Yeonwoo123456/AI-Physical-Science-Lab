@@ -661,7 +661,7 @@ def create_spring_figure(
     )
 
     fig.update_layout(
-        height=600,
+        height=450,
         margin=dict(
             l=0,
             r=0,
