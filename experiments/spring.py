@@ -26,59 +26,54 @@ def simulate_spring(
 
     n = len(time)
 
-    x = np.zeros(n)
-    v = np.zeros(n)
-
     equilibrium_displacement = (
         mass * gravity / k
     )
 
-    x[0] = (
-        equilibrium_displacement
-        + initial_displacement
-    )
+    y = np.zeros(n)
+    v = np.zeros(n)
 
+    y[0] = initial_displacement
     v[0] = 0.0
 
-    def acceleration(position, velocity):
+    def acceleration(displacement, velocity):
         return (
-            gravity
-            - (k / mass) * position
-            - (damping / mass) * velocity
+            -(k / mass) * displacement
+            -(damping / mass) * velocity
         )
 
     for i in range(n - 1):
-        x0 = x[i]
+        y0 = y[i]
         v0 = v[i]
 
-        k1_x = v0
-        k1_v = acceleration(x0, v0)
+        k1_y = v0
+        k1_v = acceleration(y0, v0)
 
-        x2 = x0 + 0.5 * dt * k1_x
+        y2 = y0 + 0.5 * dt * k1_y
         v2 = v0 + 0.5 * dt * k1_v
 
-        k2_x = v2
-        k2_v = acceleration(x2, v2)
+        k2_y = v2
+        k2_v = acceleration(y2, v2)
 
-        x3 = x0 + 0.5 * dt * k2_x
+        y3 = y0 + 0.5 * dt * k2_y
         v3 = v0 + 0.5 * dt * k2_v
 
-        k3_x = v3
-        k3_v = acceleration(x3, v3)
+        k3_y = v3
+        k3_v = acceleration(y3, v3)
 
-        x4 = x0 + dt * k3_x
+        y4 = y0 + dt * k3_y
         v4 = v0 + dt * k3_v
 
-        k4_x = v4
-        k4_v = acceleration(x4, v4)
+        k4_y = v4
+        k4_v = acceleration(y4, v4)
 
-        x[i + 1] = x0 + (
+        y[i + 1] = y0 + (
             dt / 6.0
         ) * (
-            k1_x
-            + 2 * k2_x
-            + 2 * k3_x
-            + k4_x
+            k1_y
+            + 2 * k2_y
+            + 2 * k3_y
+            + k4_y
         )
 
         v[i + 1] = v0 + (
@@ -90,20 +85,14 @@ def simulate_spring(
             + k4_v
         )
 
-    a = acceleration(x, v)
-
-    relative_displacement = (
-        x - equilibrium_displacement
-    )
+    a = acceleration(y, v)
 
     kinetic_energy = (
         0.5 * mass * v ** 2
     )
 
     spring_energy = (
-        0.5
-        * k
-        * relative_displacement ** 2
+        0.5 * k * y ** 2
     )
 
     total_energy = (
@@ -111,12 +100,16 @@ def simulate_spring(
         + spring_energy
     )
 
+    actual_position = (
+        equilibrium_displacement + y
+    )
+
     return {
         "time": time,
-        "x": x,
+        "x": actual_position,
         "v": v,
         "a": a,
-        "relative_displacement": relative_displacement,
+        "relative_displacement": y,
         "kinetic_energy": kinetic_energy,
         "spring_energy": spring_energy,
         "elastic_energy": spring_energy,
@@ -124,7 +117,6 @@ def simulate_spring(
         "total_mechanical_energy": total_energy,
         "equilibrium_displacement": equilibrium_displacement
     }
-
 
 def parse_ai_spring(user_text):
     result = {
