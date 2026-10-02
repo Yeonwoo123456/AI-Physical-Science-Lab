@@ -48,6 +48,7 @@ def simulate_spring(
         vi = v[i]
 
         k1_x = vi
+
         k1_v = acceleration(
             xi,
             vi
@@ -597,7 +598,13 @@ def create_spring_figure(
             b=0
         ),
 
+        paper_bgcolor="#0E1117",
+
+        plot_bgcolor="#0E1117",
+
         scene=dict(
+
+            bgcolor="#0E1117",
 
             xaxis=dict(
                 visible=False,
@@ -922,13 +929,26 @@ def spring_experiment():
             ]
         )
 
-        with st.container(border=True):
+        st.markdown(
+            """
+            <style>
+            div[data-testid="stPlotlyChart"] {
+                border: 1px solid rgba(255, 255, 255, 0.85);
+                border-radius: 10px;
+                overflow: hidden;
+                margin-top: 8px;
+                margin-bottom: 20px;
+            }
+            </style>
+            """,
+            unsafe_allow_html=True
+        )
 
-    st.plotly_chart(
-        initial_fig,
-        use_container_width=True,
-        key="spring_3d"
-    )
+        st.plotly_chart(
+            initial_fig,
+            use_container_width=True,
+            key="spring_3d"
+        )
 
         st.markdown(
             "### Displacement vs Time"
