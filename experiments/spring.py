@@ -1,8 +1,10 @@
-import json
+
 import re
+import html
 
 import numpy as np
 import streamlit as st
+import streamlit.components.v1 as components
 import plotly.graph_objects as go
 
 from app_modules import client
@@ -18,34 +20,19 @@ def simulate_spring(
     duration=10.0,
     dt=0.01
 ):
-    time = np.arange(
-        0.0,
-        duration + dt,
-        dt
-    )
-
+    time = np.arange(0.0, duration + dt, dt)
     n = len(time)
 
     x = np.zeros(n)
     v = np.zeros(n)
 
-    equilibrium_displacement = (
-        mass * gravity / k
-    )
+    equilibrium_displacement = mass * gravity / k
 
-    x[0] = (
-        equilibrium_displacement
-        + initial_displacement
-    )
-
+    x[0] = equilibrium_displacement + initial_displacement
     v[0] = 0.0
 
     def acceleration(position, velocity):
-        return (
-            gravity
-            - (k / mass) * position
-            - (damping / mass) * velocity
-        )
+        return gravity - (k / mass) * position - (damping / mass) * velocity
 
     for i in range(n - 1):
         x0 = x[i]
@@ -56,60 +43,27 @@ def simulate_spring(
 
         x2 = x0 + 0.5 * dt * k1_x
         v2 = v0 + 0.5 * dt * k1_v
-
         k2_x = v2
         k2_v = acceleration(x2, v2)
 
         x3 = x0 + 0.5 * dt * k2_x
         v3 = v0 + 0.5 * dt * k2_v
-
         k3_x = v3
         k3_v = acceleration(x3, v3)
 
         x4 = x0 + dt * k3_x
         v4 = v0 + dt * k3_v
-
         k4_x = v4
         k4_v = acceleration(x4, v4)
 
-        x[i + 1] = x0 + (
-            dt / 6.0
-        ) * (
-            k1_x
-            + 2 * k2_x
-            + 2 * k3_x
-            + k4_x
-        )
-
-        v[i + 1] = v0 + (
-            dt / 6.0
-        ) * (
-            k1_v
-            + 2 * k2_v
-            + 2 * k3_v
-            + k4_v
-        )
+        x[i + 1] = x0 + (dt / 6.0) * (k1_x + 2 * k2_x + 2 * k3_x + k4_x)
+        v[i + 1] = v0 + (dt / 6.0) * (k1_v + 2 * k2_v + 2 * k3_v + k4_v)
 
     a = acceleration(x, v)
-
-    relative_displacement = (
-        x - equilibrium_displacement
-    )
-
-    kinetic_energy = (
-        0.5 * mass * v ** 2
-    )
-
-    spring_energy = (
-        0.5
-        * k
-        * relative_displacement ** 2
-    )
-
-    total_energy = (
-        kinetic_energy
-        + spring_energy
-    )
+    relative_displacement = x - equilibrium_displacement
+    kinetic_energy = 0.5 * mass * v ** 2
+    spring_energy = 0.5 * k * relative_displacement ** 2
+    total_energy = kinetic_energy + spring_energy
 
     return {
         "time": time,
@@ -139,7 +93,6 @@ def parse_ai_spring(user_text):
 You are a physics parameter parser.
 
 Return ONLY valid JSON:
-
 {
     "mass": null,
     "k": null,
@@ -149,7 +102,6 @@ Return ONLY valid JSON:
 }
 
 Units:
-
 mass: kg
 k: N/m
 displacement: m
@@ -157,559 +109,397 @@ gravity: m/s^2
 damping: N*s/m
 
 Initial displacement is measured from the gravitational equilibrium position.
-
 Only extract explicitly stated numerical values.
-
 Never guess missing values.
-
-If the user says compress or 압축:
-displacement is negative.
-
-If the user says pull, stretch, 당겨, 늘려:
-displacement is positive.
+If the user says compress or 압축: displacement is negative.
+If the user says pull, stretch, 당겨, 늘려: displacement is positive.
 """
 
     try:
         response = client.chat.completions.create(
             model="openai/gpt-oss-120b",
             messages=[
-                {
-                    "role": "system",
-                    "content": system_prompt
-                },
-                {
-                    "role": "user",
-                    "content": user_text
-                }
+                {"role": "system", "content": system_prompt},
+                {"role": "user", "content": user_text}
             ],
             temperature=0
         )
 
         content = response.choices[0].message.content.strip()
-
-        content = re.sub(
-            r"```json|```",
-            "",
-            content
-        ).strip()
-
+        content = re.sub(r"```json|```", "", content).strip()
         parsed = json.loads(content)
 
         for key in result:
             value = parsed.get(key)
-
             if value is not None:
                 result[key] = float(value)
-
     except Exception:
         pass
 
     patterns = {
-        "mass": [
-            r"(-?\d+(?:\.\d+)?)\s*(?:kg|킬로그램)"
-        ],
-        "k": [
-            r"(-?\d+(?:\.\d+)?)\s*(?:N/m|n/m)"
-        ],
-        "displacement": [
-            r"(-?\d+(?:\.\d+)?)\s*(?:m(?!/s)|미터)"
-        ],
-        "gravity": [
-            r"(-?\d+(?:\.\d+)?)\s*(?:m/s\^?2|m/s²)"
-        ],
-        "damping": [
-            r"(?:damping|감쇠)\s*(?:=|은|는)?\s*"
-            r"(-?\d+(?:\.\d+)?)"
-        ]
+        "mass": [r"(-?\d+(?:\.\d+)?)\s*(?:kg|킬로그램)"],
+        "k": [r"(-?\d+(?:\.\d+)?)\s*(?:N/m|n/m)"],
+        "displacement": [r"(-?\d+(?:\.\d+)?)\s*(?:m(?!/s)|미터)"],
+        "gravity": [r"(-?\d+(?:\.\d+)?)\s*(?:m/s\^?2|m/s²)"],
+        "damping": [r"(?:damping|감쇠)\s*(?:=|은|는)?\s*(-?\d+(?:\.\d+)?)"]
     }
 
     for key, regex_list in patterns.items():
         for pattern in regex_list:
-            match = re.search(
-                pattern,
-                user_text,
-                re.IGNORECASE
-            )
-
+            match = re.search(pattern, user_text, re.IGNORECASE)
             if match:
                 try:
-                    result[key] = float(
-                        match.group(1)
-                    )
+                    result[key] = float(match.group(1))
                 except ValueError:
                     pass
-
                 break
 
     text = user_text.lower()
 
     if result["displacement"] is not None:
-        if (
-            "압축" in user_text
-            or "compress" in text
-        ):
-            result["displacement"] = -abs(
-                result["displacement"]
-            )
-
-        elif (
-            "당겨" in user_text
-            or "늘려" in user_text
-            or "stretch" in text
-            or "pull" in text
-        ):
-            result["displacement"] = abs(
-                result["displacement"]
-            )
+        if "압축" in user_text or "compress" in text:
+            result["displacement"] = -abs(result["displacement"])
+        elif "당겨" in user_text or "늘려" in user_text or "stretch" in text or "pull" in text:
+            result["displacement"] = abs(result["displacement"])
 
     return result
 
 
-def create_box(
-    center_x,
-    center_y,
-    center_z,
-    size_x,
-    size_y,
-    size_z
-):
-    x0 = center_x - size_x / 2
-    x1 = center_x + size_x / 2
+def spring_animation_html(relative_displacement, equilibrium_displacement):
+    displacement = np.asarray(relative_displacement, dtype=float)
+    time = np.linspace(0.0, 10.0, len(displacement))
 
-    y0 = center_y - size_y / 2
-    y1 = center_y + size_y / 2
+    payload = json.dumps({
+        "time": time.tolist(),
+        "displacement": displacement.tolist(),
+        "equilibrium": float(equilibrium_displacement)
+    }, separators=(",", ":"))
 
-    z0 = center_z - size_z / 2
-    z1 = center_z + size_z / 2
+    payload_js = json.dumps(payload)
 
-    vertices = np.array([
-        [x0, y0, z0],
-        [x1, y0, z0],
-        [x1, y1, z0],
-        [x0, y1, z0],
-        [x0, y0, z1],
-        [x1, y0, z1],
-        [x1, y1, z1],
-        [x0, y1, z1]
-    ])
+    return f"""
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<script src="https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.min.js"></script>
+<style>
+html, body {{
+    margin: 0;
+    padding: 0;
+    width: 100%;
+    height: 100%;
+    overflow: hidden;
+    background: #0E1117;
+    font-family: Arial, sans-serif;
+}}
+#wrap {{
+    position: relative;
+    width: 100%;
+    height: 500px;
+}}
+#scene {{
+    width: 100%;
+    height: 100%;
+}}
+#controls {{
+    position: absolute;
+    left: 16px;
+    bottom: 16px;
+    display: flex;
+    gap: 8px;
+}}
+button {{
+    border: 0;
+    border-radius: 7px;
+    padding: 8px 14px;
+    background: #262B35;
+    color: white;
+    cursor: pointer;
+    font-size: 13px;
+}}
+button:hover {{ background: #343B48; }}
+#status {{
+    position: absolute;
+    right: 16px;
+    bottom: 18px;
+    color: #AAB2C0;
+    font-size: 12px;
+}}
+</style>
+</head>
+<body>
+<div id="wrap">
+    <div id="scene"></div>
+    <div id="controls">
+        <button id="play">▶ Play</button>
+        <button id="reset">↺ Reset</button>
+    </div>
+    <div id="status">0.00 s</div>
+</div>
+<script>
+const DATA = JSON.parse({payload_js});
 
-    faces = [
-        (0, 1, 2),
-        (0, 2, 3),
-        (4, 5, 6),
-        (4, 6, 7),
-        (0, 1, 5),
-        (0, 5, 4),
-        (1, 2, 6),
-        (1, 6, 5),
-        (2, 3, 7),
-        (2, 7, 6),
-        (3, 0, 4),
-        (3, 4, 7)
-    ]
+const sceneElement = document.getElementById('scene');
+const scene = new THREE.Scene();
+scene.background = new THREE.Color(0x0E1117);
 
-    i = []
-    j = []
-    k = []
+const camera = new THREE.PerspectiveCamera(
+    42,
+    sceneElement.clientWidth / sceneElement.clientHeight,
+    0.1,
+    100
+);
 
-    for a, b, c in faces:
-        i.append(a)
-        j.append(b)
-        k.append(c)
+camera.position.set(0, 4.8, 0.35);
+camera.lookAt(0, 0, 0.45);
 
-    return go.Mesh3d(
-        x=vertices[:, 0],
-        y=vertices[:, 1],
-        z=vertices[:, 2],
-        i=i,
-        j=j,
-        k=k,
-        opacity=1.0,
-        flatshading=True,
-        showlegend=False
-    )
+const renderer = new THREE.WebGLRenderer({{ antialias: true }});
+renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+renderer.setSize(sceneElement.clientWidth, sceneElement.clientHeight);
+sceneElement.appendChild(renderer.domElement);
 
+scene.add(new THREE.AmbientLight(0xffffff, 1.5));
 
-def create_cylinder_z(
-    center_x,
-    center_y,
-    center_z,
-    radius,
-    height,
-    segments=16
-):
-    theta = np.linspace(
-        0,
-        2 * np.pi,
-        segments,
-        endpoint=False
-    )
+const ceilingMaterial = new THREE.MeshStandardMaterial({{
+    color: 0x9AA0A6,
+    roughness: 0.8
+}});
 
-    x = []
-    y = []
-    z = []
+const mountMaterial = new THREE.MeshStandardMaterial({{
+    color: 0x777D84,
+    roughness: 0.7
+}});
 
-    for t in theta:
-        x.append(
-            center_x + radius * np.cos(t)
-        )
-        y.append(
-            center_y + radius * np.sin(t)
-        )
-        z.append(
-            center_z - height / 2
-        )
+const massMaterial = new THREE.MeshStandardMaterial({{
+    color: 0x4D9DE0,
+    roughness: 0.35,
+    metalness: 0.15
+}});
 
-    for t in theta:
-        x.append(
-            center_x + radius * np.cos(t)
-        )
-        y.append(
-            center_y + radius * np.sin(t)
-        )
-        z.append(
-            center_z + height / 2
-        )
+const ceiling = new THREE.Mesh(
+    new THREE.BoxGeometry(2.4, 0.35, 1.4),
+    ceilingMaterial
+);
+ceiling.position.set(0, 1.98, 0);
+scene.add(ceiling);
 
-    vertices = np.column_stack(
-        (x, y, z)
-    )
+const mount = new THREE.Mesh(
+    new THREE.BoxGeometry(0.5, 0.16, 0.5),
+    mountMaterial
+);
+mount.position.set(0, 1.53, 0);
+scene.add(mount);
 
-    faces_i = []
-    faces_j = []
-    faces_k = []
+const springGroup = new THREE.Group();
+scene.add(springGroup);
 
-    for n in range(segments):
-        nxt = (n + 1) % segments
+const massHeight = 0.45;
+const massRadius = 0.32;
+const springStart = 1.45;
+const naturalLength = 1.0;
+const springRadius = 0.18;
+const turns = 14;
+const pointsPerTurn = 8;
+const springPoints = turns * pointsPerTurn + 1;
 
-        faces_i.append(n)
-        faces_j.append(nxt)
-        faces_k.append(n + segments)
+const springGeometry = new THREE.BufferGeometry();
+const springPositions = new Float32Array(springPoints * 3);
+springGeometry.setAttribute(
+    'position',
+    new THREE.BufferAttribute(springPositions, 3)
+);
 
-        faces_i.append(nxt)
-        faces_j.append(nxt + segments)
-        faces_k.append(n + segments)
+const springMaterial = new THREE.LineBasicMaterial({{
+    color: 0xE6E6E6,
+    linewidth: 2
+}});
 
-    return go.Mesh3d(
-        x=vertices[:, 0],
-        y=vertices[:, 1],
-        z=vertices[:, 2],
-        i=faces_i,
-        j=faces_j,
-        k=faces_k,
-        flatshading=True,
-        showlegend=False
-    )
+const springLine = new THREE.Line(springGeometry, springMaterial);
+springGroup.add(springLine);
 
+const mass = new THREE.Mesh(
+    new THREE.BoxGeometry(0.64, massHeight, 0.64),
+    massMaterial
+);
+springGroup.add(mass);
 
-def create_spring_coil(
-    start_z,
-    end_z,
-    radius=0.18,
-    turns=14
-):
-    n_points = max(
-        int(turns * 12),
-        24
-    )
+const connectorGeometry = new THREE.BufferGeometry();
+const connectorPositions = new Float32Array(6);
+connectorGeometry.setAttribute(
+    'position',
+    new THREE.BufferAttribute(connectorPositions, 3)
+);
+const connector = new THREE.Line(
+    connectorGeometry,
+    new THREE.LineDashedMaterial({{
+        color: 0xAAB2C0,
+        transparent: true,
+        opacity: 0.35,
+        dashSize: 0.05,
+        gapSize: 0.04
+    }})
+);
+connector.computeLineDistances();
+springGroup.add(connector);
 
-    theta = np.linspace(
-        0,
-        2 * np.pi * turns,
-        n_points
-    )
+const equilibriumLineMaterial = new THREE.LineDashedMaterial({{
+    color: 0xAAB2C0,
+    transparent: true,
+    opacity: 0.45,
+    dashSize: 0.06,
+    gapSize: 0.05
+}});
 
-    z = np.linspace(
-        start_z,
-        end_z,
-        n_points
-    )
+const equilibriumGeometry = new THREE.BufferGeometry();
+const equilibriumPositions = new Float32Array(6);
+equilibriumPositions[0] = -0.65;
+equilibriumPositions[1] = 0;
+equilibriumPositions[2] = 0;
+equilibriumPositions[3] = 0.65;
+equilibriumPositions[4] = 0;
+equilibriumPositions[5] = 0;
+equilibriumGeometry.setAttribute(
+    'position',
+    new THREE.BufferAttribute(equilibriumPositions, 3)
+);
+const equilibriumLine = new THREE.Line(
+    equilibriumGeometry,
+    equilibriumLineMaterial
+);
+scene.add(equilibriumLine);
 
-    x = radius * np.cos(theta)
-    y = radius * np.sin(theta)
+const maxAmplitude = Math.max(
+    Math.max(...DATA.displacement.map(Math.abs)),
+    0.05
+);
+const visualScale = Math.min(0.55, 0.55 / maxAmplitude);
 
-    return go.Scatter3d(
-        x=x,
-        y=y,
-        z=z,
-        mode="lines",
-        line=dict(width=7),
-        showlegend=False
-    )
+function interpolate(t) {{
+    const times = DATA.time;
+    const values = DATA.displacement;
 
+    if (t <= times[0]) return values[0];
+    if (t >= times[times.length - 1]) return values[values.length - 1];
 
-def create_spring_coil_points(
-    start_z,
-    end_z,
-    radius=0.18,
-    turns=14,
-    points_per_turn=18
-):
-    point_count = max(
-        int(turns * points_per_turn),
-        48
-    )
+    let lo = 0;
+    let hi = times.length - 1;
 
-    theta = np.linspace(
-        0,
-        2 * np.pi * turns,
-        point_count
-    )
+    while (lo <= hi) {{
+        const mid = (lo + hi) >> 1;
+        if (times[mid] < t) lo = mid + 1;
+        else hi = mid - 1;
+    }}
 
-    z = np.linspace(
-        start_z,
-        end_z,
-        point_count
-    )
+    const i = Math.max(0, lo - 1);
+    const f = (t - times[i]) / (times[i + 1] - times[i]);
+    return values[i] + (values[i + 1] - values[i]) * f;
+}}
 
-    x = radius * np.cos(theta)
-    y = radius * np.sin(theta)
+function updateObject(t) {{
+    const relative = interpolate(t);
+    const visualRelative = relative * visualScale;
+    const equilibriumVisual = DATA.equilibrium * 0.55;
+    const currentLength = naturalLength + equilibriumVisual + visualRelative;
 
-    return x, y, z
+    const massCenter = springStart - currentLength - massHeight / 2;
+    const springEnd = massCenter + massHeight / 2;
 
+    for (let i = 0; i < springPoints; i++) {{
+        const u = i / (springPoints - 1);
+        const angle = u * Math.PI * 2 * turns;
+        springPositions[i * 3] = springRadius * Math.cos(angle);
+        springPositions[i * 3 + 1] = springRadius * Math.sin(angle);
+        springPositions[i * 3 + 2] = springStart + (springEnd - springStart) * u;
+    }}
 
-def create_spring_figure(
-    relative_displacement,
-    equilibrium_displacement,
-    natural_length=1.0
-):
-    ceiling_z = 1.8
-    spring_start = 1.45
-    mass_height = 0.45
+    springGeometry.attributes.position.needsUpdate = true;
 
-    current_length = np.clip(
-        natural_length
-        + equilibrium_displacement
-        + relative_displacement * 0.55,
-        0.55,
-        1.85
-    )
+    mass.position.set(0, massCenter, 0);
 
-    mass_center = (
-        spring_start
-        - current_length
-        - mass_height / 2
-    )
+    connectorPositions[0] = 0;
+    connectorPositions[1] = springStart;
+    connectorPositions[2] = 0;
+    connectorPositions[3] = 0;
+    connectorPositions[4] = massCenter;
+    connectorPositions[5] = 0;
+    connectorGeometry.attributes.position.needsUpdate = true;
+    connector.computeLineDistances();
 
-    equilibrium_length = np.clip(
-        natural_length
-        + equilibrium_displacement,
-        0.55,
-        1.85
-    )
+    const equilibriumLength = naturalLength + equilibriumVisual;
+    const equilibriumMassCenter = springStart - equilibriumLength - massHeight / 2;
+    equilibriumPositions[2] = equilibriumMassCenter;
+    equilibriumPositions[5] = equilibriumMassCenter;
+    equilibriumGeometry.attributes.position.needsUpdate = true;
 
-    equilibrium_mass_center = (
-        spring_start
-        - equilibrium_length
-        - mass_height / 2
-    )
+    document.getElementById('status').textContent = t.toFixed(2) + ' s';
+}}
 
-    spring_end = mass_center + mass_height / 2
+let playing = true;
+let startWall = performance.now();
+let pausedAt = 0;
+const duration = DATA.time[DATA.time.length - 1];
 
-    spring_x, spring_y, spring_z = create_spring_coil_points(
-        spring_start,
-        spring_end
-    )
+function animate(now) {{
+    requestAnimationFrame(animate);
 
-    fig = go.Figure()
+    if (playing) {{
+        let elapsed = (now - startWall) / 1000;
+        if (elapsed >= duration) {{
+            elapsed = duration;
+            playing = false;
+            document.getElementById('play').textContent = '▶ Play';
+        }}
+        updateObject(elapsed);
+    }}
 
-    fig.add_trace(
-        create_box(
-            0, 0, ceiling_z + 0.18,
-            2.4, 1.4, 0.35
-        )
-    )
+    renderer.render(scene, camera);
+}}
 
-    fig.add_trace(
-        create_box(
-            0, 0, spring_start + 0.08,
-            0.5, 0.5, 0.16
-        )
-    )
+function startAnimation() {{
+    startWall = performance.now() - pausedAt * 1000;
+    playing = true;
+    document.getElementById('play').textContent = '⏸ Pause';
+}}
 
-    fig.add_trace(
-        go.Scatter3d(
-            x=spring_x,
-            y=spring_y,
-            z=spring_z,
-            mode="lines",
-            line=dict(width=7),
-            showlegend=False
-        )
-    )
+document.getElementById('play').addEventListener('click', () => {{
+    if (playing) {{
+        pausedAt = Math.min(duration, (performance.now() - startWall) / 1000);
+        playing = false;
+        document.getElementById('play').textContent = '▶ Play';
+    }} else {{
+        startAnimation();
+    }}
+}});
 
-    fig.add_trace(
-        go.Scatter3d(
-            x=[0],
-            y=[0],
-            z=[mass_center],
-            mode="markers",
-            marker=dict(
-                size=24,
-                symbol="circle"
-            ),
-            showlegend=False
-        )
-    )
+document.getElementById('reset').addEventListener('click', () => {{
+    pausedAt = 0;
+    updateObject(0);
+    startAnimation();
+}});
 
-    fig.add_trace(
-        go.Scatter3d(
-            x=[0, 0],
-            y=[0, 0],
-            z=[spring_start, mass_center],
-            mode="lines",
-            line=dict(
-                width=2,
-                dash="dot"
-            ),
-            opacity=0.3,
-            showlegend=False
-        )
-    )
+window.addEventListener('resize', () => {{
+    const w = sceneElement.clientWidth;
+    const h = sceneElement.clientHeight;
+    camera.aspect = w / h;
+    camera.updateProjectionMatrix();
+    renderer.setSize(w, h);
+}});
 
-    fig.add_trace(
-        go.Scatter3d(
-            x=[-0.65, 0.65],
-            y=[0, 0],
-            z=[
-                equilibrium_mass_center,
-                equilibrium_mass_center
-            ],
-            mode="lines",
-            line=dict(
-                width=2,
-                dash="dash"
-            ),
-            opacity=0.4,
-            showlegend=False
-        )
-    )
+updateObject(0);
+startAnimation();
+requestAnimationFrame(animate);
+</script>
+</body>
+</html>
+"""
 
-    fig.update_layout(
-        height=500,
-        margin=dict(l=0, r=0, t=0, b=0),
-        paper_bgcolor="#0E1117",
-        scene=dict(
-            bgcolor="#0E1117",
-            xaxis=dict(
-                visible=False,
-                range=[-1.3, 1.3]
-            ),
-            yaxis=dict(
-                visible=False,
-                range=[-1.3, 1.3]
-            ),
-            zaxis=dict(
-                visible=False,
-                range=[-0.9, 2.2]
-            ),
-            aspectmode="manual",
-            aspectratio=dict(
-                x=1,
-                y=1,
-                z=1.8
-            ),
-            camera=dict(
-                eye=dict(
-                    x=0,
-                    y=4.8,
-                    z=0.35
-                ),
-                center=dict(
-                    x=0,
-                    y=0,
-                    z=0.45
-                ),
-                up=dict(
-                    x=0,
-                    y=0,
-                    z=1
-                )
-            )
-        ),
-        showlegend=False
-    )
-
-    return fig
-
-
-def create_animation_frame(
-    relative_displacement,
-    equilibrium_displacement,
-    natural_length=1.0
-):
-    spring_start = 1.45
-    mass_height = 0.45
-
-    current_length = np.clip(
-        natural_length
-        + equilibrium_displacement
-        + relative_displacement * 0.55,
-        0.55,
-        1.85
-    )
-
-    mass_center = (
-        spring_start
-        - current_length
-        - mass_height / 2
-    )
-
-    spring_end = mass_center + mass_height / 2
-
-    spring_x, spring_y, spring_z = create_spring_coil_points(
-        spring_start,
-        spring_end
-    )
-
-    return [
-        go.Scatter3d(
-            x=spring_x,
-            y=spring_y,
-            z=spring_z,
-            mode="lines",
-            line=dict(width=7),
-            showlegend=False
-        ),
-        go.Scatter3d(
-            x=[0],
-            y=[0],
-            z=[mass_center],
-            mode="markers",
-            marker=dict(
-                size=24,
-                symbol="circle"
-            ),
-            showlegend=False
-        ),
-        go.Scatter3d(
-            x=[0, 0],
-            y=[0, 0],
-            z=[spring_start, mass_center],
-            mode="lines",
-            line=dict(
-                width=2,
-                dash="dot"
-            ),
-            opacity=0.3,
-            showlegend=False
-        )
-    ]
 
 def spring_experiment():
-
-    if st.button(
-        "Back to Experiments",
-        key="spring_back_button"
-    ):
+    if st.button("Back to Experiments", key="spring_back_button"):
         st.session_state.page = "select"
         st.session_state.experiment = None
-
-        st.session_state.pop(
-            "spring_result",
-            None
-        )
-
+        st.session_state.pop("spring_result", None)
         st.query_params.clear()
         st.rerun()
 
@@ -728,35 +518,17 @@ def spring_experiment():
             st.session_state[key] = value
 
     required_keys = {
-        "time",
-        "x",
-        "v",
-        "a",
-        "relative_displacement",
-        "kinetic_energy",
-        "spring_energy",
-        "elastic_energy",
-        "total_energy",
-        "total_mechanical_energy",
+        "time", "x", "v", "a", "relative_displacement",
+        "kinetic_energy", "spring_energy", "elastic_energy",
+        "total_energy", "total_mechanical_energy",
         "equilibrium_displacement"
     }
 
-    result = st.session_state.get(
-        "spring_result"
-    )
+    result = st.session_state.get("spring_result")
+    if not isinstance(result, dict) or not required_keys.issubset(result.keys()):
+        st.session_state.pop("spring_result", None)
 
-    if (
-        not isinstance(result, dict)
-        or not required_keys.issubset(result.keys())
-    ):
-        st.session_state.pop(
-            "spring_result",
-            None
-        )
-
-    st.markdown(
-        "### Describe Your Experiment"
-    )
+    st.markdown("### Describe Your Experiment")
 
     ai_text = st.text_area(
         "AI Assistant",
@@ -768,46 +540,23 @@ def spring_experiment():
         height=100
     )
 
-    if st.button(
-        "Run AI Analysis",
-        key="spring_ai_button"
-    ):
+    if st.button("Run AI Analysis", key="spring_ai_button"):
         if ai_text.strip():
             parsed = parse_ai_spring(ai_text)
 
             if parsed["mass"] is not None:
-                st.session_state.spring_mass = (
-                    parsed["mass"]
-                )
-
+                st.session_state.spring_mass = parsed["mass"]
             if parsed["k"] is not None:
-                st.session_state.spring_k = (
-                    parsed["k"]
-                )
-
+                st.session_state.spring_k = parsed["k"]
             if parsed["displacement"] is not None:
-                st.session_state.spring_displacement = (
-                    parsed["displacement"]
-                )
-
+                st.session_state.spring_displacement = parsed["displacement"]
             if parsed["gravity"] is not None:
-                st.session_state.spring_gravity = (
-                    parsed["gravity"]
-                )
-
+                st.session_state.spring_gravity = parsed["gravity"]
             if parsed["damping"] is not None:
-                st.session_state.spring_damping = (
-                    parsed["damping"]
-                )
+                st.session_state.spring_damping = parsed["damping"]
 
-            st.session_state.pop(
-                "spring_result",
-                None
-            )
-
-            st.success(
-                "Experiment parameters updated."
-            )
+            st.session_state.pop("spring_result", None)
+            st.success("Experiment parameters updated.")
 
     st.markdown("### Parameters")
 
@@ -815,60 +564,34 @@ def spring_experiment():
 
     with col1:
         mass = st.number_input(
-            "Mass (kg)",
-            min_value=0.01,
-            max_value=100.0,
-            step=0.1,
-            key="spring_mass"
+            "Mass (kg)", min_value=0.01, max_value=100.0,
+            step=0.1, key="spring_mass"
         )
-
         k = st.number_input(
-            "Spring Constant k (N/m)",
-            min_value=0.01,
-            max_value=1000.0,
-            step=1.0,
-            key="spring_k"
+            "Spring Constant k (N/m)", min_value=0.01, max_value=1000.0,
+            step=1.0, key="spring_k"
         )
-
         displacement = st.number_input(
             "Initial Displacement from Equilibrium (m)",
-            min_value=-5.0,
-            max_value=5.0,
-            step=0.05,
+            min_value=-5.0, max_value=5.0, step=0.05,
             key="spring_displacement"
         )
 
     with col2:
         gravity = st.number_input(
-            "Gravity (m/s²)",
-            min_value=0.0,
-            max_value=30.0,
-            step=0.1,
-            key="spring_gravity"
+            "Gravity (m/s²)", min_value=0.0, max_value=30.0,
+            step=0.1, key="spring_gravity"
         )
-
         damping = st.number_input(
-            "Damping (N·s/m)",
-            min_value=0.0,
-            max_value=5.0,
-            step=0.01,
-            key="spring_damping"
+            "Damping (N·s/m)", min_value=0.0, max_value=5.0,
+            step=0.01, key="spring_damping"
         )
 
-    equilibrium_displacement = (
-        mass * gravity / k
-    )
+    equilibrium_displacement = mass * gravity / k
 
-    st.info(
-        f"Equilibrium displacement: "
-        f"{equilibrium_displacement:.3f} m"
-    )
+    st.info(f"Equilibrium displacement: {equilibrium_displacement:.3f} m")
 
-    if st.button(
-        "Run Experiment",
-        type="primary",
-        key="spring_run_button"
-    ):
+    if st.button("Run Experiment", type="primary", key="spring_run_button"):
         try:
             result = simulate_spring(
                 mass=mass,
@@ -878,195 +601,55 @@ def spring_experiment():
                 damping=damping
             )
 
-            if not required_keys.issubset(
-                result.keys()
-            ):
+            if not required_keys.issubset(result.keys()):
                 raise ValueError()
 
             st.session_state.spring_result = result
-
         except Exception:
-            st.session_state.pop(
-                "spring_result",
-                None
-            )
-
-            st.error(
-                "The simulation could not be completed. "
-                "Please check the parameters."
-            )
-
+            st.session_state.pop("spring_result", None)
+            st.error("The simulation could not be completed. Please check the parameters.")
             return
 
-    result = st.session_state.get(
-        "spring_result"
-    )
-
-    if not isinstance(result, dict):
-        return
-
-    if not required_keys.issubset(
-        result.keys()
-    ):
-        st.session_state.pop(
-            "spring_result",
-            None
-        )
+    result = st.session_state.get("spring_result")
+    if not isinstance(result, dict) or not required_keys.issubset(result.keys()):
         return
 
     time = result["time"]
     velocity = result["v"]
+    relative_displacement = result["relative_displacement"]
+    kinetic_energy = result["kinetic_energy"]
+    spring_energy = result["spring_energy"]
+    total_energy = result["total_energy"]
+    equilibrium_displacement = result["equilibrium_displacement"]
 
-    relative_displacement = (
-        result["relative_displacement"]
-    )
-
-    kinetic_energy = (
-        result["kinetic_energy"]
-    )
-
-    spring_energy = (
-        result["spring_energy"]
-    )
-
-    total_energy = (
-        result["total_energy"]
-    )
-
-    equilibrium_displacement = (
-        result["equilibrium_displacement"]
-    )
-
-    amplitude = np.max(
-        np.abs(relative_displacement)
-    )
-
-    initial_energy = (
-        0.5
-        * k
-        * displacement ** 2
-    )
-
-    maximum_energy = np.max(
-        total_energy
-    )
+    amplitude = np.max(np.abs(relative_displacement))
+    initial_energy = 0.5 * k * displacement ** 2
+    maximum_energy = np.max(total_energy)
 
     col1, col2, col3 = st.columns(3)
 
     with col1:
-        st.metric(
-            "Maximum Oscillation",
-            f"{amplitude:.3f} m"
-        )
-
+        st.metric("Maximum Oscillation", f"{amplitude:.3f} m")
     with col2:
-        st.metric(
-            "Maximum Velocity",
-            f"{np.max(np.abs(velocity)):.3f} m/s"
-        )
-
+        st.metric("Maximum Velocity", f"{np.max(np.abs(velocity)):.3f} m/s")
     with col3:
-        st.metric(
-            "Initial Energy",
-            f"{initial_energy:.3f} J"
-        )
+        st.metric("Initial Energy", f"{initial_energy:.3f} J")
 
-    st.caption(
-        f"Maximum calculated energy: "
-        f"{maximum_energy:.3f} J"
-    )
+    st.caption(f"Maximum calculated energy: {maximum_energy:.3f} J")
 
     st.markdown("### 3D Spring")
-
-    animation_fps = 60
-    animation_duration_ms = 1000 / animation_fps
-
-    animation_time = np.arange(
-        time[0],
-        time[-1] + 1e-9,
-        1.0 / animation_fps
-    )
-
-    animation_displacement = np.interp(
-        animation_time,
-        time,
-        relative_displacement
-    )
-
-    initial_fig = create_spring_figure(
-        animation_displacement[0],
-        equilibrium_displacement
-    )
-
-    frames = []
-
-    for i, displacement_value in enumerate(
-        animation_displacement
-    ):
-        frame_data = create_animation_frame(
-            displacement_value,
+    components.html(
+        spring_animation_html(
+            relative_displacement,
             equilibrium_displacement
-        )
-
-        frames.append(
-            go.Frame(
-                data=frame_data,
-                traces=[2, 3, 4],
-                name=f"spring_frame_{i}"
-            )
-        )
-
-    initial_fig.frames = frames
-
-    frame_names = [
-        frame.name
-        for frame in frames
-    ]
-
-    initial_fig.update_layout(
-        updatemenus=[
-            {
-                "type": "buttons",
-                "showactive": False,
-                "x": 0.05,
-                "y": 0.05,
-                "buttons": [
-                    {
-                        "label": "▶ Play",
-                        "method": "animate",
-                        "args": [
-                            frame_names,
-                            {
-                                "frame": {
-                                    "duration": animation_duration_ms,
-                                    "redraw": False
-                                },
-                                "transition": {
-                                    "duration": 0
-                                },
-                                "fromcurrent": True,
-                                "mode": "immediate"
-                            }
-                        ]
-                    }
-                ]
-            }
-        ],
-        uirevision="spring"
+        ),
+        height=510,
+        scrolling=False
     )
 
-    st.plotly_chart(
-        initial_fig,
-        use_container_width=True,
-        key="spring_3d"
-    )
-
-    st.markdown(
-        "### Displacement vs Time"
-    )
+    st.markdown("### Displacement vs Time")
 
     displacement_fig = go.Figure()
-
     displacement_fig.add_trace(
         go.Scatter(
             x=time,
@@ -1075,21 +658,12 @@ def spring_experiment():
             name="Displacement"
         )
     )
-
-    displacement_fig.add_hline(
-        y=0,
-        line_dash="dash",
-        opacity=0.5
-    )
-
+    displacement_fig.add_hline(y=0, line_dash="dash", opacity=0.5)
     displacement_fig.update_layout(
         xaxis_title="Time (s)",
-        yaxis_title=(
-            "Displacement from Equilibrium (m)"
-        ),
+        yaxis_title="Displacement from Equilibrium (m)",
         height=350
     )
-
     st.plotly_chart(
         displacement_fig,
         use_container_width=True,
@@ -1099,40 +673,20 @@ def spring_experiment():
     st.markdown("### Energy")
 
     energy_fig = go.Figure()
-
     energy_fig.add_trace(
-        go.Scatter(
-            x=time,
-            y=kinetic_energy,
-            mode="lines",
-            name="Kinetic Energy"
-        )
+        go.Scatter(x=time, y=kinetic_energy, mode="lines", name="Kinetic Energy")
     )
-
     energy_fig.add_trace(
-        go.Scatter(
-            x=time,
-            y=spring_energy,
-            mode="lines",
-            name="Spring Energy"
-        )
+        go.Scatter(x=time, y=spring_energy, mode="lines", name="Spring Energy")
     )
-
     energy_fig.add_trace(
-        go.Scatter(
-            x=time,
-            y=total_energy,
-            mode="lines",
-            name="Total Energy"
-        )
+        go.Scatter(x=time, y=total_energy, mode="lines", name="Total Energy")
     )
-
     energy_fig.update_layout(
         xaxis_title="Time (s)",
         yaxis_title="Energy (J)",
         height=350
     )
-
     st.plotly_chart(
         energy_fig,
         use_container_width=True,
