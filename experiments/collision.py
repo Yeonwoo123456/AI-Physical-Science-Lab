@@ -35,7 +35,7 @@ def collision_experiment():
     with c1:
         shape1 = st.selectbox(
             "Shape",
-            ["Sphere", "Cube", "Cylinder"],
+            ["Sphere", "Cube"],
             key="collision_shape1"
         )
         mass1 = st.number_input(
@@ -50,7 +50,7 @@ def collision_experiment():
     with c2:
         shape2 = st.selectbox(
             "Shape",
-            ["Sphere", "Cube", "Cylinder"],
+            ["Sphere", "Cube"],
             key="collision_shape2"
         )
         mass2 = st.number_input(
@@ -68,8 +68,11 @@ def collision_experiment():
         key="collision_elasticity"
     )
 
-    if st.button("Run Experiment", type="primary",
-                 use_container_width=True):
+    if st.button(
+        "Run Experiment",
+        type="primary",
+        use_container_width=True
+    ):
         run_collision(
             shape1, shape2,
             mass1, mass2,
@@ -80,6 +83,7 @@ def collision_experiment():
     if st.button("Back to Experiments"):
         for k in defaults:
             st.session_state.pop(k, None)
+
         st.session_state.page = "select"
         st.query_params.clear()
         st.rerun()
@@ -148,10 +152,12 @@ def run_collision(
     #wrap {{
         height:720px;
     }}
+
     #plot {{
         width:100%;
         height:620px;
     }}
+
     #play {{
         display:block;
         margin:14px auto;
@@ -165,6 +171,11 @@ def run_collision(
         font-weight:600;
         cursor:pointer;
     }}
+
+    #play:disabled {{
+        opacity:.5;
+        cursor:default;
+    }}
     </style>
 
     <div id="wrap">
@@ -173,6 +184,7 @@ def run_collision(
     </div>
 
     <script src="https://cdn.plot.ly/plotly-2.35.2.min.js"></script>
+
     <script>
     const p1={p1}, p2={p2};
     const s1="{shape1}", s2="{shape2}";
@@ -182,88 +194,77 @@ def run_collision(
     function sphere(x,c,n) {{
         return {{
             type:"scatter3d",
-            x:[x], y:[0], z:[0],
+            x:[x],
+            y:[0],
+            z:[0],
             mode:"markers",
-            marker:{{size:22,color:c}},
+            marker:{{
+                size:22,
+                color:c
+            }},
             name:n
         }};
     }}
 
     function cube(x,c,n) {{
         const s=1.25;
+
         const X=[
             x-s,x+s,x+s,x-s,
             x-s,x+s,x+s,x-s
         ];
-        const Y=[-s,-s,s,s,-s,-s,s,s];
-        const Z=[-s,-s,-s,-s,s,s,s,s];
+
+        const Y=[
+            -s,-s,s,s,
+            -s,-s,s,s
+        ];
+
+        const Z=[
+            -s,-s,-s,-s,
+            s,s,s,s
+        ];
 
         return {{
             type:"mesh3d",
-            x:X,y:Y,z:Z,
-            i:[0,0,4,4,0,1,2,3,0,1,2,3],
-            j:[1,2,5,6,1,2,3,0,4,5,6,7],
-            k:[2,3,6,7,5,6,7,4,5,6,7,4],
+            x:X,
+            y:Y,
+            z:Z,
+
+            i:[
+                0,0,4,4,
+                0,1,2,3,
+                1,2,3,0
+            ],
+
+            j:[
+                1,2,5,6,
+                1,2,3,0,
+                5,6,7,4
+            ],
+
+            k:[
+                2,3,6,7,
+                5,6,7,4,
+                6,7,4,5
+            ],
+
             color:c,
+
             lighting:{{
                 ambient:.3,
                 diffuse:.8,
                 specular:.5,
                 roughness:.3
             }},
-            name:n
-        }};
-    }}
 
-    function cylinder(x,c,n) {{
-        const r=1.15, h=2.5, nseg=24;
-        const X=[x,x], Y=[0,0], Z=[-h/2,h/2];
-        const I=[],J=[],K=[];
-
-        for(let i=0;i<nseg;i++) {{
-            let a=2*Math.PI*i/nseg;
-            X.push(x+r*Math.cos(a));
-            Y.push(r*Math.sin(a));
-            Z.push(-h/2);
-        }}
-
-        for(let i=0;i<nseg;i++) {{
-            let a=2*Math.PI*i/nseg;
-            X.push(x+r*Math.cos(a));
-            Y.push(r*Math.sin(a));
-            Z.push(h/2);
-        }}
-
-        for(let i=0;i<nseg;i++) {{
-            let n=(i+1)%nseg;
-            let b=2+i, bn=2+n;
-            let t=2+nseg+i, tn=2+nseg+n;
-
-            I.push(0); J.push(bn); K.push(b);
-            I.push(1); J.push(t); K.push(tn);
-            I.push(b); J.push(bn); K.push(tn);
-            I.push(b); J.push(tn); K.push(t);
-        }}
-
-        return {{
-            type:"mesh3d",
-            x:X,y:Y,z:Z,
-            i:I,j:J,k:K,
-            color:c,
-            lighting:{{
-                ambient:.3,
-                diffuse:.8,
-                specular:.5,
-                roughness:.3
-            }},
             name:n
         }};
     }}
 
     function object(x,c,s,n) {{
-        if(s==="Sphere") return sphere(x,c,n);
-        if(s==="Cube") return cube(x,c,n);
-        return cylinder(x,c,n);
+        return s==="Sphere"
+            ? sphere(x,c,n)
+            : cube(x,c,n);
     }}
 
     const initial=[
@@ -273,20 +274,37 @@ def run_collision(
 
     const layout={{
         title:"3D Collision Simulation",
+
         scene:{{
             dragmode:"orbit",
-            xaxis:{{title:"X Position (m)",range:[{xmin},{xmax}]}},
-            yaxis:{{title:"Y Position (m)",range:[-5,5]}},
-            zaxis:{{title:"Z Position (m)",range:[-5,5]}},
+
+            xaxis:{{
+                title:"X Position (m)",
+                range:[{xmin},{xmax}]
+            }},
+
+            yaxis:{{
+                title:"Y Position (m)",
+                range:[-5,5]
+            }},
+
+            zaxis:{{
+                title:"Z Position (m)",
+                range:[-5,5]
+            }},
+
             aspectmode:"cube"
         }},
+
         height:620,
         margin:{{l:0,r:0,t:60,b:10}},
         paper_bgcolor:"rgba(0,0,0,0)"
     }};
 
     Plotly.newPlot(
-        plot, initial, layout,
+        plot,
+        initial,
+        layout,
         {{
             responsive:true,
             scrollZoom:true,
@@ -298,24 +316,41 @@ def run_collision(
         play.disabled=true;
 
         const camera=plot.layout.scene.camera
-            ? JSON.parse(JSON.stringify(plot.layout.scene.camera))
+            ? JSON.parse(
+                JSON.stringify(
+                    plot.layout.scene.camera
+                )
+            )
             : null;
 
         const frames=[];
 
         for(let i=0;i<p1.length;i++) {{
-            const f={{
+            const frame={{
                 name:"f"+i,
                 data:[
-                    object(p1[i],"blue",s1,"Object 1"),
-                    object(p2[i],"red",s2,"Object 2")
+                    object(
+                        p1[i],
+                        "blue",
+                        s1,
+                        "Object 1"
+                    ),
+                    object(
+                        p2[i],
+                        "red",
+                        s2,
+                        "Object 2"
+                    )
                 ]
             }};
 
-            if(camera)
-                f.layout={{scene:{{camera:camera}}}};
+            if(camera) {{
+                frame.layout={{
+                    scene:{{camera:camera}}
+                }};
+            }}
 
-            frames.push(f);
+            frames.push(frame);
         }}
 
         await Plotly.deleteFrames(plot);
@@ -331,11 +366,12 @@ def run_collision(
             }}
         );
 
-        if(camera)
+        if(camera) {{
             await Plotly.relayout(
                 plot,
                 {{"scene.camera":camera}}
             );
+        }}
 
         play.disabled=false;
     }};
@@ -353,15 +389,21 @@ def run_collision(
     c1, c2 = st.columns(2)
 
     with c1:
-        st.metric("Object 1 Final Velocity", f"{v1:.2f} m/s")
+        st.metric(
+            "Object 1 Final Velocity",
+            f"{v1:.2f} m/s"
+        )
         st.metric(
             "Initial Kinetic Energy",
-            f"{0.5*mass1*velocity1**2 + 0.5*mass2*velocity2**2:.2f} J"
+            f"{0.5 * mass1 * velocity1**2 + 0.5 * mass2 * velocity2**2:.2f} J"
         )
 
     with c2:
-        st.metric("Object 2 Final Velocity", f"{v2:.2f} m/s")
+        st.metric(
+            "Object 2 Final Velocity",
+            f"{v2:.2f} m/s"
+        )
         st.metric(
             "Final Kinetic Energy",
-            f"{0.5*mass1*v1**2 + 0.5*mass2*v2**2:.2f} J"
+            f"{0.5 * mass1 * v1**2 + 0.5 * mass2 * v2**2:.2f} J"
         )
