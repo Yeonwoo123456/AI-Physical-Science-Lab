@@ -52,14 +52,7 @@ def simulate_pendulum(
             * (1 - math.cos(theta))
         )
 
-        return (
-            px,
-            py,
-            v,
-            tension_value,
-            ke,
-            pe
-        )
+        return px, py, v, tension_value, ke, pe
 
     steps = int(duration / dt)
 
@@ -88,10 +81,7 @@ def simulate_pendulum(
         total_energy.append(ke + pe)
 
         k1_theta = omega
-        k1_omega = acceleration(
-            theta,
-            omega
-        )
+        k1_omega = acceleration(theta, omega)
 
         k2_theta = (
             omega
@@ -230,7 +220,6 @@ def create_pendulum_figure(result):
             * math.sin(angle_rad)
         )
 
-        # 0.5초마다 표시값 변경
         display_index = int(
             round(
                 result["time"][i] / 0.5
@@ -254,14 +243,12 @@ def create_pendulum_figure(result):
                 name=f"frame{i}",
 
                 data=[
-                    # Rod
                     go.Scatter3d(
                         x=[0, x],
                         y=[0, y],
                         z=[0, 0]
                     ),
 
-                    # Bob
                     go.Scatter3d(
                         x=[x],
                         y=[y],
@@ -273,7 +260,6 @@ def create_pendulum_figure(result):
                         ]]
                     ),
 
-                    # Velocity
                     go.Scatter3d(
                         x=[
                             x,
@@ -297,7 +283,7 @@ def create_pendulum_figure(result):
                     annotations=[
                         dict(
                             x=0.5,
-                            y=0.075,
+                            y=0.055,
                             xref="paper",
                             yref="paper",
                             text=info_text,
@@ -324,7 +310,6 @@ def create_pendulum_figure(result):
     fig = go.Figure(
         data=[
 
-            # Reference line
             go.Scatter3d(
                 x=[
                     -ground,
@@ -343,7 +328,6 @@ def create_pendulum_figure(result):
                 hoverinfo="skip"
             ),
 
-            # Rod
             go.Scatter3d(
                 x=[
                     0,
@@ -371,7 +355,6 @@ def create_pendulum_figure(result):
                 ]
             ),
 
-            # Pivot
             go.Scatter3d(
                 x=[0],
                 y=[0],
@@ -385,7 +368,6 @@ def create_pendulum_figure(result):
                 hoverinfo="skip"
             ),
 
-            # Bob
             go.Scatter3d(
                 x=[first_x],
                 y=[first_y],
@@ -416,7 +398,6 @@ def create_pendulum_figure(result):
                 ]]
             ),
 
-            # Velocity vector
             go.Scatter3d(
                 x=[
                     first_x,
@@ -453,14 +434,13 @@ def create_pendulum_figure(result):
 
     fig.update_layout(
 
-        # 전체 Plotly display 높이
-        height=560,
+        height=520,
 
         margin=dict(
-            l=10,
-            r=10,
-            t=10,
-            b=5
+            l=5,
+            r=5,
+            t=5,
+            b=0
         ),
 
         paper_bgcolor="#0d1117",
@@ -472,10 +452,9 @@ def create_pendulum_figure(result):
 
         scene=dict(
 
-            # 3D 모델 영역
             domain=dict(
-                x=[0.02, 0.98],
-                y=[0.20, 1.0]
+                x=[0.04, 0.96],
+                y=[0.18, 1.0]
             ),
 
             xaxis=dict(
@@ -493,8 +472,8 @@ def create_pendulum_figure(result):
                 backgroundcolor="#0d1117",
                 gridcolor="#30363d",
                 range=[
-                    -length * 1.25,
-                    length * 0.25
+                    -length * 1.2,
+                    length * 0.35
                 ]
             ),
 
@@ -503,30 +482,33 @@ def create_pendulum_figure(result):
                 backgroundcolor="#0d1117",
                 gridcolor="#30363d",
                 range=[
-                    -1.0,
-                    1.0
+                    -0.7,
+                    0.7
                 ]
             ),
 
             aspectmode="manual",
 
             aspectratio=dict(
-                x=1.8,
-                y=1.5,
-                z=0.7
+                x=1.7,
+                y=1.7,
+                z=0.65
             ),
 
-            # 정면 고정 시점
             camera=dict(
+
+                # 정면에서 바라보는 3D 시점
                 eye=dict(
-                    x=0,
-                    y=-0.15,
-                    z=3.2
+                    x=0.15,
+                    y=-0.05,
+                    z=3.0
                 ),
 
+                # 기존보다 위쪽을 바라보게 해서
+                # 진자 모델을 화면 아래쪽으로 이동
                 center=dict(
                     x=0,
-                    y=-length * 0.45,
+                    y=0.25,
                     z=0
                 ),
 
@@ -538,11 +520,10 @@ def create_pendulum_figure(result):
             )
         ),
 
-        # 수치
         annotations=[
             dict(
                 x=0.5,
-                y=0.075,
+                y=0.055,
                 xref="paper",
                 yref="paper",
                 text=initial_info,
@@ -555,14 +536,13 @@ def create_pendulum_figure(result):
             )
         ],
 
-        # Play
         updatemenus=[
             dict(
                 type="buttons",
                 showactive=False,
 
                 x=0.035,
-                y=0.965,
+                y=0.96,
 
                 xanchor="left",
                 yanchor="top",
@@ -758,7 +738,6 @@ def pendulum_experiment():
 
     st.subheader("3D Simulation")
 
-    # 3D Simulation Display
     with st.container(border=True):
 
         st.plotly_chart(
@@ -799,7 +778,6 @@ def pendulum_experiment():
     ):
 
         st.session_state.page = "select"
-
         st.session_state.experiment = None
 
         st.session_state.pop(
