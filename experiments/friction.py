@@ -32,8 +32,19 @@ def simulate_friction(
     net_force = np.zeros(n)
 
     moving = False
+    wall_locked = False
 
     for i in range(n):
+        # Once the block touches a wall, it remains completely stopped.
+        if wall_locked:
+            if i > 0:
+                position[i] = position[i - 1]
+            velocity[i] = 0.0
+            acceleration[i] = 0.0
+            net_force[i] = 0.0
+            friction[i] = friction[i - 1] if i > 0 else 0.0
+            continue
+
         if not moving:
             if abs(applied_force) <= max_static_friction:
                 friction[i] = -applied_force
@@ -73,11 +84,13 @@ def simulate_friction(
                 velocity[i] = 0.0
                 acceleration[i] = 0.0
                 net_force[i] = 0.0
+                wall_locked = True
             elif position[i] + half_block >= right_wall:
                 position[i] = right_wall - half_block
                 velocity[i] = 0.0
                 acceleration[i] = 0.0
                 net_force[i] = 0.0
+                wall_locked = True
 
     state = np.where(
         np.abs(velocity) > 1e-6,
@@ -406,7 +419,11 @@ function draw() {
     const leftWallX = wallMargin;
     const rightWallX = w - wallMargin;
     const positionScale = (rightWallX - leftWallX) / 16;
-    const blockX = centerX + position * positionScale;
+    const rawBlockX = centerX + position * positionScale;
+    const blockX = Math.max(
+        leftWallX + blockW / 2,
+        Math.min(rightWallX - blockW / 2, rawBlockX)
+    );
 
     // Surface and two walls.
     ctx.strokeStyle = "#777";
