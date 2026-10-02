@@ -63,6 +63,22 @@ def simulate_friction(
                 + 0.5 * acceleration[i] * dt * dt
             )
 
+            # The object stops immediately when it touches either wall.
+            left_wall = -8.0
+            right_wall = 8.0
+            half_block = 0.55
+
+            if position[i] - half_block <= left_wall:
+                position[i] = left_wall + half_block
+                velocity[i] = 0.0
+                acceleration[i] = 0.0
+                net_force[i] = 0.0
+            elif position[i] + half_block >= right_wall:
+                position[i] = right_wall - half_block
+                velocity[i] = 0.0
+                acceleration[i] = 0.0
+                net_force[i] = 0.0
+
     state = np.where(
         np.abs(velocity) > 1e-6,
         "KINETIC",
@@ -209,7 +225,7 @@ body {
 }
 #canvas {
     width: 100%;
-    height: 470px;
+    height: 560px;
     display: block;
     background: #0E1117;
 }
@@ -386,14 +402,27 @@ function draw() {
     const blockW = 110;
     const blockH = 75;
 
-    const positionScale = 45;
+    const wallMargin = 45;
+    const leftWallX = wallMargin;
+    const rightWallX = w - wallMargin;
+    const positionScale = (rightWallX - leftWallX) / 16;
     const blockX = centerX + position * positionScale;
 
+    // Surface and two walls.
     ctx.strokeStyle = "#777";
     ctx.lineWidth = 5;
     ctx.beginPath();
-    ctx.moveTo(35, baseY + blockH / 2 + 2);
-    ctx.lineTo(w - 35, baseY + blockH / 2 + 2);
+    ctx.moveTo(leftWallX, baseY + blockH / 2 + 2);
+    ctx.lineTo(rightWallX, baseY + blockH / 2 + 2);
+    ctx.stroke();
+
+    ctx.strokeStyle = "#FFFFFF";
+    ctx.lineWidth = 4;
+    ctx.beginPath();
+    ctx.moveTo(leftWallX, baseY - blockH / 2 - 20);
+    ctx.lineTo(leftWallX, baseY + blockH / 2 + 4);
+    ctx.moveTo(rightWallX, baseY - blockH / 2 - 20);
+    ctx.lineTo(rightWallX, baseY + blockH / 2 + 4);
     ctx.stroke();
 
     ctx.fillStyle = "#B8B8B8";
@@ -448,18 +477,18 @@ function draw() {
 
     arrow(
         blockX,
-        baseY,
+        baseY - 38,
         blockX + applied * horizontalScale,
-        baseY,
+        baseY - 38,
         "#4DA6FF",
         "Applied " + Math.abs(applied).toFixed(1) + " N"
     );
 
     arrow(
         blockX,
-        baseY + 5,
+        baseY + 38,
         blockX + friction * horizontalScale,
-        baseY + 5,
+        baseY + 38,
         "#FF6B6B",
         "Friction " + Math.abs(friction).toFixed(1) + " N"
     );
