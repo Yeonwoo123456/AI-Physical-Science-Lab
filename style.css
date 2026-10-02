@@ -160,16 +160,3 @@
     font-weight: 700 !important; 
 }
 
-
-/* 3D Physics Display */
-
-[data-testid="stIFrame"] {
-    width: 75% !important;
-    margin-left: auto !important;
-    margin-right: auto !important;
-
-    border: 1px solid #6b7280 !important;
-    border-radius: 10px !important;
-
-    overflow: hidden !important;
-}
