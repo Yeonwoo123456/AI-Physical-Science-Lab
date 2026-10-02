@@ -922,29 +922,13 @@ def spring_experiment():
             ]
         )
 
-        st.markdown(
-            """
-            <div style="
-                border: 1px solid rgba(255,255,255,0.85);
-                border-radius: 10px;
-                padding: 8px;
-                margin-top: 8px;
-                margin-bottom: 20px;
-            ">
-            """,
-            unsafe_allow_html=True
-        )
+        with st.container(border=True):
 
-        st.plotly_chart(
-            initial_fig,
-            use_container_width=True,
-            key="spring_3d"
-        )
-
-        st.markdown(
-            "</div>",
-            unsafe_allow_html=True
-        )
+    st.plotly_chart(
+        initial_fig,
+        use_container_width=True,
+        key="spring_3d"
+    )
 
         st.markdown(
             "### Displacement vs Time"
