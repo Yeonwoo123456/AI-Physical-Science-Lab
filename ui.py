@@ -8,12 +8,17 @@ from app_modules import (
     PhysicsValidator,
     PhysicsEngine
 )
+
 from experiments.projectile import projectile_experiment
+from experiments.collision import collision_experiment
+
 
 def load_css():
+
     path = Path(__file__).parent / "style.css"
 
     if path.exists():
+
         st.markdown(
             f"<style>{path.read_text(encoding='utf-8')}</style>",
             unsafe_allow_html=True
@@ -21,15 +26,19 @@ def load_css():
 
 
 def get_image(path):
+
     p = Path(__file__).parent / path
 
     if not p.exists():
         return ""
 
-    return base64.b64encode(p.read_bytes()).decode()
+    return base64.b64encode(
+        p.read_bytes()
+    ).decode()
 
 
 def init_state():
+
     if "page" not in st.session_state:
         st.session_state.page = "home"
 
@@ -38,6 +47,7 @@ def init_state():
 
 
 def home_page():
+
     st.markdown(
         '<div class="home-title">What happens if…?</div>',
         unsafe_allow_html=True
@@ -61,16 +71,19 @@ def home_page():
     _, col, _ = st.columns([1, 2, 1])
 
     with col:
+
         if st.button(
             "Start Exploring",
             type="primary",
             use_container_width=True
         ):
+
             st.session_state.page = "select"
             st.rerun()
 
 
 def selection_page():
+
     st.markdown(
         """
         <div class="selection-header">
@@ -84,29 +97,62 @@ def selection_page():
     )
 
     experiments = [
-        ("projectile", "Projectile Motion", "Kinematics",
-         "Speed · Angle · Gravity", "#9FC5F8"),
+        (
+            "projectile",
+            "Projectile Motion",
+            "Kinematics",
+            "Speed · Angle · Gravity",
+            "#9FC5F8"
+        ),
 
-        ("collision", "Collision", "Momentum & Energy",
-         "Mass · Speed · Elasticity", "#F4A6A6"),
+        (
+            "collision",
+            "Collision",
+            "Momentum & Energy",
+            "Mass · Speed · Elasticity",
+            "#F4A6A6"
+        ),
 
-        ("pendulum", "Pendulum", "Periodic Motion",
-         "Length · Gravity · Angle", "#F6D77A"),
+        (
+            "pendulum",
+            "Pendulum",
+            "Periodic Motion",
+            "Length · Gravity · Angle",
+            "#F6D77A"
+        ),
 
-        ("spring", "Spring", "Hooke's Law",
-         "Mass · k · Displacement", "#9ED6A8"),
+        (
+            "spring",
+            "Spring",
+            "Hooke's Law",
+            "Mass · k · Displacement",
+            "#9ED6A8"
+        ),
 
-        ("friction", "Friction", "Friction Force",
-         "μ · Mass · Gravity", "#8FD3D3"),
+        (
+            "friction",
+            "Friction",
+            "Friction Force",
+            "μ · Mass · Gravity",
+            "#8FD3D3"
+        ),
 
-        ("orbit", "Gravity & Orbit", "Gravity",
-         "Mass · Distance · Velocity", "#B7A4E8")
+        (
+            "orbit",
+            "Gravity & Orbit",
+            "Gravity",
+            "Mass · Distance · Velocity",
+            "#B7A4E8"
+        )
     ]
 
     cards = ""
 
     for key, title, concept, params, color in experiments:
-        image = get_image(f"assets/{key}.png")
+
+        image = get_image(
+            f"assets/{key}.png"
+        )
 
         cards += f"""
         <a href="?experiment={key}"
@@ -115,41 +161,72 @@ def selection_page():
                   background-image:url('data:image/png;base64,{image}');">
 
             <div class="card-text">
-                <div class="card-title">{title}</div>
-                <div class="card-concept">{concept}</div>
-                <div class="card-parameters">{params}</div>
+
+                <div class="card-title">
+                    {title}
+                </div>
+
+                <div class="card-concept">
+                    {concept}
+                </div>
+
+                <div class="card-parameters">
+                    {params}
+                </div>
+
             </div>
 
         </a>
         """
 
-    st.html(f"""
+    st.html(
+        f"""
         <div class="physics-grid">
             {cards}
         </div>
-    """)
+        """
+    )
 
-    st.markdown("<br>", unsafe_allow_html=True)
+    st.markdown(
+        "<br>",
+        unsafe_allow_html=True
+    )
 
     if st.button("Back to Home"):
+
         st.session_state.page = "home"
+
         st.query_params.clear()
+
         st.rerun()
 
 
 def experiment_page():
+
     experiment = st.session_state.experiment
 
     if experiment == "projectile":
+
         projectile_experiment()
+
+        return
+
+    if experiment == "collision":
+
+        collision_experiment()
+
         return
 
     names = {
-        "collision": "Collision",
+
         "pendulum": "Pendulum",
+
         "spring": "Spring",
+
         "friction": "Friction",
+
         "orbit": "Gravity & Orbit"
+
     }
 
     name = names.get(
@@ -163,27 +240,41 @@ def experiment_page():
         "This experiment is currently under development."
     )
 
-    if st.button("Back to Experiments"):
+    if st.button(
+        "Back to Experiments"
+    ):
+
         st.session_state.page = "select"
+
         st.query_params.clear()
+
         st.rerun()
 
 
 def render_app():
+
     load_css()
+
     init_state()
 
-    experiment = st.query_params.get("experiment")
+    experiment = st.query_params.get(
+        "experiment"
+    )
 
     if experiment:
+
         st.session_state.experiment = experiment
+
         st.session_state.page = "experiment"
 
     if st.session_state.page == "home":
+
         home_page()
 
     elif st.session_state.page == "select":
+
         selection_page()
 
     else:
+
         experiment_page()
