@@ -26,7 +26,8 @@ def projectile_experiment():
             min_value=0.1,
             max_value=100.0,
             value=20.0,
-            step=1.0
+            step=1.0,
+            key="projectile_velocity"
         )
 
     with col2:
@@ -35,7 +36,8 @@ def projectile_experiment():
             min_value=0.0,
             max_value=90.0,
             value=45.0,
-            step=1.0
+            step=1.0,
+            key="projectile_angle"
         )
 
     with col3:
@@ -44,7 +46,8 @@ def projectile_experiment():
             min_value=0.0,
             max_value=500.0,
             value=0.0,
-            step=1.0
+            step=1.0,
+            key="projectile_height"
         )
 
     col1, col2 = st.columns(2)
@@ -55,7 +58,8 @@ def projectile_experiment():
             min_value=0.01,
             max_value=30.0,
             value=9.81,
-            step=0.1
+            step=0.1,
+            key="projectile_gravity"
         )
 
     with col2:
@@ -64,7 +68,8 @@ def projectile_experiment():
             min_value=0.01,
             max_value=1000.0,
             value=1.0,
-            step=0.1
+            step=0.1,
+            key="projectile_mass"
         )
 
     st.markdown("<br>", unsafe_allow_html=True)
@@ -74,6 +79,9 @@ def projectile_experiment():
         type="primary",
         use_container_width=True
     ):
+        st.session_state.projectile_run = True
+
+    if st.session_state.get("projectile_run", False):
         run_projectile_simulation(
             velocity,
             angle,
@@ -85,6 +93,7 @@ def projectile_experiment():
     st.markdown("<br>", unsafe_allow_html=True)
 
     if st.button("Back to Experiments"):
+        st.session_state.projectile_run = False
         st.session_state.page = "select"
         st.query_params.clear()
         st.rerun()
@@ -115,7 +124,7 @@ def run_projectile_simulation(
 
     horizontal_range = vx * total_time
 
-    point_count = 120
+    point_count = 100
 
     times = [
         total_time * i / (point_count - 1)
@@ -198,40 +207,78 @@ def run_projectile_simulation(
         template="plotly_dark",
         height=550,
         showlegend=True,
-        updatemenus=[
-            {
-                "type": "buttons",
-                "showactive": False,
-                "x": 0.05,
-                "y": 1.12,
-                "buttons": [
-                    {
-                        "label": "Play",
-                        "method": "animate",
-                        "args": [
-                            None,
-                            {
-                                "frame": {
-                                    "duration": 30,
-                                    "redraw": True
-                                },
-                                "transition": {
-                                    "duration": 0
-                                },
-                                "fromcurrent": False
-                            }
-                        ]
-                    }
-                ]
-            }
-        ]
+        updatemenus=[]
     )
 
     st.markdown("### Simulation")
 
+    chart_id = (
+        f"projectile_{velocity}_{angle}_"
+        f"{height}_{gravity}_{mass}"
+    )
+
     st.plotly_chart(
         fig,
-        use_container_width=True
+        use_container_width=True,
+        key=chart_id
+    )
+
+    st.markdown(
+        """
+        <script>
+        setTimeout(() => {
+            const plots = window.parent.document.querySelectorAll(
+                '.js-plotly-plot'
+            );
+
+            const plot = plots[plots.length - 1];
+
+            if (plot && plot._fullLayout) {
+                Plotly.animate(
+                    plot,
+                    null,
+                    {
+                        frame: {
+                            duration: 25,
+                            redraw: true
+                        },
+                        transition: {
+                            duration: 0
+                        },
+                        fromcurrent: false,
+                        mode: "afterall"
+                    }
+                );
+
+                setTimeout(function loop() {
+                    if (
+                        plot &&
+                        plot.isConnected
+                    ) {
+                        Plotly.animate(
+                            plot,
+                            null,
+                            {
+                                frame: {
+                                    duration: 25,
+                                    redraw: true
+                                },
+                                transition: {
+                                    duration: 0
+                                },
+                                fromcurrent: false,
+                                mode: "afterall"
+                            }
+                        );
+
+                        setTimeout(loop, 2600);
+                    }
+                }, 2600);
+            }
+        }, 300);
+        </script>
+        """,
+        height=0
     )
 
     st.markdown("### Results")
