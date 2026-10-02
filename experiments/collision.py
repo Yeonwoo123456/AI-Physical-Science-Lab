@@ -395,26 +395,37 @@ def run_collision(
 
             return {{
                 type: "mesh3d",
+
                 x: X,
                 y: Y,
                 z: Z,
+
                 i: I,
                 j: J,
                 k: K,
-                color: color,
+
+                color:
+                    color === "blue"
+                        ? "#4DA3FF"
+                        : "#FF5C5C",
+
                 opacity: 1,
                 flatshading: false,
+
                 lighting: {{
-                    ambient: 0.25,
-                    diffuse: 0.85,
+                    ambient: 0.55,
+                    diffuse: 1.0,
                     specular: 1.0,
-                    roughness: 0.12
+                    fresnel: 0.45,
+                    roughness: 0.05
                 }},
+
                 lightposition: {{
                     x: 100,
-                    y: 100,
-                    z: 200
+                    y: 150,
+                    z: 300
                 }},
+
                 name: name
             }};
         }}
@@ -425,6 +436,7 @@ def run_collision(
             const s = 1.25;
 
             return {{
+
                 type: "mesh3d",
 
                 x: [
