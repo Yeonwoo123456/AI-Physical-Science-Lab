@@ -27,129 +27,120 @@ def simulate_spring(
     duration=10.0,
     dt=0.01
 ):
-    n = int(duration / dt) + 1
-
-    time = np.linspace(
-        0,
-        duration,
-        n
+    time = np.arange(
+        0.0,
+        duration + dt,
+        dt
     )
 
-    x = np.zeros(n)
+    n = len(time)
+
+    y = np.zeros(n)
     v = np.zeros(n)
 
-    x[0] = initial_displacement
-
-    def acceleration(xi, vi):
-        return (
-            -k * xi
-            - damping * vi
-        ) / mass
-
-    for i in range(n - 1):
-
-        xi = x[i]
-        vi = v[i]
-
-        k1x = vi
-        k1v = acceleration(
-            xi,
-            vi
-        )
-
-        k2x = (
-            vi
-            + 0.5 * k1v * dt
-        )
-
-        k2v = acceleration(
-            xi + 0.5 * k1x * dt,
-            vi + 0.5 * k1v * dt
-        )
-
-        k3x = (
-            vi
-            + 0.5 * k2v * dt
-        )
-
-        k3v = acceleration(
-            xi + 0.5 * k2x * dt,
-            vi + 0.5 * k2v * dt
-        )
-
-        k4x = (
-            vi
-            + k3v * dt
-        )
-
-        k4v = acceleration(
-            xi + k3x * dt,
-            vi + k3v * dt
-        )
-
-        x[i + 1] = (
-            xi
-            + dt / 6
-            * (
-                k1x
-                + 2 * k2x
-                + 2 * k3x
-                + k4x
-            )
-        )
-
-        v[i + 1] = (
-            vi
-            + dt / 6
-            * (
-                k1v
-                + 2 * k2v
-                + 2 * k3v
-                + k4v
-            )
-        )
-
-    a = (
-        -k * x
-        - damping * v
-    ) / mass
-
-    kinetic_energy = (
-        0.5
-        * mass
-        * v ** 2
+    equilibrium_displacement = (
+        mass * gravity / k
     )
 
-    elastic_energy = (
-        0.5
-        * k
-        * x ** 2
+    y[0] = initial_displacement
+    v[0] = 0.0
+
+    def acceleration(displacement, velocity):
+        return (
+            -(k / mass) * displacement
+            - (damping / mass) * velocity
+        )
+
+    for i in range(n - 1):
+        y0 = y[i]
+        v0 = v[i]
+
+        k1_y = v0
+        k1_v = acceleration(y0, v0)
+
+        y2 = y0 + 0.5 * dt * k1_y
+        v2 = v0 + 0.5 * dt * k1_v
+
+        k2_y = v2
+        k2_v = acceleration(y2, v2)
+
+        y3 = y0 + 0.5 * dt * k2_y
+        v3 = v0 + 0.5 * dt * k2_v
+
+        k3_y = v3
+        k3_v = acceleration(y3, v3)
+
+        y4 = y0 + dt * k3_y
+        v4 = v0 + dt * k3_v
+
+        k4_y = v4
+        k4_v = acceleration(y4, v4)
+
+        y[i + 1] = y0 + (
+            dt / 6.0
+        ) * (
+            k1_y
+            + 2 * k2_y
+            + 2 * k3_y
+            + k4_y
+        )
+
+        v[i + 1] = v0 + (
+            dt / 6.0
+        ) * (
+            k1_v
+            + 2 * k2_v
+            + 2 * k3_v
+            + k4_v
+        )
+
+    a = acceleration(y, v)
+
+    kinetic_energy = (
+        0.5 * mass * v ** 2
+    )
+
+    spring_energy = (
+        0.5 * k * y ** 2
     )
 
     total_energy = (
         kinetic_energy
-        + elastic_energy
+        + spring_energy
     )
 
-    return (
-        time,
-        x,
-        v,
-        a,
-        kinetic_energy,
-        elastic_energy,
-        total_energy
+    actual_position = (
+        equilibrium_displacement + y
     )
+
+    return {
+        "time": time,
+        "x": actual_position,
+        "v": v,
+        "a": a,
+        "relative_displacement": y,
+        "kinetic_energy": kinetic_energy,
+        "spring_energy": spring_energy,
+        "elastic_energy": spring_energy,
+        "total_energy": total_energy,
+        "total_mechanical_energy": total_energy,
+        "equilibrium_displacement": equilibrium_displacement
+    }
 
 
 def parse_ai_spring(user_text):
+    result = {
+        "mass": None,
+        "k": None,
+        "displacement": None,
+        "gravity": None,
+        "damping": None
+    }
 
     system_prompt = """
 You are a physics parameter parser.
 
-Extract ONLY explicitly stated numerical values.
-
-Return JSON only:
+Return ONLY valid JSON:
 
 {
     "mass": null,
@@ -159,30 +150,28 @@ Return JSON only:
     "damping": null
 }
 
-Rules:
+Units:
 
-mass:
-kg
+mass: kg
+k: N/m
+displacement: m
+gravity: m/s^2
+damping: N*s/m
 
-k:
-N/m
+Initial displacement is measured from the gravitational equilibrium position.
 
-displacement:
-m
+Only extract explicitly stated numerical values.
 
-gravity:
-m/s^2
+Never guess missing values.
 
-damping:
-dimensionless
+If the user says compress or 압축:
+displacement is negative.
 
-Do NOT guess missing values.
-
-If a value is not explicitly given, return null.
+If the user says pull, stretch, 당겨, 늘려:
+displacement is positive.
 """
 
     try:
-
         response = client.chat.completions.create(
             model="openai/gpt-oss-120b",
             messages=[
@@ -198,39 +187,46 @@ If a value is not explicitly given, return null.
             temperature=0
         )
 
-        data = json.loads(
-            response
-            .choices[0]
-            .message
-            .content
-        )
+        content = response.choices[0].message.content.strip()
+
+        content = re.sub(
+            r"```json|```",
+            "",
+            content
+        ).strip()
+
+        parsed = json.loads(content)
+
+        for key in result:
+            value = parsed.get(key)
+
+            if value is not None:
+                result[key] = float(value)
 
     except Exception:
-        data = {}
+        pass
 
     patterns = {
         "mass": [
-            r"(\d+(?:\.\d+)?)\s*(?:kg|킬로그램)"
+            r"(-?\d+(?:\.\d+)?)\s*(?:kg|킬로그램)"
         ],
         "k": [
-            r"(\d+(?:\.\d+)?)\s*(?:N/m|n/m)"
+            r"(-?\d+(?:\.\d+)?)\s*(?:N/m|n/m)"
         ],
         "displacement": [
             r"(-?\d+(?:\.\d+)?)\s*(?:m(?!/s)|미터)"
         ],
         "gravity": [
-            r"(\d+(?:\.\d+)?)\s*(?:m/s\^?2|m/s²)"
+            r"(-?\d+(?:\.\d+)?)\s*(?:m/s\^?2|m/s²)"
         ],
         "damping": [
             r"(?:damping|감쇠)\s*(?:=|은|는)?\s*"
-            r"(\d+(?:\.\d+)?)"
+            r"(-?\d+(?:\.\d+)?)"
         ]
     }
 
     for key, regex_list in patterns.items():
-
         for pattern in regex_list:
-
             match = re.search(
                 pattern,
                 user_text,
@@ -238,9 +234,8 @@ If a value is not explicitly given, return null.
             )
 
             if match:
-
                 try:
-                    data[key] = float(
+                    result[key] = float(
                         match.group(1)
                     )
                 except ValueError:
@@ -248,49 +243,44 @@ If a value is not explicitly given, return null.
 
                 break
 
-    lower = user_text.lower()
+    text = user_text.lower()
 
-    if (
-        "compress" in lower
-        or "compressed" in lower
-        or "압축" in user_text
-    ):
-        if data.get("displacement") is not None:
-            data["displacement"] = -abs(
-                data["displacement"]
+    if result["displacement"] is not None:
+        if (
+            "압축" in user_text
+            or "compress" in text
+        ):
+            result["displacement"] = -abs(
+                result["displacement"]
             )
 
-    elif (
-        "pull" in lower
-        or "stretch" in lower
-        or "당겨" in user_text
-        or "늘려" in user_text
-    ):
-        if data.get("displacement") is not None:
-            data["displacement"] = abs(
-                data["displacement"]
+        elif (
+            "당겨" in user_text
+            or "늘려" in user_text
+            or "stretch" in text
+            or "pull" in text
+        ):
+            result["displacement"] = abs(
+                result["displacement"]
             )
 
-    return data
+    return result
 
 
 def create_box(
-    cx,
-    cy,
-    cz,
-    sx,
-    sy,
-    sz
+    center_x,
+    center_y,
+    center_z,
+    size_x,
+    size_y,
+    size_z
 ):
-
-    x0 = cx - sx / 2
-    x1 = cx + sx / 2
-
-    y0 = cy - sy / 2
-    y1 = cy + sy / 2
-
-    z0 = cz - sz / 2
-    z1 = cz + sz / 2
+    x0 = center_x - size_x / 2
+    x1 = center_x + size_x / 2
+    y0 = center_y - size_y / 2
+    y1 = center_y + size_y / 2
+    z0 = center_z - size_z / 2
+    z1 = center_z + size_z / 2
 
     vertices = np.array([
         [x0, y0, z0],
@@ -334,100 +324,171 @@ def create_box(
         i=i,
         j=j,
         k=k,
-        opacity=1
+        opacity=1.0,
+        flatshading=True,
+        showlegend=False
+    )
+
+
+def create_cylinder_z(
+    center_x,
+    center_y,
+    center_z,
+    radius,
+    height,
+    segments=16
+):
+    theta = np.linspace(
+        0,
+        2 * np.pi,
+        segments,
+        endpoint=False
+    )
+
+    x = []
+    y = []
+    z = []
+
+    for t in theta:
+        x.append(
+            center_x + radius * np.cos(t)
+        )
+        y.append(
+            center_y + radius * np.sin(t)
+        )
+        z.append(
+            center_z - height / 2
+        )
+
+    for t in theta:
+        x.append(
+            center_x + radius * np.cos(t)
+        )
+        y.append(
+            center_y + radius * np.sin(t)
+        )
+        z.append(
+            center_z + height / 2
+        )
+
+    vertices = np.column_stack(
+        (x, y, z)
+    )
+
+    faces_i = []
+    faces_j = []
+    faces_k = []
+
+    for n in range(segments):
+        nxt = (n + 1) % segments
+
+        faces_i.append(n)
+        faces_j.append(nxt)
+        faces_k.append(n + segments)
+
+        faces_i.append(nxt)
+        faces_j.append(nxt + segments)
+        faces_k.append(n + segments)
+
+    return go.Mesh3d(
+        x=vertices[:, 0],
+        y=vertices[:, 1],
+        z=vertices[:, 2],
+        i=faces_i,
+        j=faces_j,
+        k=faces_k,
+        flatshading=True,
+        showlegend=False
     )
 
 
 def create_spring_coil(
     start_z,
     end_z,
-    radius=0.2,
-    turns=12
+    radius=0.18,
+    turns=10
 ):
-
-    points = 120
+    n_points = max(
+        int(turns * 10),
+        40
+    )
 
     theta = np.linspace(
         0,
         2 * np.pi * turns,
-        points
+        n_points
     )
 
     z = np.linspace(
         start_z,
         end_z,
-        points
+        n_points
     )
 
+    x = radius * np.cos(theta)
+    y = radius * np.sin(theta)
+
     return go.Scatter3d(
-        x=radius * np.cos(theta),
-        y=radius * np.sin(theta),
+        x=x,
+        y=y,
         z=z,
         mode="lines",
-        line=dict(
-            width=7
-        ),
-        uid="spring"
+        line=dict(width=7),
+        showlegend=False
     )
 
 
-def create_mass(
-    z
+def create_spring_figure(
+    relative_displacement,
+    equilibrium_displacement,
+    natural_length=1.0
 ):
-
-    return go.Scatter3d(
-        x=[0],
-        y=[0],
-        z=[z],
-        mode="markers",
-        marker=dict(
-            size=25,
-            symbol="circle"
-        ),
-        uid="mass"
-    )
-
-
-def create_reference(
-    z
-):
-
-    return go.Scatter3d(
-        x=[0, 0],
-        y=[0, 0],
-        z=[1.45, z],
-        mode="lines",
-        line=dict(
-            width=2,
-            dash="dot"
-        ),
-        opacity=0.35,
-        uid="reference"
-    )
-
-
-def dynamic_traces(
-    displacement
-):
-
+    ceiling_z = 1.8
     spring_start = 1.45
-    natural_length = 1.0
-    mass_height = 0.45
 
-    visual_displacement = np.clip(
-        displacement * 0.55,
-        -0.75,
-        1.25
+    visual_displacement = (
+        relative_displacement * 0.55
     )
 
-    spring_length = (
-        natural_length
+    actual_displacement = (
+        equilibrium_displacement
         + visual_displacement
     )
 
+    current_length = (
+        natural_length
+        + actual_displacement
+    )
+
+    current_length = np.clip(
+        current_length,
+        0.55,
+        1.85
+    )
+
+    mass_height = 0.45
+    mass_radius = 0.32
+
     mass_center = (
         spring_start
-        - spring_length
+        - current_length
+        - mass_height / 2
+    )
+
+    equilibrium_length = (
+        natural_length
+        + equilibrium_displacement
+    )
+
+    equilibrium_length = np.clip(
+        equilibrium_length,
+        0.55,
+        1.85
+    )
+
+    equilibrium_mass_center = (
+        spring_start
+        - equilibrium_length
         - mass_height / 2
     )
 
@@ -436,31 +497,13 @@ def dynamic_traces(
         + mass_height / 2
     )
 
-    return [
-        create_spring_coil(
-            spring_start,
-            spring_end
-        ),
-        create_mass(
-            mass_center
-        ),
-        create_reference(
-            mass_center
-        )
-    ]
-
-
-def create_figure(
-    displacement
-):
-
     fig = go.Figure()
 
     fig.add_trace(
         create_box(
             0,
             0,
-            1.98,
+            ceiling_z + 0.18,
             2.4,
             1.4,
             0.35
@@ -471,64 +514,105 @@ def create_figure(
         create_box(
             0,
             0,
-            1.53,
+            spring_start + 0.08,
             0.5,
             0.5,
             0.16
         )
     )
 
-    for trace in dynamic_traces(
-        displacement
-    ):
-        fig.add_trace(trace)
+    fig.add_trace(
+        create_spring_coil(
+            spring_start,
+            spring_end
+        )
+    )
+
+    fig.add_trace(
+        create_cylinder_z(
+            0,
+            0,
+            mass_center,
+            mass_radius,
+            mass_height
+        )
+    )
+
+    fig.add_trace(
+        go.Scatter3d(
+            x=[0, 0],
+            y=[0, 0],
+            z=[
+                spring_start,
+                mass_center
+            ],
+            mode="lines",
+            line=dict(
+                width=2,
+                dash="dot"
+            ),
+            opacity=0.3,
+            showlegend=False
+        )
+    )
+
+    fig.add_trace(
+        go.Scatter3d(
+            x=[-0.65, 0.65],
+            y=[0, 0],
+            z=[
+                equilibrium_mass_center,
+                equilibrium_mass_center
+            ],
+            mode="lines",
+            line=dict(
+                width=2,
+                dash="dash"
+            ),
+            opacity=0.4,
+            showlegend=False
+        )
+    )
 
     fig.update_layout(
-
-        height=450,
-
+        height=500,
         margin=dict(
             l=0,
             r=0,
             t=0,
             b=0
         ),
-
+        paper_bgcolor="#0E1117",
         scene=dict(
-
+            bgcolor="#0E1117",
             xaxis=dict(
                 visible=False,
-                range=[-1.5, 1.5]
+                range=[-1.3, 1.3]
             ),
-
             yaxis=dict(
                 visible=False,
-                range=[-1.5, 1.5]
+                range=[-1.3, 1.3]
             ),
-
             zaxis=dict(
                 visible=False,
-                range=[-1.7, 2.1]
+                range=[-0.9, 2.2]
             ),
-
             aspectmode="manual",
-
             aspectratio=dict(
                 x=1,
                 y=1,
-                z=2.6
+                z=1.8
             ),
-
             camera=dict(
                 eye=dict(
                     x=0,
-                    y=3,
-                    z=0
+                    y=4.8,
+                    z=0.35
                 ),
                 center=dict(
                     x=0,
                     y=0,
-                    z=0.1
+                    z=0.45
                 ),
                 up=dict(
                     x=0,
@@ -537,17 +621,13 @@ def create_figure(
                 )
             )
         ),
-
-        showlegend=False,
-
-        uirevision="spring"
+        showlegend=False
     )
 
     return fig
 
 
 def reset_spring_state():
-
     keys = [
         "spring_mass",
         "spring_k",
@@ -555,6 +635,7 @@ def reset_spring_state():
         "spring_gravity",
         "spring_damping",
         "spring_ai_input",
+        "spring_result",
         "spring_initialized"
     ]
 
@@ -567,15 +648,40 @@ def reset_spring_state():
 
 def spring_experiment():
 
-    if (
-        "spring_initialized"
-        not in st.session_state
-    ):
-
+    if "spring_initialized" not in st.session_state:
         for key, value in DEFAULTS.items():
             st.session_state[key] = value
 
         st.session_state.spring_initialized = True
+
+    required_keys = {
+        "time",
+        "x",
+        "v",
+        "a",
+        "relative_displacement",
+        "kinetic_energy",
+        "spring_energy",
+        "elastic_energy",
+        "total_energy",
+        "total_mechanical_energy",
+        "equilibrium_displacement"
+    }
+
+    result = st.session_state.get(
+        "spring_result"
+    )
+
+    if (
+        not isinstance(result, dict)
+        or not required_keys.issubset(
+            result.keys()
+        )
+    ):
+        st.session_state.pop(
+            "spring_result",
+            None
+        )
 
     st.subheader(
         "Spring Experiment"
@@ -585,47 +691,54 @@ def spring_experiment():
         "### Describe Your Experiment"
     )
 
-    ai_text = st.text_input(
-        "Example: 질량 2kg, 스프링 상수 50N/m, "
-        "0.3m 당겨서 시작해",
-        key="spring_ai_input"
+    ai_text = st.text_area(
+        "AI Assistant",
+        placeholder=(
+            "Example: 질량 5kg, 스프링 상수 100N/m, "
+            "평형 위치에서 0.5m 당겨서 시작해"
+        ),
+        key="spring_ai_input",
+        height=100
     )
 
     if st.button(
         "Run AI Analysis",
         key="spring_ai_button"
     ):
-
         if ai_text.strip():
-
             parsed = parse_ai_spring(
                 ai_text
             )
 
-            if parsed.get("mass") is not None:
+            if parsed["mass"] is not None:
                 st.session_state.spring_mass = (
                     parsed["mass"]
                 )
 
-            if parsed.get("k") is not None:
+            if parsed["k"] is not None:
                 st.session_state.spring_k = (
                     parsed["k"]
                 )
 
-            if parsed.get("displacement") is not None:
+            if parsed["displacement"] is not None:
                 st.session_state.spring_displacement = (
                     parsed["displacement"]
                 )
 
-            if parsed.get("gravity") is not None:
+            if parsed["gravity"] is not None:
                 st.session_state.spring_gravity = (
                     parsed["gravity"]
                 )
 
-            if parsed.get("damping") is not None:
+            if parsed["damping"] is not None:
                 st.session_state.spring_damping = (
                     parsed["damping"]
                 )
+
+            st.session_state.pop(
+                "spring_result",
+                None
+            )
 
             st.success(
                 "Experiment parameters updated."
@@ -638,259 +751,317 @@ def spring_experiment():
     col1, col2 = st.columns(2)
 
     with col1:
-
         mass = st.number_input(
             "Mass (kg)",
             min_value=0.01,
-            value=float(
-                st.session_state.spring_mass
-            ),
+            max_value=100.0,
             step=0.1,
-            key="spring_mass_input"
+            key="spring_mass"
         )
 
         k = st.number_input(
             "Spring Constant k (N/m)",
             min_value=0.01,
-            value=float(
-                st.session_state.spring_k
-            ),
+            max_value=1000.0,
             step=1.0,
-            key="spring_k_input"
+            key="spring_k"
         )
 
         displacement = st.number_input(
-            "Initial Displacement (m)",
-            value=float(
-                st.session_state.spring_displacement
-            ),
+            "Initial Displacement from Equilibrium (m)",
+            min_value=-5.0,
+            max_value=5.0,
             step=0.05,
-            key="spring_displacement_input"
+            key="spring_displacement"
         )
 
     with col2:
-
         gravity = st.number_input(
             "Gravity (m/s²)",
             min_value=0.01,
-            value=float(
-                st.session_state.spring_gravity
-            ),
+            max_value=30.0,
             step=0.1,
-            key="spring_gravity_input"
+            key="spring_gravity"
         )
 
         damping = st.number_input(
-            "Damping",
+            "Damping (N·s/m)",
             min_value=0.0,
-            value=float(
-                st.session_state.spring_damping
-            ),
+            max_value=5.0,
             step=0.01,
-            key="spring_damping_input"
+            key="spring_damping"
         )
+
+    equilibrium_displacement = (
+        mass * gravity / k
+    )
+
+    st.info(
+        f"Equilibrium displacement: "
+        f"{equilibrium_displacement:.3f} m"
+    )
 
     if st.button(
         "Run Experiment",
         type="primary",
         key="spring_run_button"
     ):
-
-        (
-            time,
-            x,
-            velocity,
-            acceleration,
-            kinetic_energy,
-            elastic_energy,
-            total_energy
-        ) = simulate_spring(
-            mass,
-            k,
-            displacement,
-            gravity,
-            damping
-        )
-
-        col1, col2, col3 = st.columns(3)
-
-        with col1:
-            st.metric(
-                "Maximum Displacement",
-                f"{np.max(np.abs(x)):.3f} m"
+        try:
+            result = simulate_spring(
+                mass=mass,
+                k=k,
+                initial_displacement=displacement,
+                gravity=gravity,
+                damping=damping
             )
 
-        with col2:
-            st.metric(
-                "Maximum Velocity",
-                f"{np.max(np.abs(velocity)):.3f} m/s"
+            if not required_keys.issubset(
+                result.keys()
+            ):
+                raise ValueError()
+
+            st.session_state.spring_result = result
+
+        except Exception:
+            st.session_state.pop(
+                "spring_result",
+                None
             )
 
-        with col3:
-            st.metric(
-                "Maximum Energy",
-                f"{np.max(total_energy):.3f} J"
+            st.error(
+                "The simulation could not be completed. "
+                "Please check the parameters."
             )
 
-        st.markdown(
-            "### 3D Spring"
-        )
+            return
 
-        frame_count = 240
+    result = st.session_state.get(
+        "spring_result"
+    )
 
-        frame_indices = np.linspace(
-            0,
-            len(time) - 1,
-            frame_count,
-            dtype=int
-        )
-
-        initial = create_figure(
-            x[frame_indices[0]]
-        )
-
-        frames = []
-
-        for number, index in enumerate(
-            frame_indices
+    if isinstance(result, dict):
+        if required_keys.issubset(
+            result.keys()
         ):
+            time = result["time"]
+            velocity = result["v"]
 
-            traces = dynamic_traces(
-                x[index]
+            relative_displacement = (
+                result["relative_displacement"]
             )
 
-            frames.append(
-                go.Frame(
-                    data=traces,
-                    traces=[2, 3, 4],
-                    name=str(number)
+            kinetic_energy = (
+                result["kinetic_energy"]
+            )
+
+            spring_energy = (
+                result["spring_energy"]
+            )
+
+            total_energy = (
+                result["total_energy"]
+            )
+
+            equilibrium_displacement = (
+                result["equilibrium_displacement"]
+            )
+
+            amplitude = np.max(
+                np.abs(relative_displacement)
+            )
+
+            initial_energy = (
+                0.5
+                * k
+                * displacement ** 2
+            )
+
+            maximum_energy = np.max(
+                total_energy
+            )
+
+            col1, col2, col3 = st.columns(3)
+
+            with col1:
+                st.metric(
+                    "Maximum Oscillation",
+                    f"{amplitude:.3f} m"
+                )
+
+            with col2:
+                st.metric(
+                    "Maximum Velocity",
+                    f"{np.max(np.abs(velocity)):.3f} m/s"
+                )
+
+            with col3:
+                st.metric(
+                    "Initial Energy",
+                    f"{initial_energy:.3f} J"
+                )
+
+            st.caption(
+                f"Maximum calculated energy: "
+                f"{maximum_energy:.3f} J"
+            )
+
+            st.markdown(
+                "### 3D Spring"
+            )
+
+            frame_indices = np.linspace(
+                0,
+                len(time) - 1,
+                90,
+                dtype=int
+            )
+
+            initial_fig = create_spring_figure(
+                relative_displacement[
+                    frame_indices[0]
+                ],
+                equilibrium_displacement
+            )
+
+            frames = []
+
+            for i in frame_indices:
+                frame_fig = create_spring_figure(
+                    relative_displacement[i],
+                    equilibrium_displacement
+                )
+
+                frames.append(
+                    go.Frame(
+                        data=[
+                            frame_fig.data[2],
+                            frame_fig.data[3]
+                        ],
+                        traces=[2, 3],
+                        name=f"{time[i]:.2f}"
+                    )
+                )
+
+            initial_fig.frames = frames
+
+            initial_fig.update_layout(
+                updatemenus=[
+                    {
+                        "type": "buttons",
+                        "showactive": False,
+                        "x": 0.05,
+                        "y": 0.05,
+                        "buttons": [
+                            {
+                                "label": "▶ Play",
+                                "method": "animate",
+                                "args": [
+                                    None,
+                                    {
+                                        "frame": {
+                                            "duration": 120,
+                                            "redraw": True
+                                        },
+                                        "transition": {
+                                            "duration": 0
+                                        },
+                                        "fromcurrent": True,
+                                        "mode": "immediate"
+                                    }
+                                ]
+                            }
+                        ]
+                    }
+                ],
+                uirevision="spring"
+            )
+
+            st.plotly_chart(
+                initial_fig,
+                use_container_width=True,
+                key="spring_3d"
+            )
+
+            st.markdown(
+                "### Displacement vs Time"
+            )
+
+            displacement_fig = go.Figure()
+
+            displacement_fig.add_trace(
+                go.Scatter(
+                    x=time,
+                    y=relative_displacement,
+                    mode="lines",
+                    name="Displacement"
                 )
             )
 
-        initial.frames = frames
-
-        initial.update_layout(
-
-            updatemenus=[
-
-                {
-                    "type": "buttons",
-
-                    "showactive": False,
-
-                    "x": 0.05,
-                    "y": 0.05,
-
-                    "buttons": [
-
-                        {
-                            "label": "▶ Play",
-
-                            "method": "animate",
-
-                            "args": [
-
-                                None,
-
-                                {
-                                    "mode": "immediate",
-
-                                    "fromcurrent": True,
-
-                                    "transition": {
-                                        "duration": 30,
-                                        "easing": "linear"
-                                    },
-
-                                    "frame": {
-                                        "duration": 42,
-                                        "redraw": False
-                                    }
-                                }
-                            ]
-                        }
-                    ]
-                }
-            ]
-        )
-
-        st.plotly_chart(
-            initial,
-            use_container_width=True,
-            key="spring_3d"
-        )
-
-        st.markdown(
-            "### Displacement vs Time"
-        )
-
-        displacement_fig = go.Figure()
-
-        displacement_fig.add_trace(
-            go.Scatter(
-                x=time,
-                y=x,
-                mode="lines",
-                name="Displacement"
+            displacement_fig.add_hline(
+                y=0,
+                line_dash="dash",
+                opacity=0.5
             )
-        )
 
-        displacement_fig.update_layout(
-            xaxis_title="Time (s)",
-            yaxis_title="Displacement (m)",
-            height=350
-        )
-
-        st.plotly_chart(
-            displacement_fig,
-            use_container_width=True,
-            key="spring_displacement_graph"
-        )
-
-        st.markdown(
-            "### Energy"
-        )
-
-        energy_fig = go.Figure()
-
-        energy_fig.add_trace(
-            go.Scatter(
-                x=time,
-                y=kinetic_energy,
-                mode="lines",
-                name="Kinetic Energy"
+            displacement_fig.update_layout(
+                xaxis_title="Time (s)",
+                yaxis_title=(
+                    "Displacement from Equilibrium (m)"
+                ),
+                height=350
             )
-        )
 
-        energy_fig.add_trace(
-            go.Scatter(
-                x=time,
-                y=elastic_energy,
-                mode="lines",
-                name="Elastic Energy"
+            st.plotly_chart(
+                displacement_fig,
+                use_container_width=True,
+                key="spring_displacement_graph"
             )
-        )
 
-        energy_fig.add_trace(
-            go.Scatter(
-                x=time,
-                y=total_energy,
-                mode="lines",
-                name="Total Energy"
+            st.markdown(
+                "### Energy"
             )
-        )
 
-        energy_fig.update_layout(
-            xaxis_title="Time (s)",
-            yaxis_title="Energy (J)",
-            height=350
-        )
+            energy_fig = go.Figure()
 
-        st.plotly_chart(
-            energy_fig,
-            use_container_width=True,
-            key="spring_energy_graph"
-        )
+            energy_fig.add_trace(
+                go.Scatter(
+                    x=time,
+                    y=kinetic_energy,
+                    mode="lines",
+                    name="Kinetic Energy"
+                )
+            )
+
+            energy_fig.add_trace(
+                go.Scatter(
+                    x=time,
+                    y=spring_energy,
+                    mode="lines",
+                    name="Spring Energy"
+                )
+            )
+
+            energy_fig.add_trace(
+                go.Scatter(
+                    x=time,
+                    y=total_energy,
+                    mode="lines",
+                    name="Total Energy"
+                )
+            )
+
+            energy_fig.update_layout(
+                xaxis_title="Time (s)",
+                yaxis_title="Energy (J)",
+                height=350,
+                hovermode="x unified"
+            )
+
+            st.plotly_chart(
+                energy_fig,
+                use_container_width=True,
+                key="spring_energy_graph"
+            )
 
     st.markdown(
         "<br><br>",
@@ -902,17 +1073,14 @@ def spring_experiment():
     )
 
     with back_col:
-
         if st.button(
             "Back to Experiments",
             key="spring_back_button"
         ):
-
             reset_spring_state()
 
             st.session_state.page = "select"
             st.session_state.experiment = None
 
             st.query_params.clear()
-
             st.rerun()
