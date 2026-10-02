@@ -15,11 +15,9 @@ from experiments.pendulum import pendulum_experiment
 
 
 def load_css():
-
     path = Path(__file__).parent / "style.css"
 
     if path.exists():
-
         st.markdown(
             f"<style>{path.read_text(encoding='utf-8')}</style>",
             unsafe_allow_html=True
@@ -27,7 +25,6 @@ def load_css():
 
 
 def get_image(path):
-
     p = Path(__file__).parent / path
 
     if not p.exists():
@@ -39,7 +36,6 @@ def get_image(path):
 
 
 def init_state():
-
     if "page" not in st.session_state:
         st.session_state.page = "home"
 
@@ -48,7 +44,6 @@ def init_state():
 
 
 def home_page():
-
     st.markdown(
         '<div class="home-title">What happens if…?</div>',
         unsafe_allow_html=True
@@ -72,13 +67,11 @@ def home_page():
     _, col, _ = st.columns([1, 2, 1])
 
     with col:
-
         if st.button(
             "Start Exploring",
             type="primary",
             use_container_width=True
         ):
-
             st.session_state.page = "select"
             st.rerun()
 
@@ -86,19 +79,18 @@ def home_page():
 def selection_page():
 
     st.markdown(
-    '<div class="section-title">Choose Your Experiment</div>',
-    unsafe_allow_html=True
-)
+        '<div class="section-title">Choose Your Experiment</div>',
+        unsafe_allow_html=True
+    )
 
-st.markdown(
-    '<div class="selection-description">'
-    'Explore different physical phenomena through simulation.'
-    '</div>',
-    unsafe_allow_html=True
-)
+    st.markdown(
+        '<div class="selection-description">'
+        'Explore different physical phenomena through simulation.'
+        '</div>',
+        unsafe_allow_html=True
+    )
 
     experiments = [
-
         (
             "projectile",
             "Projectile Motion",
@@ -106,7 +98,6 @@ st.markdown(
             "Speed · Angle · Gravity",
             "#9FC5F8"
         ),
-
         (
             "collision",
             "Collision",
@@ -114,7 +105,6 @@ st.markdown(
             "Mass · Speed · Elasticity",
             "#F4A6A6"
         ),
-
         (
             "pendulum",
             "Pendulum",
@@ -122,7 +112,6 @@ st.markdown(
             "Length · Gravity · Angle",
             "#F6D77A"
         ),
-
         (
             "spring",
             "Spring",
@@ -130,7 +119,6 @@ st.markdown(
             "Mass · k · Displacement",
             "#9ED6A8"
         ),
-
         (
             "friction",
             "Friction",
@@ -138,7 +126,6 @@ st.markdown(
             "μ · Mass · Gravity",
             "#8FD3D3"
         ),
-
         (
             "orbit",
             "Gravity & Orbit",
@@ -189,13 +176,9 @@ st.markdown(
         """
     )
 
-    st.markdown(
-        "<br>",
-        unsafe_allow_html=True
-    )
+    st.markdown("<br>", unsafe_allow_html=True)
 
     if st.button("Back to Home"):
-
         st.session_state.page = "home"
         st.query_params.clear()
         st.rerun()
@@ -206,17 +189,14 @@ def experiment_page():
     experiment = st.session_state.experiment
 
     if experiment == "projectile":
-
         projectile_experiment()
         return
 
     if experiment == "collision":
-
         collision_experiment()
         return
 
     if experiment == "pendulum":
-
         pendulum_experiment()
         return
 
@@ -238,7 +218,6 @@ def experiment_page():
     )
 
     if st.button("Back to Experiments"):
-
         st.session_state.page = "select"
         st.query_params.clear()
         st.rerun()
@@ -254,18 +233,14 @@ def render_app():
     )
 
     if experiment:
-
         st.session_state.experiment = experiment
         st.session_state.page = "experiment"
 
     if st.session_state.page == "home":
-
         home_page()
 
     elif st.session_state.page == "select":
-
         selection_page()
 
     else:
-
         experiment_page()
