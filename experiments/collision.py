@@ -33,7 +33,12 @@ def collision_experiment():
         key="collision_ai_input"
     )
 
-    if st.button("Run AI Analysis", key="collision_ai_button", type="primary"):
+    if st.button(
+        "Run AI Analysis",
+        key="collision_ai_button",
+        type="primary",
+        use_container_width=True
+    ):
         if not ai_input.strip():
             st.warning("Describe a collision experiment first.")
         else:
