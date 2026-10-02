@@ -438,68 +438,34 @@ def create_spring_coil(
     )
 
 
-def create_dynamic_traces(
-    relative_displacement,
-    equilibrium_displacement,
-    natural_length=1.0
+def create_spring_coil_points(
+    start_z,
+    end_z,
+    radius=0.18,
+    turns=14,
+    points_per_turn=18
 ):
-    spring_start = 1.45
-
-    visual_displacement = relative_displacement * 0.55
-
-    actual_displacement = (
-        equilibrium_displacement
-        + visual_displacement
+    point_count = max(
+        int(turns * points_per_turn),
+        48
     )
 
-    current_length = np.clip(
-        natural_length + actual_displacement,
-        0.55,
-        1.85
-    )
-
-    mass_height = 0.45
-    mass_radius = 0.32
-
-    mass_center = (
-        spring_start
-        - current_length
-        - mass_height / 2
-    )
-
-    spring_end = mass_center + mass_height / 2
-
-    spring_trace = create_spring_coil(
-        spring_start,
-        spring_end
-    )
-
-    mass_trace = create_cylinder_z(
+    theta = np.linspace(
         0,
-        0,
-        mass_center,
-        mass_radius,
-        mass_height
+        2 * np.pi * turns,
+        point_count
     )
 
-    connector_trace = go.Scatter3d(
-        x=[0, 0],
-        y=[0, 0],
-        z=[spring_start, mass_center],
-        mode="lines",
-        line=dict(
-            width=2,
-            dash="dot"
-        ),
-        opacity=0.3,
-        showlegend=False
+    z = np.linspace(
+        start_z,
+        end_z,
+        point_count
     )
 
-    return [
-        spring_trace,
-        mass_trace,
-        connector_trace
-    ]
+    x = radius * np.cos(theta)
+    y = radius * np.sin(theta)
+
+    return x, y, z
 
 
 def create_spring_figure(
@@ -511,8 +477,23 @@ def create_spring_figure(
     spring_start = 1.45
     mass_height = 0.45
 
+    current_length = np.clip(
+        natural_length
+        + equilibrium_displacement
+        + relative_displacement * 0.55,
+        0.55,
+        1.85
+    )
+
+    mass_center = (
+        spring_start
+        - current_length
+        - mass_height / 2
+    )
+
     equilibrium_length = np.clip(
-        natural_length + equilibrium_displacement,
+        natural_length
+        + equilibrium_displacement,
         0.55,
         1.85
     )
@@ -523,38 +504,68 @@ def create_spring_figure(
         - mass_height / 2
     )
 
-    dynamic_traces = create_dynamic_traces(
-        relative_displacement,
-        equilibrium_displacement,
-        natural_length
+    spring_end = mass_center + mass_height / 2
+
+    spring_x, spring_y, spring_z = create_spring_coil_points(
+        spring_start,
+        spring_end
     )
 
     fig = go.Figure()
 
     fig.add_trace(
         create_box(
-            0,
-            0,
-            ceiling_z + 0.18,
-            2.4,
-            1.4,
-            0.35
+            0, 0, ceiling_z + 0.18,
+            2.4, 1.4, 0.35
         )
     )
 
     fig.add_trace(
         create_box(
-            0,
-            0,
-            spring_start + 0.08,
-            0.5,
-            0.5,
-            0.16
+            0, 0, spring_start + 0.08,
+            0.5, 0.5, 0.16
         )
     )
 
-    for trace in dynamic_traces:
-        fig.add_trace(trace)
+    fig.add_trace(
+        go.Scatter3d(
+            x=spring_x,
+            y=spring_y,
+            z=spring_z,
+            mode="lines",
+            line=dict(width=7),
+            showlegend=False
+        )
+    )
+
+    fig.add_trace(
+        go.Scatter3d(
+            x=[0],
+            y=[0],
+            z=[mass_center],
+            mode="markers",
+            marker=dict(
+                size=24,
+                symbol="circle"
+            ),
+            showlegend=False
+        )
+    )
+
+    fig.add_trace(
+        go.Scatter3d(
+            x=[0, 0],
+            y=[0, 0],
+            z=[spring_start, mass_center],
+            mode="lines",
+            line=dict(
+                width=2,
+                dash="dot"
+            ),
+            opacity=0.3,
+            showlegend=False
+        )
+    )
 
     fig.add_trace(
         go.Scatter3d(
@@ -576,12 +587,7 @@ def create_spring_figure(
 
     fig.update_layout(
         height=500,
-        margin=dict(
-            l=0,
-            r=0,
-            t=0,
-            b=0
-        ),
+        margin=dict(l=0, r=0, t=0, b=0),
         paper_bgcolor="#0E1117",
         scene=dict(
             bgcolor="#0E1117",
@@ -626,6 +632,69 @@ def create_spring_figure(
 
     return fig
 
+
+def create_animation_frame(
+    relative_displacement,
+    equilibrium_displacement,
+    natural_length=1.0
+):
+    spring_start = 1.45
+    mass_height = 0.45
+
+    current_length = np.clip(
+        natural_length
+        + equilibrium_displacement
+        + relative_displacement * 0.55,
+        0.55,
+        1.85
+    )
+
+    mass_center = (
+        spring_start
+        - current_length
+        - mass_height / 2
+    )
+
+    spring_end = mass_center + mass_height / 2
+
+    spring_x, spring_y, spring_z = create_spring_coil_points(
+        spring_start,
+        spring_end
+    )
+
+    return [
+        go.Scatter3d(
+            x=spring_x,
+            y=spring_y,
+            z=spring_z,
+            mode="lines",
+            line=dict(width=7),
+            showlegend=False
+        ),
+        go.Scatter3d(
+            x=[0],
+            y=[0],
+            z=[mass_center],
+            mode="markers",
+            marker=dict(
+                size=24,
+                symbol="circle"
+            ),
+            showlegend=False
+        ),
+        go.Scatter3d(
+            x=[0, 0],
+            y=[0, 0],
+            z=[spring_start, mass_center],
+            mode="lines",
+            line=dict(
+                width=2,
+                dash="dot"
+            ),
+            opacity=0.3,
+            showlegend=False
+        )
+    ]
 
 def spring_experiment():
 
@@ -909,35 +978,41 @@ def spring_experiment():
 
     st.markdown("### 3D Spring")
 
-    frame_count = min(360, len(time))
+    animation_fps = 60
+    animation_duration_ms = 1000 / animation_fps
 
-    frame_indices = np.linspace(
-        0,
-        len(time) - 1,
-        frame_count,
-        dtype=int
+    animation_time = np.arange(
+        time[0],
+        time[-1] + 1e-9,
+        1.0 / animation_fps
     )
 
-    initial_index = frame_indices[0]
+    animation_displacement = np.interp(
+        animation_time,
+        time,
+        relative_displacement
+    )
 
     initial_fig = create_spring_figure(
-        relative_displacement[initial_index],
+        animation_displacement[0],
         equilibrium_displacement
     )
 
     frames = []
 
-    for i in frame_indices:
-        dynamic_traces = create_dynamic_traces(
-            relative_displacement[i],
+    for i, displacement_value in enumerate(
+        animation_displacement
+    ):
+        frame_data = create_animation_frame(
+            displacement_value,
             equilibrium_displacement
         )
 
         frames.append(
             go.Frame(
-                data=dynamic_traces,
+                data=frame_data,
                 traces=[2, 3, 4],
-                name=f"frame_{i}"
+                name=f"spring_frame_{i}"
             )
         )
 
@@ -963,8 +1038,8 @@ def spring_experiment():
                             frame_names,
                             {
                                 "frame": {
-                                    "duration": 28,
-                                    "redraw": True
+                                    "duration": animation_duration_ms,
+                                    "redraw": False
                                 },
                                 "transition": {
                                     "duration": 0
