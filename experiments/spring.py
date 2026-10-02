@@ -203,6 +203,11 @@ html, body {{
     position: relative;
     width: 100%;
     height: 500px;
+    box-sizing: border-box;
+    border: 2px solid #FFFFFF;
+    border-radius: 10px;
+    overflow: hidden;
+    background: #0E1117;
 }}
 #scene {{
     width: 100%;
@@ -501,6 +506,15 @@ requestAnimationFrame(animate);
 """
 
 
+def back_to_experiments_button():
+    if st.button("Back to Experiments", key="spring_back_button"):
+        st.session_state.page = "select"
+        st.session_state.experiment = None
+        st.session_state.pop("spring_result", None)
+        st.query_params.clear()
+        st.rerun()
+
+
 def spring_experiment():
     st.subheader("Spring Experiment")
 
@@ -607,10 +621,14 @@ def spring_experiment():
         except Exception:
             st.session_state.pop("spring_result", None)
             st.error("The simulation could not be completed. Please check the parameters.")
+            st.markdown("<div style='min-height: 20px;'></div>", unsafe_allow_html=True)
+            back_to_experiments_button()
             return
 
     result = st.session_state.get("spring_result")
     if not isinstance(result, dict) or not required_keys.issubset(result.keys()):
+        st.markdown("<div style='min-height: 20px;'></div>", unsafe_allow_html=True)
+        back_to_experiments_button()
         return
 
     time = result["time"]
@@ -693,12 +711,6 @@ def spring_experiment():
         key="spring_energy_graph"
     )
 
-    st.markdown("<br>", unsafe_allow_html=True)
-
-    if st.button("Back to Experiments", key="spring_back_button"):
-        st.session_state.page = "select"
-        st.session_state.experiment = None
-        st.session_state.pop("spring_result", None)
-        st.query_params.clear()
-        st.rerun()
+    st.markdown("<div style='min-height: 28px;'></div>", unsafe_allow_html=True)
+    back_to_experiments_button()
 
