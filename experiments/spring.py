@@ -26,12 +26,12 @@ def simulate_spring(
 
     n = len(time)
 
+    y = np.zeros(n)
+    v = np.zeros(n)
+
     equilibrium_displacement = (
         mass * gravity / k
     )
-
-    y = np.zeros(n)
-    v = np.zeros(n)
 
     y[0] = initial_displacement
     v[0] = 0.0
@@ -39,7 +39,7 @@ def simulate_spring(
     def acceleration(displacement, velocity):
         return (
             -(k / mass) * displacement
-            -(damping / mass) * velocity
+            - (damping / mass) * velocity
         )
 
     for i in range(n - 1):
@@ -117,6 +117,7 @@ def simulate_spring(
         "total_mechanical_energy": total_energy,
         "equilibrium_displacement": equilibrium_displacement
     }
+
 
 def parse_ai_spring(user_text):
     result = {
@@ -393,6 +394,7 @@ def create_cylinder_z(
         showlegend=False
     )
 
+
 def create_spring_coil(
     start_z,
     end_z,
@@ -427,6 +429,7 @@ def create_spring_coil(
         line=dict(width=7),
         showlegend=False
     )
+
 
 def create_spring_figure(
     relative_displacement,
@@ -625,24 +628,22 @@ def spring_experiment():
     ):
         st.session_state.page = "select"
         st.session_state.experiment = None
-
         st.session_state.pop(
             "spring_result",
             None
         )
-
         st.query_params.clear()
         st.rerun()
 
     st.subheader("Spring Experiment")
 
     defaults = {
-    "spring_mass": 1.5,
-    "spring_k": 60.0,
-    "spring_displacement": 0.25,
-    "spring_gravity": 9.81,
-    "spring_damping": 0.03
-}
+        "spring_mass": 1.5,
+        "spring_k": 60.0,
+        "spring_displacement": 0.25,
+        "spring_gravity": 9.81,
+        "spring_damping": 0.02
+    }
 
     for key, value in defaults.items():
         if key not in st.session_state:
@@ -668,7 +669,9 @@ def spring_experiment():
 
     if (
         not isinstance(result, dict)
-        or not required_keys.issubset(result.keys())
+        or not required_keys.issubset(
+            result.keys()
+        )
     ):
         st.session_state.pop(
             "spring_result",
@@ -694,7 +697,9 @@ def spring_experiment():
         key="spring_ai_button"
     ):
         if ai_text.strip():
-            parsed = parse_ai_spring(ai_text)
+            parsed = parse_ai_spring(
+                ai_text
+            )
 
             if parsed["mass"] is not None:
                 st.session_state.spring_mass = (
@@ -900,71 +905,71 @@ def spring_experiment():
     st.markdown("### 3D Spring")
 
     frame_indices = np.linspace(
-    0,
-    len(time) - 1,
-    60,
-    dtype=int
-)
+        0,
+        len(time) - 1,
+        60,
+        dtype=int
+    )
 
-initial_fig = create_spring_figure(
-    relative_displacement[frame_indices[0]],
-    equilibrium_displacement
-)
-
-frames = []
-
-for i in frame_indices:
-    frame_fig = create_spring_figure(
-        relative_displacement[i],
+    initial_fig = create_spring_figure(
+        relative_displacement[
+            frame_indices[0]
+        ],
         equilibrium_displacement
     )
 
-    frames.append(
-        go.Frame(
-            data=frame_fig.data,
-            name=f"{time[i]:.2f}"
+    frames = []
+
+    for i in frame_indices:
+        frame_fig = create_spring_figure(
+            relative_displacement[i],
+            equilibrium_displacement
         )
+
+        frames.append(
+            go.Frame(
+                data=[
+                    frame_fig.data[2],
+                    frame_fig.data[3]
+                ],
+                traces=[2, 3],
+                name=f"{time[i]:.2f}"
+            )
+        )
+
+    initial_fig.frames = frames
+
+    initial_fig.update_layout(
+        updatemenus=[
+            {
+                "type": "buttons",
+                "showactive": False,
+                "x": 0.05,
+                "y": 0.05,
+                "buttons": [
+                    {
+                        "label": "▶ Play",
+                        "method": "animate",
+                        "args": [
+                            None,
+                            {
+                                "frame": {
+                                    "duration": 70,
+                                    "redraw": True
+                                },
+                                "transition": {
+                                    "duration": 0
+                                },
+                                "fromcurrent": True,
+                                "mode": "immediate"
+                            }
+                        ]
+                    }
+                ]
+            }
+        ],
+        uirevision="spring"
     )
-
-initial_fig.frames = frames
-
-initial_fig.update_layout(
-    updatemenus=[
-        {
-            "type": "buttons",
-            "showactive": False,
-            "x": 0.05,
-            "y": 0.05,
-            "buttons": [
-                {
-                    "label": "▶ Play",
-                    "method": "animate",
-                    "args": [
-                        None,
-                        {
-                            "frame": {
-                                "duration": 70,
-                                "redraw": True
-                            },
-                            "transition": {
-                                "duration": 0
-                            },
-                            "fromcurrent": True,
-                            "mode": "immediate"
-                        }
-                    ]
-                }
-            ]
-        }
-    ],
-    uirevision="spring"
-)
-
-st.plotly_chart(
-    initial_fig,
-    use_container_width=True,
-    key="spring_3d"
-)
 
     st.plotly_chart(
         initial_fig,
@@ -1041,7 +1046,8 @@ st.plotly_chart(
     energy_fig.update_layout(
         xaxis_title="Time (s)",
         yaxis_title="Energy (J)",
-        height=350
+        height=350,
+        hovermode="x unified"
     )
 
     st.plotly_chart(
