@@ -131,8 +131,13 @@ def run_collision(
     speed
 ):
 
-    distance = 12.0
-    contact = 3.5
+    radius = 1.25
+    start_distance = 12.0
+    collision_distance = radius * 2
+    start1 = -start_distance / 2
+    start2 = start_distance / 2
+    collision1 = -collision_distance / 2
+    collision2 = collision_distance / 2
     points = 240
 
     closing_speed = velocity1 + velocity2
@@ -142,16 +147,9 @@ def run_collision(
         return
 
     collision_time = max(
-        (distance - contact) / closing_speed,
-        0.1
+        (start_distance - collision_distance) / closing_speed,
+        0.01
     )
-
-    total_time = collision_time + 3.5
-
-    times = [
-        total_time * i / (points - 1)
-        for i in range(points)
-    ]
 
     u1 = velocity1
     u2 = -velocity2
@@ -168,6 +166,31 @@ def run_collision(
         + mass1 * elasticity * (u1 - u2)
     ) / (mass1 + mass2)
 
+    return_distance = (
+        start_distance - collision_distance
+    ) / 2
+
+    return_speed = max(
+        velocity1,
+        velocity2,
+        1.0
+    )
+
+    return_time = max(
+        return_distance / return_speed,
+        0.8
+    )
+
+    total_time = collision_time + return_time
+
+    times = [
+        total_time * i / (points - 1)
+        for i in range(points)
+    ]
+
+    times.append(collision_time)
+    times = sorted(set(times))
+
     positions1 = []
     positions2 = []
 
@@ -175,28 +198,40 @@ def run_collision(
 
         if t < collision_time:
 
-            positions1.append(
-                -distance / 2 + velocity1 * t
-            )
-
-            positions2.append(
-                distance / 2 - velocity2 * t
-            )
+            pos1 = start1 + velocity1 * t
+            pos2 = start2 - velocity2 * t
 
         else:
 
-            dt = t - collision_time
-
-            positions1.append(
-                -contact / 2 + v1 * dt
+            progress = min(
+                (t - collision_time) / return_time,
+                1.0
             )
 
-            positions2.append(
-                contact / 2 + v2 * dt
+            smooth = (
+                progress
+                * progress
+                * (3 - 2 * progress)
             )
 
-    xmin = min(positions1 + positions2) - 3
-    xmax = max(positions1 + positions2) + 3
+            pos1 = collision1 + (
+                start1 - collision1
+            ) * smooth
+
+            pos2 = collision2 + (
+                start2 - collision2
+            ) * smooth
+
+        positions1.append(
+            max(start1, min(pos1, collision1))
+        )
+
+        positions2.append(
+            min(start2, max(pos2, collision2))
+        )
+
+    xmin = start1 - 3
+    xmax = start2 + 3
 
     p1 = json.dumps(positions1)
     p2 = json.dumps(positions2)
@@ -204,7 +239,10 @@ def run_collision(
     html = f"""
     <style>
 
-        html, body {{
+        html,
+        body {{
+            width: 100%;
+            height: 540px;
             margin: 0;
             padding: 0;
             background: transparent;
@@ -213,39 +251,37 @@ def run_collision(
 
         #display {{
             width: 75%;
+            height: 500px;
             margin: 0 auto;
-
             padding: 8px;
-
+            box-sizing: border-box;
             border: 1px solid #6b7280;
             border-radius: 10px;
-
-            box-sizing: border-box;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
         }}
 
         #plot {{
             width: 100%;
-            height: 420px;
+            height: 430px;
+            flex: 0 0 430px;
         }}
 
         #play {{
             display: block;
-
-            margin: 10px auto 4px auto;
-
-            padding: 10px 32px;
-            min-width: 120px;
-
+            width: 120px;
+            height: 44px;
+            margin: 10px auto 0;
             border: 1px solid #888;
             border-radius: 8px;
-
             background: white;
             color: #111;
-
             font-size: 18px;
             font-weight: 600;
-
             cursor: pointer;
+            flex-shrink: 0;
         }}
 
         #play:hover {{
@@ -259,29 +295,19 @@ def run_collision(
 
     </style>
 
-
     <div id="display">
-
         <div id="plot"></div>
-
-        <button id="play">
-            PLAY
-        </button>
-
+        <button id="play">PLAY</button>
     </div>
 
-
     <script src="https://cdn.plot.ly/plotly-2.35.2.min.js"></script>
-
 
     <script>
 
         const p1 = {p1};
         const p2 = {p2};
-
         const s1 = "{shape1}";
         const s2 = "{shape2}";
-
         const SPEED = {speed};
 
         const plot = document.getElementById("plot");
@@ -290,25 +316,93 @@ def run_collision(
 
         function sphere(x, color, name) {{
 
+            const radius = 1.25;
+            const segments = 16;
+            const rings = 10;
+
+            const X = [];
+            const Y = [];
+            const Z = [];
+            const I = [];
+            const J = [];
+            const K = [];
+
+            for (let r = 0; r <= rings; r++) {{
+
+                const phi = Math.PI * r / rings;
+
+                for (let s = 0; s < segments; s++) {{
+
+                    const theta =
+                        2 * Math.PI * s / segments;
+
+                    X.push(
+                        x +
+                        radius *
+                        Math.sin(phi) *
+                        Math.cos(theta)
+                    );
+
+                    Y.push(
+                        radius *
+                        Math.sin(phi) *
+                        Math.sin(theta)
+                    );
+
+                    Z.push(
+                        radius * Math.cos(phi)
+                    );
+                }}
+            }}
+
+            for (let r = 0; r < rings; r++) {{
+
+                for (let s = 0; s < segments; s++) {{
+
+                    const next =
+                        (s + 1) % segments;
+
+                    const a =
+                        r * segments + s;
+
+                    const b =
+                        r * segments + next;
+
+                    const c =
+                        (r + 1) * segments + next;
+
+                    const d =
+                        (r + 1) * segments + s;
+
+                    I.push(a);
+                    J.push(b);
+                    K.push(c);
+
+                    I.push(a);
+                    J.push(c);
+                    K.push(d);
+                }}
+            }}
+
             return {{
-
-                type: "scatter3d",
-
-                x: [x],
-                y: [0],
-                z: [0],
-
-                mode: "markers",
-
-                marker: {{
-                    size: 22,
-                    color: color
+                type: "mesh3d",
+                x: X,
+                y: Y,
+                z: Z,
+                i: I,
+                j: J,
+                k: K,
+                color: color,
+                opacity: 1,
+                flatshading: false,
+                lighting: {{
+                    ambient: 0.35,
+                    diffuse: 0.8,
+                    specular: 0.4,
+                    roughness: 0.4
                 }},
-
                 name: name
-
             }};
-
         }}
 
 
@@ -317,7 +411,6 @@ def run_collision(
             const s = 1.25;
 
             return {{
-
                 type: "mesh3d",
 
                 x: [
@@ -363,9 +456,7 @@ def run_collision(
                 ],
 
                 color: color,
-
                 opacity: 1,
-
                 flatshading: true,
 
                 lighting: {{
@@ -376,39 +467,108 @@ def run_collision(
                 }},
 
                 name: name
-
             }};
-
         }}
 
 
-        function createObject(x, color, shape, name) {{
+        function createObject(
+            x,
+            color,
+            shape,
+            name
+        ) {{
 
             if (shape === "Sphere") {{
                 return sphere(x, color, name);
             }}
 
             return cube(x, color, name);
+        }}
 
+
+        function updateSphere(
+            objectIndex,
+            x
+        ) {{
+
+            const radius = 1.25;
+            const segments = 16;
+            const rings = 10;
+            const X = [];
+
+            for (let r = 0; r <= rings; r++) {{
+
+                const phi = Math.PI * r / rings;
+
+                for (let s = 0; s < segments; s++) {{
+
+                    const theta =
+                        2 * Math.PI * s / segments;
+
+                    X.push(
+                        x +
+                        radius *
+                        Math.sin(phi) *
+                        Math.cos(theta)
+                    );
+                }}
+            }}
+
+            Plotly.restyle(
+                plot,
+                {{x: [X]}},
+                [objectIndex]
+            );
+        }}
+
+
+        function updateCube(
+            objectIndex,
+            x
+        ) {{
+
+            const s = 1.25;
+
+            const X = [
+                x-s, x+s, x+s, x-s,
+                x-s, x+s, x+s, x-s
+            ];
+
+            Plotly.restyle(
+                plot,
+                {{x: [X]}},
+                [objectIndex]
+            );
+        }}
+
+
+        function updateObject(
+            objectIndex,
+            x,
+            shape
+        ) {{
+
+            if (shape === "Sphere") {{
+                updateSphere(objectIndex, x);
+            }} else {{
+                updateCube(objectIndex, x);
+            }}
         }}
 
 
         const data = [
-
             createObject(
                 p1[0],
                 "blue",
                 s1,
                 "Object 1"
             ),
-
             createObject(
                 p2[0],
                 "red",
                 s2,
                 "Object 2"
             )
-
         ];
 
 
@@ -423,65 +583,40 @@ def run_collision(
                 dragmode: "orbit",
 
                 camera: {{
-
                     projection: {{
                         type: "orthographic"
                     }}
-
                 }},
 
                 xaxis: {{
-
                     title: "X Position (m)",
-
-                    range: [
-                        {xmin},
-                        {xmax}
-                    ]
-
+                    range: [{xmin}, {xmax}]
                 }},
 
                 yaxis: {{
-
                     title: "Y Position (m)",
-
-                    range: [
-                        -5,
-                        5
-                    ]
-
+                    range: [-5, 5]
                 }},
 
                 zaxis: {{
-
                     title: "Z Position (m)",
-
-                    range: [
-                        -5,
-                        5
-                    ]
-
+                    range: [-5, 5]
                 }},
 
                 aspectmode: "cube"
-
             }},
 
             height: 420,
 
             margin: {{
-
                 l: 0,
                 r: 0,
                 t: 50,
                 b: 0
-
             }},
 
             paper_bgcolor: "rgba(0,0,0,0)",
-
             plot_bgcolor: "rgba(0,0,0,0)"
-
         }};
 
 
@@ -490,7 +625,7 @@ def run_collision(
             data,
             layout,
             {{
-                responsive: true,
+                responsive: false,
                 scrollZoom: true,
                 displaylogo: false
             }}
@@ -505,7 +640,11 @@ def run_collision(
 
             play.disabled = true;
 
-            const camera = plot.layout.scene.camera;
+            const camera = JSON.parse(
+                JSON.stringify(
+                    plot.layout.scene.camera
+                )
+            );
 
             let i = 0;
 
@@ -514,99 +653,44 @@ def run_collision(
 
                 if (i >= p1.length) {{
 
+                    updateObject(
+                        0,
+                        p1[p1.length - 1],
+                        s1
+                    );
+
+                    updateObject(
+                        1,
+                        p2[p2.length - 1],
+                        s2
+                    );
+
+                    if (camera) {{
+
+                        Plotly.relayout(
+                            plot,
+                            {{
+                                "scene.camera": camera
+                            }}
+                        );
+                    }}
+
                     play.disabled = false;
-
                     return;
-
                 }}
 
 
-                const x1 = p1[i];
-                const x2 = p2[i];
+                updateObject(
+                    0,
+                    p1[i],
+                    s1
+                );
 
-
-                if (s1 === "Sphere") {{
-
-                    Plotly.restyle(
-                        plot,
-                        {{
-                            x: [[x1]],
-                            y: [[0]],
-                            z: [[0]]
-                        }},
-                        [0]
-                    );
-
-                }} else {{
-
-                    const s = 1.25;
-
-                    Plotly.restyle(
-                        plot,
-                        {{
-                            x: [[
-                                x1-s,
-                                x1+s,
-                                x1+s,
-                                x1-s,
-                                x1-s,
-                                x1+s,
-                                x1+s,
-                                x1-s
-                            ]]
-                        }},
-                        [0]
-                    );
-
-                }}
-
-
-                if (s2 === "Sphere") {{
-
-                    Plotly.restyle(
-                        plot,
-                        {{
-                            x: [[x2]],
-                            y: [[0]],
-                            z: [[0]]
-                        }},
-                        [1]
-                    );
-
-                }} else {{
-
-                    const s = 1.25;
-
-                    Plotly.restyle(
-                        plot,
-                        {{
-                            x: [[
-                                x2-s,
-                                x2+s,
-                                x2+s,
-                                x2-s,
-                                x2-s,
-                                x2+s,
-                                x2+s,
-                                x2-s
-                            ]]
-                        }},
-                        [1]
-                    );
-
-                }}
-
-
-                if (camera) {{
-
-                    Plotly.relayout(
-                        plot,
-                        {{
-                            "scene.camera": camera
-                        }}
-                    );
-
-                }}
+                updateObject(
+                    1,
+                    p2[i],
+                    s2
+                );
 
 
                 i++;
@@ -615,12 +699,10 @@ def run_collision(
                     nextFrame,
                     20 / SPEED
                 );
-
             }}
 
 
             nextFrame();
-
         }};
 
     </script>
@@ -648,7 +730,6 @@ def run_collision(
     col1, col2 = st.columns(2)
 
     with col1:
-
         st.metric(
             "Object 1 Final Velocity",
             f"{v1:.2f} m/s"
@@ -660,7 +741,6 @@ def run_collision(
         )
 
     with col2:
-
         st.metric(
             "Object 2 Final Velocity",
             f"{v2:.2f} m/s"
