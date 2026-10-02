@@ -1,5 +1,6 @@
+import json
 import streamlit as st
-import plotly.graph_objects as go
+import streamlit.components.v1 as components
 
 
 def collision_experiment():
@@ -15,7 +16,6 @@ def collision_experiment():
     }
 
     for key, value in defaults.items():
-
         if key not in st.session_state:
             st.session_state[key] = value
 
@@ -124,50 +124,6 @@ def collision_experiment():
         st.rerun()
 
 
-def make_object(
-    shape,
-    x,
-    color,
-    name
-):
-
-    if shape == "Sphere":
-
-        symbol = "circle"
-
-    elif shape == "Cube":
-
-        symbol = "square"
-
-    else:
-
-        symbol = "diamond"
-
-    return go.Scatter3d(
-        x=[x],
-        y=[0],
-        z=[0],
-        mode="markers",
-        marker=dict(
-            size=20,
-            color=color,
-            symbol=symbol,
-            opacity=1.0
-        ),
-        name=name,
-        hovertemplate=(
-            f"{name}"
-            "<br>"
-            "X: %{x:.2f} m"
-            "<br>"
-            "Y: %{y:.2f} m"
-            "<br>"
-            "Z: %{z:.2f} m"
-            "<extra></extra>"
-        )
-    )
-
-
 def run_collision(
     shape1,
     shape2,
@@ -179,7 +135,6 @@ def run_collision(
 ):
 
     start_distance = 12.0
-
     contact_distance = 3.0
 
     closing_speed = velocity1 + velocity2
@@ -215,14 +170,16 @@ def run_collision(
         for i in range(points)
     ]
 
+    u1 = velocity1
+    u2 = -velocity2
+
     final_velocity1 = (
         (
-            mass1 * velocity1
+            mass1 * u1
             +
-            mass2 * (-velocity2)
+            mass2 * u2
             -
-            mass2 * elasticity *
-            (velocity1 + velocity2)
+            mass2 * elasticity * (u1 - u2)
         )
         /
         (mass1 + mass2)
@@ -230,22 +187,21 @@ def run_collision(
 
     final_velocity2 = (
         (
-            mass1 * velocity1
+            mass1 * u1
             +
-            mass2 * (-velocity2)
+            mass2 * u2
             +
-            mass1 * elasticity *
-            (velocity1 + velocity2)
+            mass1 * elasticity * (u1 - u2)
         )
         /
         (mass1 + mass2)
     )
 
-    positions1 = []
-    positions2 = []
-
     collision_x1 = -contact_distance / 2
     collision_x2 = contact_distance / 2
+
+    positions1 = []
+    positions2 = []
 
     for t in times:
 
@@ -282,153 +238,249 @@ def run_collision(
         positions1.append(x1)
         positions2.append(x2)
 
-    all_positions = (
-        positions1 +
-        positions2
-    )
+    all_positions = positions1 + positions2
 
     x_min = min(all_positions) - 3
     x_max = max(all_positions) + 3
 
-    fig = go.Figure()
+    positions1_json = json.dumps(positions1)
+    positions2_json = json.dumps(positions2)
 
-    fig.add_trace(
-        make_object(
-            shape1,
+    collision_index = min(
+        range(points),
+        key=lambda i: abs(
+            times[i] - collision_time
+        )
+    )
+
+    html = f"""
+    <div id="collision-container"
+         style="width:100%; height:650px;">
+    </div>
+
+    <script src="https://cdn.plot.ly/plotly-2.35.2.min.js"></script>
+
+    <script>
+
+    const positions1 = {positions1_json};
+    const positions2 = {positions2_json};
+
+    const shape1 = "{shape1}";
+    const shape2 = "{shape2}";
+
+    const collisionIndex = {collision_index};
+
+    const xMin = {x_min};
+    const xMax = {x_max};
+
+    const container =
+        document.getElementById("collision-container");
+
+    function markerSymbol(shape) {{
+
+        if (shape === "Sphere")
+            return "circle";
+
+        if (shape === "Cube")
+            return "square";
+
+        return "diamond";
+    }}
+
+    function createObject(
+        position,
+        color,
+        shape,
+        name
+    ) {{
+
+        return {{
+            x: [position],
+            y: [0],
+            z: [0],
+
+            mode: "markers",
+
+            type: "scatter3d",
+
+            marker: {{
+                size: 20,
+                color: color,
+                symbol: markerSymbol(shape),
+                opacity: 1
+            }},
+
+            name: name,
+
+            hovertemplate:
+                name +
+                "<br>X: %{{x:.2f}} m" +
+                "<br>Y: %{{y:.2f}} m" +
+                "<br>Z: %{{z:.2f}} m" +
+                "<extra></extra>"
+        }};
+    }}
+
+    const initialData = [
+
+        createObject(
             positions1[0],
             "blue",
+            shape1,
             "Object 1"
-        )
-    )
+        ),
 
-    fig.add_trace(
-        make_object(
-            shape2,
+        createObject(
             positions2[0],
             "red",
+            shape2,
             "Object 2"
         )
-    )
 
-    frames = []
+    ];
 
-    for i in range(points):
+    const frames = [];
 
-        frames.append(
-            go.Frame(
-                data=[
-                    make_object(
-                        shape1,
-                        positions1[i],
-                        "blue",
-                        "Object 1"
-                    ),
+    for (
+        let i = 0;
+        i < positions1.length;
+        i++
+    ) {{
 
-                    make_object(
-                        shape2,
-                        positions2[i],
-                        "red",
-                        "Object 2"
-                    )
-                ],
-                name=str(i)
-            )
-        )
+        frames.push({{
+            name: "frame" + i,
 
-    fig.frames = frames
+            data: [
 
-    fig.update_layout(
+                createObject(
+                    positions1[i],
+                    "blue",
+                    shape1,
+                    "Object 1"
+                ),
 
-        title="3D Collision Simulation",
+                createObject(
+                    positions2[i],
+                    "red",
+                    shape2,
+                    "Object 2"
+                )
 
-        scene=dict(
+            ]
+        }});
 
-            dragmode="orbit",
+    }}
 
-            uirevision="collision-camera",
+    const layout = {{
 
-            xaxis=dict(
-                title="X Position (m)",
-                range=[
-                    x_min,
-                    x_max
-                ]
-            ),
+        title: "3D Collision Simulation",
 
-            yaxis=dict(
-                title="Y Position (m)",
-                range=[
-                    -5,
-                    5
-                ]
-            ),
+        scene: {{
 
-            zaxis=dict(
-                title="Z Position (m)",
-                range=[
-                    -5,
-                    5
-                ]
-            ),
+            dragmode: "orbit",
 
-            aspectmode="cube"
-        ),
+            xaxis: {{
+                title: "X Position (m)",
+                range: [xMin, xMax]
+            }},
 
-        uirevision="collision-camera",
+            yaxis: {{
+                title: "Y Position (m)",
+                range: [-5, 5]
+            }},
 
-        template="plotly_dark",
+            zaxis: {{
+                title: "Z Position (m)",
+                range: [-5, 5]
+            }},
 
-        height=600,
+            aspectmode: "cube"
+        }},
 
-        margin=dict(
-            l=0,
-            r=0,
-            t=60,
-            b=100
-        ),
+        height: 600,
 
-        updatemenus=[
-            {
-                "type": "buttons",
-                "showactive": False,
-                "x": 0.5,
-                "xanchor": "center",
-                "y": -0.12,
-                "yanchor": "top",
+        margin: {{
+            l: 0,
+            r: 0,
+            t: 60,
+            b: 20
+        }},
 
-                "buttons": [
-                    {
-                        "label": "PLAY",
-                        "method": "animate",
-                        "args": [
-                            None,
-                            {
-                                "frame": {
-                                    "duration": 35,
-                                    "redraw": True
-                                },
-                                "transition": {
-                                    "duration": 0
-                                },
-                                "fromcurrent": True,
-                                "mode": "immediate"
-                            }
-                        ]
-                    }
-                ]
-            }
-        ]
-    )
+        paper_bgcolor: "rgba(0,0,0,0)",
 
-    st.markdown("### Simulation")
+        plot_bgcolor: "rgba(0,0,0,0)"
+    }};
 
-    st.plotly_chart(
-        fig,
-        use_container_width=True,
-        config={
-            "displayModeBar": True,
-            "scrollZoom": True
-        }
+    Plotly.newPlot(
+        container,
+        initialData,
+        layout,
+        {{
+            responsive: true,
+            scrollZoom: true,
+            displaylogo: false
+        }}
+    );
+
+    let playing = false;
+
+    async function playAnimation() {{
+
+        if (playing)
+            return;
+
+        playing = true;
+
+        for (
+            let i = 0;
+            i < frames.length;
+            i++
+        ) {{
+
+            await Plotly.animate(
+                container,
+                [frames[i]],
+                {{
+                    transition: {{
+                        duration: 0
+                    }},
+
+                    frame: {{
+                        duration: 35,
+                        redraw: true
+                    }},
+
+                    mode: "immediate"
+                }}
+            );
+
+        }}
+
+        playing = false;
+    }}
+
+    const button = document.createElement("button");
+
+    button.innerText = "PLAY";
+
+    button.style.display = "block";
+    button.style.margin = "10px auto";
+    button.style.padding = "8px 28px";
+    button.style.borderRadius = "6px";
+    button.style.border = "none";
+    button.style.cursor = "pointer";
+
+    button.onclick = playAnimation;
+
+    container.parentNode.appendChild(button);
+
+    </script>
+    """
+
+    components.html(
+        html,
+        height=680,
+        scrolling=False
     )
 
     initial_energy = (
