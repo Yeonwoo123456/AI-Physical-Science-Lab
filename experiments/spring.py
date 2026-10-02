@@ -257,8 +257,8 @@ const camera = new THREE.PerspectiveCamera(
     100
 );
 
-camera.position.set(0, 4.8, 0.35);
-camera.lookAt(0, 0, 0.45);
+camera.position.set(3.2, 0.65, 6.2);
+camera.lookAt(0, 0.45, 0);
 
 const renderer = new THREE.WebGLRenderer({{ antialias: true }});
 renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
@@ -284,17 +284,17 @@ const massMaterial = new THREE.MeshStandardMaterial({{
 }});
 
 const ceiling = new THREE.Mesh(
-    new THREE.BoxGeometry(2.4, 0.35, 1.4),
+    new THREE.BoxGeometry(3.0, 0.30, 1.25),
     ceilingMaterial
 );
-ceiling.position.set(0, 1.98, 0);
+ceiling.position.set(0, 2.05, 0);
 scene.add(ceiling);
 
 const mount = new THREE.Mesh(
-    new THREE.BoxGeometry(0.5, 0.16, 0.5),
+    new THREE.BoxGeometry(0.5, 0.20, 0.5),
     mountMaterial
 );
-mount.position.set(0, 1.53, 0);
+mount.position.set(0, 1.78, 0);
 scene.add(mount);
 
 const springGroup = new THREE.Group();
@@ -302,7 +302,7 @@ scene.add(springGroup);
 
 const massHeight = 0.45;
 const massRadius = 0.32;
-const springStart = 1.45;
+const springStart = 1.67;
 const naturalLength = 1.0;
 const springRadius = 0.18;
 const turns = 14;
@@ -415,8 +415,8 @@ function updateObject(t) {{
         const u = i / (springPoints - 1);
         const angle = u * Math.PI * 2 * turns;
         springPositions[i * 3] = springRadius * Math.cos(angle);
-        springPositions[i * 3 + 1] = springRadius * Math.sin(angle);
-        springPositions[i * 3 + 2] = springStart + (springEnd - springStart) * u;
+        springPositions[i * 3 + 1] = springStart + (springEnd - springStart) * u;
+        springPositions[i * 3 + 2] = springRadius * Math.sin(angle);
     }}
 
     springGeometry.attributes.position.needsUpdate = true;
@@ -434,8 +434,8 @@ function updateObject(t) {{
 
     const equilibriumLength = naturalLength + equilibriumVisual;
     const equilibriumMassCenter = springStart - equilibriumLength - massHeight / 2;
-    equilibriumPositions[2] = equilibriumMassCenter;
-    equilibriumPositions[5] = equilibriumMassCenter;
+    equilibriumPositions[1] = equilibriumMassCenter;
+    equilibriumPositions[4] = equilibriumMassCenter;
     equilibriumGeometry.attributes.position.needsUpdate = true;
 
     document.getElementById('status').textContent = t.toFixed(2) + ' s';
