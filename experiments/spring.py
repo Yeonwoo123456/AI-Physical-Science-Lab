@@ -1,4 +1,4 @@
-
+import json
 import re
 import html
 
@@ -165,9 +165,15 @@ If the user says pull, stretch, 당겨, 늘려: displacement is positive.
     return result
 
 
-def spring_animation_html(relative_displacement, equilibrium_displacement):
+def spring_animation_html(relative_displacement, equilibrium_displacement, time=None):
+    import json
+
     displacement = np.asarray(relative_displacement, dtype=float)
-    time = np.linspace(0.0, 10.0, len(displacement))
+
+    if time is None:
+        time = np.arange(len(displacement), dtype=float) * 0.01
+    else:
+        time = np.asarray(time, dtype=float)
 
     payload = json.dumps({
         "time": time.tolist(),
@@ -641,7 +647,8 @@ def spring_experiment():
     components.html(
         spring_animation_html(
             relative_displacement,
-            equilibrium_displacement
+            equilibrium_displacement,
+            time
         ),
         height=510,
         scrolling=False
