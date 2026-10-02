@@ -309,8 +309,8 @@ def run_projectile_simulation(
 
     fig.add_trace(
         go.Scatter(
-            x=x_values,
-            y=y_values,
+            x=[],
+            y=[],
             mode="lines",
             line=dict(
                 width=4
@@ -327,8 +327,8 @@ def run_projectile_simulation(
 
     fig.add_trace(
         go.Scatter(
-            x=[max_height_x],
-            y=[max_height],
+            x=[],
+            y=[],
             mode="markers",
             marker=dict(
                 size=15,
@@ -363,6 +363,7 @@ def run_projectile_simulation(
     )
 
     frames = []
+    apex_index = max(range(point_count), key=lambda i: y_values[i])
 
     for i in range(point_count):
 
@@ -385,8 +386,8 @@ def run_projectile_simulation(
                     ),
 
                     go.Scatter(
-                        x=[max_height_x],
-                        y=[max_height],
+                        x=([max_height_x] if i >= apex_index else []),
+                        y=([max_height] if i >= apex_index else []),
                         mode="markers",
                         marker=dict(
                             size=15,
