@@ -8,6 +8,15 @@ import plotly.graph_objects as go
 from app_modules import client
 
 
+DEFAULTS = {
+    "spring_mass": 1.0,
+    "spring_k": 10.0,
+    "spring_displacement": 5.0,
+    "spring_gravity": 9.87,
+    "spring_damping": 0.02
+}
+
+
 @st.cache_data
 def simulate_spring(
     mass,
@@ -620,34 +629,31 @@ def create_spring_figure(
     return fig
 
 
-def spring_experiment():
+def reset_spring_state():
+    keys = [
+        "spring_mass",
+        "spring_k",
+        "spring_displacement",
+        "spring_gravity",
+        "spring_damping",
+        "spring_ai_input",
+        "spring_result"
+    ]
 
-    if st.button(
-        "Back to Experiments",
-        key="spring_back_button"
-    ):
-        st.session_state.page = "select"
-        st.session_state.experiment = None
+    for key in keys:
         st.session_state.pop(
-            "spring_result",
+            key,
             None
         )
-        st.query_params.clear()
-        st.rerun()
 
-    st.subheader("Spring Experiment")
 
-    defaults = {
-        "spring_mass": 1.5,
-        "spring_k": 60.0,
-        "spring_displacement": 0.25,
-        "spring_gravity": 9.81,
-        "spring_damping": 0.02
-    }
+def spring_experiment():
 
-    for key, value in defaults.items():
-        if key not in st.session_state:
+    if "spring_initialized" not in st.session_state:
+        for key, value in DEFAULTS.items():
             st.session_state[key] = value
+
+        st.session_state.spring_initialized = True
 
     required_keys = {
         "time",
@@ -677,6 +683,10 @@ def spring_experiment():
             "spring_result",
             None
         )
+
+    st.subheader(
+        "Spring Experiment"
+    )
 
     st.markdown(
         "### Describe Your Experiment"
@@ -735,7 +745,9 @@ def spring_experiment():
                 "Experiment parameters updated."
             )
 
-    st.markdown("### Parameters")
+    st.markdown(
+        "### Parameters"
+    )
 
     col1, col2 = st.columns(2)
 
@@ -767,7 +779,7 @@ def spring_experiment():
     with col2:
         gravity = st.number_input(
             "Gravity (m/s²)",
-            min_value=0.0,
+            min_value=0.01,
             max_value=30.0,
             step=0.1,
             key="spring_gravity"
@@ -828,230 +840,245 @@ def spring_experiment():
         "spring_result"
     )
 
-    if not isinstance(result, dict):
-        return
+    if isinstance(result, dict):
+        if required_keys.issubset(
+            result.keys()
+        ):
+            time = result["time"]
+            velocity = result["v"]
 
-    if not required_keys.issubset(
-        result.keys()
-    ):
-        st.session_state.pop(
-            "spring_result",
-            None
-        )
-        return
-
-    time = result["time"]
-    velocity = result["v"]
-
-    relative_displacement = (
-        result["relative_displacement"]
-    )
-
-    kinetic_energy = (
-        result["kinetic_energy"]
-    )
-
-    spring_energy = (
-        result["spring_energy"]
-    )
-
-    total_energy = (
-        result["total_energy"]
-    )
-
-    equilibrium_displacement = (
-        result["equilibrium_displacement"]
-    )
-
-    amplitude = np.max(
-        np.abs(relative_displacement)
-    )
-
-    initial_energy = (
-        0.5
-        * k
-        * displacement ** 2
-    )
-
-    maximum_energy = np.max(
-        total_energy
-    )
-
-    col1, col2, col3 = st.columns(3)
-
-    with col1:
-        st.metric(
-            "Maximum Oscillation",
-            f"{amplitude:.3f} m"
-        )
-
-    with col2:
-        st.metric(
-            "Maximum Velocity",
-            f"{np.max(np.abs(velocity)):.3f} m/s"
-        )
-
-    with col3:
-        st.metric(
-            "Initial Energy",
-            f"{initial_energy:.3f} J"
-        )
-
-    st.caption(
-        f"Maximum calculated energy: "
-        f"{maximum_energy:.3f} J"
-    )
-
-    st.markdown("### 3D Spring")
-
-    frame_indices = np.linspace(
-        0,
-        len(time) - 1,
-        60,
-        dtype=int
-    )
-
-    initial_fig = create_spring_figure(
-        relative_displacement[
-            frame_indices[0]
-        ],
-        equilibrium_displacement
-    )
-
-    frames = []
-
-    for i in frame_indices:
-        frame_fig = create_spring_figure(
-            relative_displacement[i],
-            equilibrium_displacement
-        )
-
-        frames.append(
-            go.Frame(
-                data=[
-                    frame_fig.data[2],
-                    frame_fig.data[3]
-                ],
-                traces=[2, 3],
-                name=f"{time[i]:.2f}"
+            relative_displacement = (
+                result["relative_displacement"]
             )
-        )
 
-    initial_fig.frames = frames
+            kinetic_energy = (
+                result["kinetic_energy"]
+            )
 
-    initial_fig.update_layout(
-        updatemenus=[
-            {
-                "type": "buttons",
-                "showactive": False,
-                "x": 0.05,
-                "y": 0.05,
-                "buttons": [
+            spring_energy = (
+                result["spring_energy"]
+            )
+
+            total_energy = (
+                result["total_energy"]
+            )
+
+            equilibrium_displacement = (
+                result["equilibrium_displacement"]
+            )
+
+            amplitude = np.max(
+                np.abs(relative_displacement)
+            )
+
+            initial_energy = (
+                0.5
+                * k
+                * displacement ** 2
+            )
+
+            maximum_energy = np.max(
+                total_energy
+            )
+
+            col1, col2, col3 = st.columns(3)
+
+            with col1:
+                st.metric(
+                    "Maximum Oscillation",
+                    f"{amplitude:.3f} m"
+                )
+
+            with col2:
+                st.metric(
+                    "Maximum Velocity",
+                    f"{np.max(np.abs(velocity)):.3f} m/s"
+                )
+
+            with col3:
+                st.metric(
+                    "Initial Energy",
+                    f"{initial_energy:.3f} J"
+                )
+
+            st.caption(
+                f"Maximum calculated energy: "
+                f"{maximum_energy:.3f} J"
+            )
+
+            st.markdown(
+                "### 3D Spring"
+            )
+
+            frame_indices = np.linspace(
+                0,
+                len(time) - 1,
+                60,
+                dtype=int
+            )
+
+            initial_fig = create_spring_figure(
+                relative_displacement[
+                    frame_indices[0]
+                ],
+                equilibrium_displacement
+            )
+
+            frames = []
+
+            for i in frame_indices:
+                frame_fig = create_spring_figure(
+                    relative_displacement[i],
+                    equilibrium_displacement
+                )
+
+                frames.append(
+                    go.Frame(
+                        data=[
+                            frame_fig.data[2],
+                            frame_fig.data[3]
+                        ],
+                        traces=[2, 3],
+                        name=f"{time[i]:.2f}"
+                    )
+                )
+
+            initial_fig.frames = frames
+
+            initial_fig.update_layout(
+                updatemenus=[
                     {
-                        "label": "▶ Play",
-                        "method": "animate",
-                        "args": [
-                            None,
+                        "type": "buttons",
+                        "showactive": False,
+                        "x": 0.05,
+                        "y": 0.05,
+                        "buttons": [
                             {
-                                "frame": {
-                                    "duration": 70,
-                                    "redraw": True
-                                },
-                                "transition": {
-                                    "duration": 0
-                                },
-                                "fromcurrent": True,
-                                "mode": "immediate"
+                                "label": "▶ Play",
+                                "method": "animate",
+                                "args": [
+                                    None,
+                                    {
+                                        "frame": {
+                                            "duration": 70,
+                                            "redraw": True
+                                        },
+                                        "transition": {
+                                            "duration": 0
+                                        },
+                                        "fromcurrent": True,
+                                        "mode": "immediate"
+                                    }
+                                ]
                             }
                         ]
                     }
-                ]
-            }
-        ],
-        uirevision="spring"
+                ],
+                uirevision="spring"
+            )
+
+            st.plotly_chart(
+                initial_fig,
+                use_container_width=True,
+                key="spring_3d"
+            )
+
+            st.markdown(
+                "### Displacement vs Time"
+            )
+
+            displacement_fig = go.Figure()
+
+            displacement_fig.add_trace(
+                go.Scatter(
+                    x=time,
+                    y=relative_displacement,
+                    mode="lines",
+                    name="Displacement"
+                )
+            )
+
+            displacement_fig.add_hline(
+                y=0,
+                line_dash="dash",
+                opacity=0.5
+            )
+
+            displacement_fig.update_layout(
+                xaxis_title="Time (s)",
+                yaxis_title=(
+                    "Displacement from Equilibrium (m)"
+                ),
+                height=350
+            )
+
+            st.plotly_chart(
+                displacement_fig,
+                use_container_width=True,
+                key="spring_displacement_graph"
+            )
+
+            st.markdown(
+                "### Energy"
+            )
+
+            energy_fig = go.Figure()
+
+            energy_fig.add_trace(
+                go.Scatter(
+                    x=time,
+                    y=kinetic_energy,
+                    mode="lines",
+                    name="Kinetic Energy"
+                )
+            )
+
+            energy_fig.add_trace(
+                go.Scatter(
+                    x=time,
+                    y=spring_energy,
+                    mode="lines",
+                    name="Spring Energy"
+                )
+            )
+
+            energy_fig.add_trace(
+                go.Scatter(
+                    x=time,
+                    y=total_energy,
+                    mode="lines",
+                    name="Total Energy"
+                )
+            )
+
+            energy_fig.update_layout(
+                xaxis_title="Time (s)",
+                yaxis_title="Energy (J)",
+                height=350,
+                hovermode="x unified"
+            )
+
+            st.plotly_chart(
+                energy_fig,
+                use_container_width=True,
+                key="spring_energy_graph"
+            )
+
+    st.markdown("<br>", unsafe_allow_html=True)
+
+    back_col, _, _ = st.columns(
+        [1, 5, 1]
     )
 
-    st.plotly_chart(
-        initial_fig,
-        use_container_width=True,
-        key="spring_3d"
-    )
+    with back_col:
+        if st.button(
+            "Back to Experiments",
+            key="spring_back_button"
+        ):
+            reset_spring_state()
 
-    st.markdown(
-        "### Displacement vs Time"
-    )
+            st.session_state.page = "select"
+            st.session_state.experiment = None
 
-    displacement_fig = go.Figure()
-
-    displacement_fig.add_trace(
-        go.Scatter(
-            x=time,
-            y=relative_displacement,
-            mode="lines",
-            name="Displacement"
-        )
-    )
-
-    displacement_fig.add_hline(
-        y=0,
-        line_dash="dash",
-        opacity=0.5
-    )
-
-    displacement_fig.update_layout(
-        xaxis_title="Time (s)",
-        yaxis_title=(
-            "Displacement from Equilibrium (m)"
-        ),
-        height=350
-    )
-
-    st.plotly_chart(
-        displacement_fig,
-        use_container_width=True,
-        key="spring_displacement_graph"
-    )
-
-    st.markdown("### Energy")
-
-    energy_fig = go.Figure()
-
-    energy_fig.add_trace(
-        go.Scatter(
-            x=time,
-            y=kinetic_energy,
-            mode="lines",
-            name="Kinetic Energy"
-        )
-    )
-
-    energy_fig.add_trace(
-        go.Scatter(
-            x=time,
-            y=spring_energy,
-            mode="lines",
-            name="Spring Energy"
-        )
-    )
-
-    energy_fig.add_trace(
-        go.Scatter(
-            x=time,
-            y=total_energy,
-            mode="lines",
-            name="Total Energy"
-        )
-    )
-
-    energy_fig.update_layout(
-        xaxis_title="Time (s)",
-        yaxis_title="Energy (J)",
-        height=350,
-        hovermode="x unified"
-    )
-
-    st.plotly_chart(
-        energy_fig,
-        use_container_width=True,
-        key="spring_energy_graph"
-    )
+            st.query_params.clear()
+            st.rerun()
