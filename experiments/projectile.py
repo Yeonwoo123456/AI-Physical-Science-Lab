@@ -75,9 +75,6 @@ def projectile_experiment():
         type="primary",
         use_container_width=True
     ):
-        st.session_state.projectile_run = True
-
-    if st.session_state.get("projectile_run", False):
         run_projectile_simulation(
             velocity,
             angle,
@@ -89,7 +86,6 @@ def projectile_experiment():
     st.markdown("<br>", unsafe_allow_html=True)
 
     if st.button("Back to Experiments"):
-        st.session_state.projectile_run = False
         st.session_state.page = "select"
         st.query_params.clear()
         st.rerun()
@@ -167,7 +163,9 @@ def run_projectile_simulation(
             x=[x_values[0]],
             y=[y_values[0]],
             mode="markers",
-            marker=dict(size=18),
+            marker=dict(
+                size=20
+            ),
             name="Projectile"
         )
     )
@@ -183,13 +181,17 @@ def run_projectile_simulation(
                         x=x_values[:i + 1],
                         y=y_values[:i + 1],
                         mode="lines",
-                        line=dict(width=4)
+                        line=dict(
+                            width=4
+                        )
                     ),
                     go.Scatter(
                         x=[x_values[i]],
                         y=[y_values[i]],
                         mode="markers",
-                        marker=dict(size=18)
+                        marker=dict(
+                            size=20
+                        )
                     )
                 ],
                 name=str(i)
@@ -209,15 +211,71 @@ def run_projectile_simulation(
             range=[0, y_max]
         ),
         template="plotly_dark",
-        height=550,
-        showlegend=True
+        height=600,
+        showlegend=True,
+        margin=dict(
+            l=70,
+            r=40,
+            t=80,
+            b=130
+        ),
+        updatemenus=[
+            {
+                "type": "buttons",
+                "direction": "left",
+                "showactive": False,
+                "x": 0.5,
+                "xanchor": "center",
+                "y": -0.20,
+                "yanchor": "top",
+                "buttons": [
+                    {
+                        "label": "▶  PLAY",
+                        "method": "animate",
+                        "args": [
+                            None,
+                            {
+                                "frame": {
+                                    "duration": 30,
+                                    "redraw": True
+                                },
+                                "transition": {
+                                    "duration": 0
+                                },
+                                "fromcurrent": False,
+                                "mode": "immediate"
+                            }
+                        ]
+                    }
+                ]
+            }
+        ]
     )
 
     st.markdown("### Simulation")
 
     st.plotly_chart(
         fig,
-        use_container_width=True
+        use_container_width=True,
+        config={
+            "displayModeBar": False
+        }
+    )
+
+    st.markdown(
+        """
+        <style>
+        .js-plotly-plot .updatemenu-button {
+            font-size: 22px !important;
+            font-weight: 700 !important;
+        }
+
+        .js-plotly-plot .updatemenu-button rect {
+            height: 48px !important;
+        }
+        </style>
+        """,
+        unsafe_allow_html=True
     )
 
     st.markdown("### Results")
