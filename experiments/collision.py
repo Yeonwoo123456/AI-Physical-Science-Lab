@@ -144,18 +144,15 @@ def run_collision(
     collision1 = -collision_distance / 2
     collision2 = collision_distance / 2
 
-    points = 240
-
     closing_speed = velocity1 + velocity2
 
     if closing_speed <= 0:
         st.warning("The objects must move toward each other.")
         return
 
-    collision_time = max(
-        (start_distance - collision_distance) / closing_speed,
-        0.01
-    )
+    collision_time = (
+        start_distance - collision_distance
+    ) / closing_speed
 
     u1 = velocity1
     u2 = -velocity2
@@ -172,22 +169,21 @@ def run_collision(
         + mass1 * elasticity * (u1 - u2)
     ) / (mass1 + mass2)
 
-    return_distance = (
-        start_distance - collision_distance
-    ) / 2
+    separation_distance = start_distance - collision_distance
 
-    return_speed = max(
-        velocity1,
-        velocity2,
-        1.0
+    relative_separation_speed = max(
+        abs(v2 - v1),
+        0.01
     )
 
-    return_time = max(
-        return_distance / return_speed,
+    post_collision_time = max(
+        separation_distance / relative_separation_speed,
         0.8
     )
 
-    total_time = collision_time + return_time
+    total_time = collision_time + post_collision_time
+
+    points = 360
 
     times = [
         total_time * i / (points - 1)
@@ -202,45 +198,36 @@ def run_collision(
 
     for t in times:
 
-        if t < collision_time:
+        if t <= collision_time:
 
             pos1 = start1 + velocity1 * t
             pos2 = start2 - velocity2 * t
 
         else:
 
-            progress = min(
-                (t - collision_time) / return_time,
-                1.0
-            )
+            dt = t - collision_time
 
-            smooth = (
-                progress
-                * progress
-                * (3 - 2 * progress)
-            )
+            pos1 = collision1 + v1 * dt
+            pos2 = collision2 + v2 * dt
 
-            pos1 = collision1 + (
-                start1 - collision1
-            ) * smooth
+        distance = pos2 - pos1
 
-            pos2 = collision2 + (
-                start2 - collision2
-            ) * smooth
+        if distance < collision_distance:
 
-        positions1.append(
-            max(start1, min(pos1, collision1))
-        )
+            center = (pos1 + pos2) / 2
 
-        positions2.append(
-            min(start2, max(pos2, collision2))
-        )
+            pos1 = center - collision_distance / 2
+            pos2 = center + collision_distance / 2
+
+        positions1.append(pos1)
+        positions2.append(pos2)
 
     xmin = start1 - 3
     xmax = start2 + 3
 
     p1 = json.dumps(positions1)
     p2 = json.dumps(positions2)
+    pt = json.dumps(times)
 
     html = f"""
     <style>
@@ -312,11 +299,15 @@ def run_collision(
 
         const p1 = {p1};
         const p2 = {p2};
+        const pt = {pt};
 
         const s1 = "{shape1}";
         const s2 = "{shape2}";
 
         const SPEED = {speed};
+
+        const collisionTime = {collision_time};
+        const totalTime = {total_time};
 
         const plot = document.getElementById("plot");
         const play = document.getElementById("play");
@@ -338,8 +329,7 @@ def run_collision(
 
             for (let r = 0; r <= rings; r++) {{
 
-                const phi =
-                    Math.PI * r / rings;
+                const phi = Math.PI * r / rings;
 
                 for (let s = 0; s < segments; s++) {{
 
@@ -581,6 +571,51 @@ def run_collision(
         }}
 
 
+        function interpolatePosition(
+            values,
+            times,
+            time
+        ) {{
+
+            if (time <= times[0]) {{
+                return values[0];
+            }}
+
+            if (time >= times[times.length - 1]) {{
+                return values[values.length - 1];
+            }}
+
+            let low = 0;
+            let high = times.length - 1;
+
+            while (low <= high) {{
+
+                const mid =
+                    Math.floor((low + high) / 2);
+
+                if (times[mid] < time) {{
+                    low = mid + 1;
+                }} else {{
+                    high = mid - 1;
+                }}
+            }}
+
+            const i = Math.max(0, low - 1);
+
+            const t1 = times[i];
+            const t2 = times[i + 1];
+
+            const pStart = values[i];
+            const pEnd = values[i + 1];
+
+            const ratio =
+                (time - t1) / (t2 - t1);
+
+            return pStart +
+                (pEnd - pStart) * ratio;
+        }}
+
+
         const data = [
 
             createObject(
@@ -714,24 +749,58 @@ def run_collision(
                 )
             );
 
-            let i = 0;
+            const animationDuration =
+                totalTime * 1000 / SPEED;
+
+            const startTime = performance.now();
 
 
-            function nextFrame() {{
+            function animate(now) {{
 
-                if (i >= p1.length) {{
+                const elapsed =
+                    now - startTime;
 
-                    updateObject(
-                        0,
-                        p1[p1.length - 1],
-                        s1
+                const simulationTime =
+                    Math.min(
+                        elapsed /
+                        animationDuration *
+                        totalTime,
+                        totalTime
                     );
 
-                    updateObject(
-                        1,
-                        p2[p2.length - 1],
-                        s2
+                const x1 =
+                    interpolatePosition(
+                        p1,
+                        pt,
+                        simulationTime
                     );
+
+                const x2 =
+                    interpolatePosition(
+                        p2,
+                        pt,
+                        simulationTime
+                    );
+
+                updateObject(
+                    0,
+                    x1,
+                    s1
+                );
+
+                updateObject(
+                    1,
+                    x2,
+                    s2
+                );
+
+                if (simulationTime < totalTime) {{
+
+                    requestAnimationFrame(
+                        animate
+                    );
+
+                }} else {{
 
                     Plotly.relayout(
                         plot,
@@ -741,33 +810,11 @@ def run_collision(
                     );
 
                     play.disabled = false;
-
-                    return;
                 }}
-
-
-                updateObject(
-                    0,
-                    p1[i],
-                    s1
-                );
-
-                updateObject(
-                    1,
-                    p2[i],
-                    s2
-                );
-
-                i++;
-
-                setTimeout(
-                    nextFrame,
-                    20 / SPEED
-                );
             }}
 
 
-            nextFrame();
+            requestAnimationFrame(animate);
         }};
 
     </script>
