@@ -346,7 +346,7 @@ Conversions:
         }
 
 
-def orbit_animation_html(data, planet_radius):
+def orbit_animation_html(data, planet_radius, playback_ratio=45.0):
     payload = json.dumps(
         {
             "time": data["time"],
@@ -478,6 +478,7 @@ button:hover {{
 <script>
 const data = {payload};
 const planetRadius = {planet_radius};
+const playbackRatio = {playback_ratio};
 
 const canvas = document.getElementById("canvas");
 const ctx = canvas.getContext("2d");
@@ -493,7 +494,7 @@ const gravityEl = document.getElementById("gravity");
 let index = 0;
 let playing = false;
 let lastTimestamp = 0;
-let accumulator = 0;
+let simulationTime = 0;
 
 function resize() {{
     const dpr = window.devicePixelRatio || 1;
@@ -702,25 +703,23 @@ function animate(timestamp) {{
         lastTimestamp = timestamp;
     }}
 
-    const delta = Math.min(
-        50,
-        timestamp - lastTimestamp
-    );
-
+    const deltaSeconds = Math.min(0.05, (timestamp - lastTimestamp) / 1000);
     lastTimestamp = timestamp;
-    accumulator += delta;
 
-    while (accumulator >= 16.67) {{
-        index++;
+    // playbackRatio means simulated seconds per real second.
+    simulationTime += deltaSeconds * playbackRatio;
 
-        if (index >= data.time.length) {{
-            index = data.time.length - 1;
-            playing = false;
-            playButton.textContent = "▶ Play";
-            break;
-        }}
+    const dt = data.time.length > 1
+        ? data.time[1] - data.time[0]
+        : 1;
 
-        accumulator -= 16.67;
+    index = Math.floor(simulationTime / dt);
+
+    if (index >= data.time.length - 1) {{
+        index = data.time.length - 1;
+        simulationTime = data.time[index];
+        playing = false;
+        playButton.textContent = "▶ Play";
     }}
 
     draw();
@@ -740,7 +739,6 @@ playButton.addEventListener("click", () => {{
     if (playing) {{
         playButton.textContent = "⏸ Pause";
         lastTimestamp = 0;
-        accumulator = 0;
         requestAnimationFrame(animate);
     }} else {{
         playButton.textContent = "▶ Play";
@@ -751,7 +749,7 @@ resetButton.addEventListener("click", () => {{
     playing = false;
     index = 0;
     lastTimestamp = 0;
-    accumulator = 0;
+    simulationTime = 0;
     playButton.textContent = "▶ Play";
     draw();
 }});
@@ -892,20 +890,19 @@ def orbit_experiment():
     initial_altitude_si = initial_altitude_km * 1000.0
     initial_velocity_si = initial_velocity_kms * 1000.0
 
-    st.markdown("### Experiment Duration")
+    # Fixed physics settings.
+    # The physics engine always uses a 0.75-second time step and
+    # a 20,000-second simulation. Only the playback speed is adjustable.
+    duration = 20000.0
+    dt = 0.75
 
-    duration = st.slider(
-        "Simulation Time (seconds)",
-        min_value=60,
-        max_value=20000,
-        value=7200,
-        step=60,
-    )
-
-    dt = st.select_slider(
-        "Physics Time Step (seconds)",
-        options=[0.5, 1.0, 2.0, 5.0, 10.0],
-        value=2.0,
+    playback_ratio = st.slider(
+        "Simulation Playback Speed (×)",
+        min_value=45,
+        max_value=200,
+        value=45,
+        step=1,
+        help="Controls how many simulation seconds pass during 1 real second. 45× means 1 real second = 45 simulated seconds.",
     )
 
     if st.button(
@@ -938,6 +935,7 @@ def orbit_experiment():
         html = orbit_animation_html(
             result,
             planet_radius_si,
+            playback_ratio=float(playback_ratio),
         )
 
         components.html(
