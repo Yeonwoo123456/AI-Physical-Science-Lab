@@ -312,31 +312,41 @@ def create_pendulum_figure(result):
 
     fig.update_layout(
         height=620,
+
         margin=dict(
             l=0,
             r=0,
             t=0,
             b=0
         ),
+
         paper_bgcolor="#0d1117",
-        font=dict(color="white"),
+
+        font=dict(
+            color="white"
+        ),
 
         scene=dict(
+            uirevision="pendulum-camera",
+
             xaxis=dict(
                 title="X",
                 backgroundcolor="#0d1117",
                 gridcolor="#30363d"
             ),
+
             yaxis=dict(
                 title="Y",
                 backgroundcolor="#0d1117",
                 gridcolor="#30363d"
             ),
+
             zaxis=dict(
                 title="Z",
                 backgroundcolor="#0d1117",
                 gridcolor="#30363d"
             ),
+
             aspectmode="cube"
         ),
 
@@ -344,10 +354,13 @@ def create_pendulum_figure(result):
             dict(
                 type="buttons",
                 showactive=False,
+
                 x=0.02,
                 y=1.02,
+
                 xanchor="left",
                 yanchor="bottom",
+
                 buttons=[
                     dict(
                         label="▶ Play",
@@ -359,10 +372,13 @@ def create_pendulum_figure(result):
                                     duration=50,
                                     redraw=True
                                 ),
+
                                 transition=dict(
                                     duration=0
                                 ),
-                                fromcurrent=False,
+
+                                fromcurrent=True,
+
                                 mode="immediate"
                             )
                         ]
@@ -516,6 +532,7 @@ def pendulum_experiment():
         st.info(
             "Set the parameters and run the experiment."
         )
+
         return
 
     result = st.session_state[
@@ -526,7 +543,10 @@ def pendulum_experiment():
 
     st.plotly_chart(
         create_pendulum_figure(result),
-        use_container_width=True
+        use_container_width=True,
+        config={
+            "displaylogo": False
+        }
     )
 
     st.divider()
@@ -538,12 +558,14 @@ def pendulum_experiment():
     )
 
     with tab1:
+
         st.plotly_chart(
             create_angle_graph(result),
             use_container_width=True
         )
 
     with tab2:
+
         st.plotly_chart(
             create_energy_graph(result),
             use_container_width=True
@@ -551,13 +573,18 @@ def pendulum_experiment():
 
     st.divider()
 
-    if st.button("← Back to Experiments"):
+    if st.button(
+        "← Back to Experiments"
+    ):
 
         st.session_state.page = "select"
         st.session_state.experiment = None
+
         st.session_state.pop(
             "pendulum_result",
             None
         )
+
         st.query_params.clear()
+
         st.rerun()
