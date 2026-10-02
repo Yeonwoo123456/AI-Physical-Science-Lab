@@ -1,555 +1,942 @@
-import os
 import json
-import math
-from typing import Dict, Any, Optional, List
-
-from pydantic import BaseModel, Field
-from groq import Groq
-
-client = Groq(api_key=os.environ["GROQ_API_KEY"])
+import streamlit as st
+import streamlit.components.v1 as components
+from app_modules import CollisionNaturalLanguageParser
 
 
-class PhysicalEnvironment(BaseModel):
-    mass: float = Field(default=1.0)
-    gravity: float = Field(default=9.81)
-    height: float = Field(default=0.0)
-    initial_velocity: float = Field(default=0.0)
-    launch_angle: float = Field(default=0.0)
-    friction: float = Field(default=0.0)
-    tension: float = Field(default=0.0)
-    elasticity: float = Field(default=1.0)
-    air_resistance: float = Field(default=0.0)
-    planet_mass: Optional[float] = Field(default=5.972e24)
-    planet_radius: Optional[float] = Field(default=6371000.0)
+def collision_experiment():
 
+    defaults = {
+        "collision_shape1": "Sphere",
+        "collision_shape2": "Cube",
+        "collision_mass1": 2.0,
+        "collision_mass2": 2.0,
+        "collision_velocity1": 5.0,
+        "collision_velocity2": 3.0,
+        "collision_elasticity": 1.0,
+        "collision_speed": 1.0
+    }
 
-class ExperimentConfig(BaseModel):
-    intent: str
-    parameters: PhysicalEnvironment
-    needs_clarification: bool = False
-    clarification_message: Optional[str] = None
+    for key, value in defaults.items():
+        if key not in st.session_state:
+            st.session_state[key] = value
 
+    st.markdown("### AI Experiment Assistant")
 
-class NaturalLanguageParser:
+    st.markdown("Describe the collision experiment in natural language. Only values explicitly mentioned will be changed.")
 
-    SYSTEM_INSTRUCTION = """
-You are a physics parameter extraction system.
+    ai_input = st.text_area(
+        "Collision description",
+        placeholder="Example: Object A is 4 kg and moves at 8 m/s. Object B is 1 kg and moves at 3 m/s.",
+        height=90,
+        key="collision_ai_input"
+    )
 
-Read the user's sentence carefully and extract ONLY values explicitly stated by the user.
+    if st.button("Run AI Analysis", key="collision_ai_button", type="primary"):
+        if not ai_input.strip():
+            st.warning("Describe a collision experiment first.")
+        else:
+            with st.spinner("AI is analyzing the collision experiment..."):
+                result = CollisionNaturalLanguageParser.parse(ai_input)
 
-Rules:
+            parameters = result.get("parameters", {})
+            updated = False
 
-1. Convert all values to SI units.
-   - g -> kg
-   - kg -> kg
-   - km/h -> m/s
-   - km -> m
-   - cm -> m
-   - degrees -> degrees
+            mapping = {
+                "mass1": ("collision_mass1", 0.1, 1000.0),
+                "mass2": ("collision_mass2", 0.1, 1000.0),
+                "velocity1": ("collision_velocity1", 0.0, 100.0),
+                "velocity2": ("collision_velocity2", 0.0, 100.0),
+                "elasticity": ("collision_elasticity", 0.0, 1.0)
+            }
 
-2. NEVER invent or guess a value that the user did not mention.
+            for parameter, (session_key, minimum, maximum) in mapping.items():
+                value = parameters.get(parameter)
 
-3. If a value is not mentioned, use these defaults:
+                if value is None:
+                    continue
 
-mass = 1.0
-gravity = 9.81
-height = 0.0
-initial_velocity = 20.0
-launch_angle = 0.0
-friction = 0.0
-tension = 0.0
-elasticity = 1.0
-air_resistance = 0.0
-planet_mass = 5.972e24
-planet_radius = 6371000.0
+                try:
+                    value = float(value)
+                except (TypeError, ValueError):
+                    continue
 
-4. Examples:
+                if minimum <= value <= maximum:
+                    st.session_state[session_key] = value
+                    updated = True
 
-"공이 10m 높이에서 40도로 날아가"
-
-height = 10
-launch_angle = 40
-initial_velocity = 0
-
-Do NOT guess the speed.
-
-"2kg 공을 20m/s로 30도 던져"
-
-mass = 2
-initial_velocity = 20
-launch_angle = 30
-
-"36km/h로 공을 던져"
-
-initial_velocity = 10
-
-5. Identify the experiment:
-
-projectile:
-throwing, launching, flying, projectile, 던지다, 던져, 발사, 날아가다, 포물선
-
-free_fall:
-drop, falling, free fall, 낙하, 떨어지다, 떨어뜨리다
-
-slanted_motion:
-incline, slope, sliding, 경사, 미끄러지다
-
-6. Do not modify parameters that are not explicitly mentioned.
-Use the default value instead.
-
-7. Return ONLY valid JSON.
-
-{
-  "intent": "free_fall | projectile | slanted_motion | unknown",
-  "parameters": {
-    "mass": 1.0,
-    "gravity": 9.81,
-    "height": 0.0,
-    "initial_velocity": 20.0,
-    "launch_angle": 0.0,
-    "friction": 0.0,
-    "tension": 0.0,
-    "elasticity": 1.0,
-    "air_resistance": 0.0,
-    "planet_mass": 5.972e24,
-    "planet_radius": 6371000.0
-  },
-  "needs_clarification": false,
-  "clarification_message": null
-}
-"""
-
-    @classmethod
-    def parse(cls, prompt: str) -> Dict[str, Any]:
-
-        try:
-
-            response = client.chat.completions.create(
-                model="openai/gpt-oss-120b",
-                messages=[
-                    {
-                        "role": "system",
-                        "content": cls.SYSTEM_INSTRUCTION
-                    },
-                    {
-                        "role": "user",
-                        "content": prompt
-                    }
-                ],
-                response_format={"type": "json_object"},
-                temperature=0
-            )
-
-            result = json.loads(
-                response.choices[0].message.content
-            )
-
-            return result
-
-        except Exception as e:
-
-            return {
-                "intent": "unknown",
-                "parameters": {},
-                "needs_clarification": True,
-                "clarification_message": (
-                    "The AI could not understand the experiment. "
-                    "Please describe the experiment with more specific values."
+            if result.get("needs_clarification") and not updated:
+                st.warning(
+                    result.get(
+                        "clarification_message",
+                        "The AI could not find valid collision values."
+                    )
                 )
-            }
+            elif updated:
+                st.success("AI analysis completed. The detected values have been applied.")
+            else:
+                st.warning("No valid collision values were found. The current values were kept.")
 
-class CollisionNaturalLanguageParser:
+    st.markdown(
+        """
+        <div class="selection-header">
+            <div class="section-title">3D Collision</div>
+            <div class="selection-description">
+                Simulate a collision between two objects in 3D space.
+            </div>
+        </div>
+        """,
+        unsafe_allow_html=True
+    )
 
-    SYSTEM_INSTRUCTION = """
-You extract collision experiment parameters from natural language.
+    col1, col2 = st.columns(2)
 
-Extract ONLY values explicitly stated by the user. Never guess, infer, estimate, or calculate missing values.
+    with col1:
 
-Parameters:
-- mass1: Object A mass
-- mass2: Object B mass
-- velocity1: Object A speed
-- velocity2: Object B speed
-- elasticity: coefficient of restitution
+        shape1 = st.selectbox(
+            "Shape",
+            ["Sphere", "Cube"],
+            key="collision_shape1"
+        )
 
-Unit conversion:
-- g, gram -> kg
-- mg -> kg
-- kg -> kg
-- km/h -> m/s
-- m/s -> m/s
+        mass1 = st.number_input(
+            "Mass (kg)",
+            min_value=0.1,
+            max_value=1000.0,
+            step=0.1,
+            key="collision_mass1"
+        )
 
-Object identification:
-- Object A, first object, first ball -> parameter 1
-- Object B, second object, second ball -> parameter 2
-- If two objects are described in order without labels, the first is Object A and the second is Object B.
+        velocity1 = st.number_input(
+            "Velocity (m/s)",
+            min_value=0.0,
+            max_value=100.0,
+            step=0.5,
+            key="collision_velocity1"
+        )
 
-Return velocity as a positive speed magnitude.
-Return elasticity between 0 and 1 only when explicitly stated.
+    with col2:
 
-If a parameter is not explicitly mentioned, return null.
+        shape2 = st.selectbox(
+            "Shape",
+            ["Sphere", "Cube"],
+            key="collision_shape2"
+        )
 
-Examples:
-"Object A is 4 kg and moving at 8 m/s."
--> mass1 = 4, velocity1 = 8
-"Object B has a mass of 500 g and moves at 36 km/h."
--> mass2 = 0.5, velocity2 = 10
-"A is 6kg and B is 2kg."
--> mass1 = 6, mass2 = 2
-"The coefficient of restitution is 0.8."
--> elasticity = 0.8
+        mass2 = st.number_input(
+            "Mass (kg)",
+            min_value=0.1,
+            max_value=1000.0,
+            step=0.1,
+            key="collision_mass2"
+        )
 
-Return ONLY valid JSON:
-{
-  "parameters": {
-    "mass1": null,
-    "mass2": null,
-    "velocity1": null,
-    "velocity2": null,
-    "elasticity": null
-  },
-  "needs_clarification": false,
-  "clarification_message": null
-}
-"""
+        velocity2 = st.number_input(
+            "Velocity (m/s)",
+            min_value=0.0,
+            max_value=100.0,
+            step=0.5,
+            key="collision_velocity2"
+        )
 
-    @classmethod
-    def parse(cls, prompt: str) -> Dict[str, Any]:
-        try:
-            response = client.chat.completions.create(
-                model="openai/gpt-oss-120b",
-                messages=[
-                    {"role": "system", "content": cls.SYSTEM_INSTRUCTION},
-                    {"role": "user", "content": prompt}
-                ],
-                response_format={"type": "json_object"},
-                temperature=0
-            )
-            return json.loads(response.choices[0].message.content)
-        except Exception:
-            return {
-                "parameters": {},
-                "needs_clarification": True,
-                "clarification_message": "AI could not understand the collision description."
-            }
+    elasticity = st.slider(
+        "Coefficient of Restitution",
+        0.0,
+        1.0,
+        key="collision_elasticity"
+    )
+
+    speed = st.select_slider(
+        "Animation Speed",
+        options=[0.25, 0.5, 1.0, 1.5, 2.0],
+        value=1.0,
+        format_func=lambda x: f"{x}x",
+        key="collision_speed"
+    )
+
+    if st.button(
+        "Run Experiment",
+        type="primary",
+        use_container_width=True
+    ):
+        run_collision(
+            shape1,
+            shape2,
+            mass1,
+            mass2,
+            velocity1,
+            velocity2,
+            elasticity,
+            speed
+        )
+
+    if st.button("Back to Experiments"):
+
+        for key in defaults:
+            st.session_state.pop(key, None)
+
+        st.session_state.pop("collision_ai_input", None)
+
+        st.session_state.page = "select"
+        st.query_params.clear()
+        st.rerun()
 
 
-class ValidationResult(BaseModel):
-    is_valid: bool
-    mode: str
-    errors: List[str]
-    warnings: List[str]
-    validated_params: Dict[str, Any]
+def run_collision(
+    shape1,
+    shape2,
+    mass1,
+    mass2,
+    velocity1,
+    velocity2,
+    elasticity,
+    speed
+):
 
+    radius = 1.25
 
-class PhysicsValidator:
-    EARTH_MASS = 5.972e24
-    EARTH_RADIUS = 6371000.0
-    G = 6.67430e-11
+    wall_left = -9.0
+    wall_right = 9.0
 
-    @classmethod
-    def validate(cls, config: Dict[str, Any]) -> ValidationResult:
-        defaults = {
-            "mass": 1.0,
-            "gravity": 9.81,
-            "height": 0.0,
-            "initial_velocity": 0.0,
-            "launch_angle": 0.0,
-            "friction": 0.0,
-            "tension": 0.0,
-            "elasticity": 1.0,
-            "air_resistance": 0.0,
-            "planet_mass": cls.EARTH_MASS,
-            "planet_radius": cls.EARTH_RADIUS
-        }
+    center_left = wall_left + radius
+    center_right = wall_right - radius
 
-        params = {**defaults, **config.get("parameters", {})}
-        errors = []
-        warnings = []
-        mode = "Realistic Mode"
+    start1 = -6.0
+    start2 = 6.0
 
-        checks = [
-            (params["mass"] <= 0, "Mass must be greater than 0 kg."),
-            (params["gravity"] < 0, "Gravity cannot be negative."),
-            (params["height"] < 0, "Height cannot be negative."),
-            (params["initial_velocity"] < 0, "Velocity cannot be negative."),
-            (params["friction"] < 0, "Friction cannot be negative."),
-            (params["tension"] < 0, "Tension cannot be negative."),
-            (params["air_resistance"] < 0, "Air resistance cannot be negative."),
-            (params["planet_mass"] <= 0, "Planet mass must be greater than 0 kg."),
-            (params["planet_radius"] <= 0, "Planet radius must be greater than 0 m."),
-            (
-                not 0 <= params["elasticity"] <= 1,
-                "Elasticity must be between 0 and 1."
-            )
-        ]
+    v1 = velocity1
+    v2 = -velocity2
 
-        errors.extend(message for invalid, message in checks if invalid)
+    collision_result_v1 = None
+    collision_result_v2 = None
 
-        if errors:
-            return ValidationResult(
-                is_valid=False,
-                mode="Invalid",
-                errors=errors,
-                warnings=warnings,
-                validated_params=params
-            )
+    dt = 1 / 240
+    simulation_time = 6.0
+
+    positions1 = []
+    positions2 = []
+    times = []
+
+    x1 = start1
+    x2 = start2
+
+    collision_cooldown = 0.0
+
+    steps = int(simulation_time / dt)
+
+    for step in range(steps + 1):
+
+        t = step * dt
+
+        positions1.append(x1)
+        positions2.append(x2)
+        times.append(t)
+
+        next_x1 = x1 + v1 * dt
+        next_x2 = x2 + v2 * dt
+
+        if next_x1 <= center_left:
+            next_x1 = center_left
+            v1 = 0.0
+
+        elif next_x1 >= center_right:
+            next_x1 = center_right
+            v1 = 0.0
+
+        if next_x2 <= center_left:
+            next_x2 = center_left
+            v2 = 0.0
+
+        elif next_x2 >= center_right:
+            next_x2 = center_right
+            v2 = 0.0
+
+        x1 = next_x1
+        x2 = next_x2
+
+        collision_cooldown = max(
+            0.0,
+            collision_cooldown - dt
+        )
+
+        distance = x2 - x1
 
         if (
-            params["planet_mass"] != cls.EARTH_MASS
-            or params["planet_radius"] != cls.EARTH_RADIUS
+            distance <= radius * 2
+            and collision_cooldown <= 0
+            and abs(v1 - v2) > 0.001
         ):
-            mode = "Hypothetical Mode"
-            params["gravity"] = (
-                cls.G * params["planet_mass"] / params["planet_radius"] ** 2
+
+            center = (x1 + x2) / 2
+
+            x1 = center - radius
+            x2 = center + radius
+
+            relative_velocity = v1 - v2
+
+            if relative_velocity > 0:
+
+                new_v1 = (
+                    (
+                        mass1 - elasticity * mass2
+                    ) * v1
+                    + (
+                        1 + elasticity
+                    ) * mass2 * v2
+                ) / (mass1 + mass2)
+
+                new_v2 = (
+                    (
+                        1 + elasticity
+                    ) * mass1 * v1
+                    + (
+                        mass2 - elasticity * mass1
+                    ) * v2
+                ) / (mass1 + mass2)
+
+                v1 = new_v1
+                v2 = new_v2
+
+                if collision_result_v1 is None:
+                    collision_result_v1 = v1
+                    collision_result_v2 = v2
+
+            collision_cooldown = 0.08
+
+    if collision_result_v1 is None:
+        collision_result_v1 = v1
+        collision_result_v2 = v2
+
+    p1 = json.dumps(positions1)
+    p2 = json.dumps(positions2)
+    pt = json.dumps(times)
+
+    html = f"""
+    <style>
+
+        html,
+        body {{
+            width: 100%;
+            height: 540px;
+            margin: 0;
+            padding: 0;
+            background: transparent;
+            overflow: hidden;
+        }}
+
+        #display {{
+            width: 75%;
+            height: 500px;
+            margin: 0 auto;
+            padding: 8px;
+            box-sizing: border-box;
+            border: 1px solid #6b7280;
+            border-radius: 10px;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }}
+
+        #plot {{
+            width: 100%;
+            height: 430px;
+            flex: 0 0 430px;
+        }}
+
+        #play {{
+            display: block;
+            width: 120px;
+            height: 44px;
+            margin: 10px auto 0;
+            border: 1px solid #888;
+            border-radius: 8px;
+            background: white;
+            color: #111;
+            font-size: 18px;
+            font-weight: 600;
+            cursor: pointer;
+            flex-shrink: 0;
+        }}
+
+        #play:hover {{
+            background: #f2f2f2;
+        }}
+
+        #play:disabled {{
+            opacity: 0.5;
+            cursor: default;
+        }}
+
+    </style>
+
+    <div id="display">
+        <div id="plot"></div>
+        <button id="play">PLAY</button>
+    </div>
+
+    <script src="https://cdn.plot.ly/plotly-2.35.2.min.js"></script>
+
+    <script>
+
+        const p1 = {p1};
+        const p2 = {p2};
+        const pt = {pt};
+
+        const s1 = "{shape1}";
+        const s2 = "{shape2}";
+        const SPEED = {speed};
+
+        const plot = document.getElementById("plot");
+        const play = document.getElementById("play");
+
+
+        function sphere(x, color, name) {{
+
+            const radius = 1.25;
+            const segments = 32;
+            const rings = 20;
+
+            const X = [];
+            const Y = [];
+            const Z = [];
+
+            const I = [];
+            const J = [];
+            const K = [];
+
+            for (let r = 0; r <= rings; r++) {{
+
+                const phi = Math.PI * r / rings;
+
+                for (let s = 0; s < segments; s++) {{
+
+                    const theta =
+                        2 * Math.PI * s / segments;
+
+                    X.push(
+                        x +
+                        radius *
+                        Math.sin(phi) *
+                        Math.cos(theta)
+                    );
+
+                    Y.push(
+                        radius *
+                        Math.sin(phi) *
+                        Math.sin(theta)
+                    );
+
+                    Z.push(
+                        radius *
+                        Math.cos(phi)
+                    );
+                }}
+            }}
+
+            for (let r = 0; r < rings; r++) {{
+
+                for (let s = 0; s < segments; s++) {{
+
+                    const next =
+                        (s + 1) % segments;
+
+                    const a =
+                        r * segments + s;
+
+                    const b =
+                        r * segments + next;
+
+                    const c =
+                        (r + 1) * segments + next;
+
+                    const d =
+                        (r + 1) * segments + s;
+
+                    I.push(a);
+                    J.push(b);
+                    K.push(c);
+
+                    I.push(a);
+                    J.push(c);
+                    K.push(d);
+                }}
+            }}
+
+            return {{
+                type: "mesh3d",
+
+                x: X,
+                y: Y,
+                z: Z,
+
+                i: I,
+                j: J,
+                k: K,
+
+                color:
+                    color === "blue"
+                        ? "#4DA3FF"
+                        : "#FF5C5C",
+
+                opacity: 1,
+                flatshading: false,
+
+                lighting: {{
+                    ambient: 0.55,
+                    diffuse: 1.0,
+                    specular: 1.0,
+                    fresnel: 0.45,
+                    roughness: 0.05
+                }},
+
+                lightposition: {{
+                    x: 100,
+                    y: 150,
+                    z: 300
+                }},
+
+                name: name
+            }};
+        }}
+
+
+        function cube(x, color, name) {{
+
+            const s = 1.25;
+
+            return {{
+                type: "mesh3d",
+
+                x: [
+                    x-s, x+s, x+s, x-s,
+                    x-s, x+s, x+s, x-s
+                ],
+
+                y: [
+                    -s, -s, s, s,
+                    -s, -s, s, s
+                ],
+
+                z: [
+                    -s, -s, -s, -s,
+                    s, s, s, s
+                ],
+
+                i: [
+                    0, 0,
+                    4, 4,
+                    0, 0,
+                    1, 1,
+                    2, 2,
+                    3, 3
+                ],
+
+                j: [
+                    1, 2,
+                    5, 6,
+                    1, 5,
+                    2, 6,
+                    3, 7,
+                    0, 4
+                ],
+
+                k: [
+                    2, 3,
+                    6, 7,
+                    5, 4,
+                    6, 5,
+                    7, 6,
+                    4, 7
+                ],
+
+                color: color,
+                opacity: 1,
+                flatshading: true,
+
+                lighting: {{
+                    ambient: 0.3,
+                    diffuse: 0.8,
+                    specular: 0.5,
+                    roughness: 0.3
+                }},
+
+                name: name
+            }};
+        }}
+
+
+        function createObject(x, color, shape, name) {{
+
+            return shape === "Sphere"
+                ? sphere(x, color, name)
+                : cube(x, color, name);
+        }}
+
+
+        function updateSphere(objectIndex, x) {{
+
+            const radius = 1.25;
+            const segments = 32;
+            const rings = 20;
+
+            const X = [];
+
+            for (let r = 0; r <= rings; r++) {{
+
+                const phi = Math.PI * r / rings;
+
+                for (let s = 0; s < segments; s++) {{
+
+                    const theta =
+                        2 * Math.PI * s / segments;
+
+                    X.push(
+                        x +
+                        radius *
+                        Math.sin(phi) *
+                        Math.cos(theta)
+                    );
+                }}
+            }}
+
+            Plotly.restyle(
+                plot,
+                {{x: [X]}},
+                [objectIndex]
+            );
+        }}
+
+
+        function updateCube(objectIndex, x) {{
+
+            const s = 1.25;
+
+            const X = [
+                x-s, x+s, x+s, x-s,
+                x-s, x+s, x+s, x-s
+            ];
+
+            Plotly.restyle(
+                plot,
+                {{x: [X]}},
+                [objectIndex]
+            );
+        }}
+
+
+        function updateObject(objectIndex, x, shape) {{
+
+            if (shape === "Sphere")
+                updateSphere(objectIndex, x);
+            else
+                updateCube(objectIndex, x);
+        }}
+
+
+        function interpolate(values, times, time) {{
+
+            if (time <= times[0])
+                return values[0];
+
+            if (time >= times[times.length - 1])
+                return values[values.length - 1];
+
+            let low = 0;
+            let high = times.length - 1;
+
+            while (low < high) {{
+
+                const mid =
+                    Math.floor((low + high) / 2);
+
+                if (times[mid] < time)
+                    low = mid + 1;
+                else
+                    high = mid;
+            }}
+
+            const i = Math.max(0, low - 1);
+
+            const ratio =
+                (time - times[i]) /
+                (times[i + 1] - times[i]);
+
+            return (
+                values[i] +
+                (values[i + 1] - values[i]) * ratio
+            );
+        }}
+
+
+        const data = [
+            createObject(
+                p1[0],
+                "blue",
+                s1,
+                "Object A"
+            ),
+            createObject(
+                p2[0],
+                "red",
+                s2,
+                "Object B"
             )
-            warnings.append(
-                f"Surface gravity recalculated: {params['gravity']:.4f} m/s²."
-            )
-
-        if abs(params["gravity"] - 9.81) > 0.1:
-            mode = "Hypothetical Mode"
-            warnings.append(
-                f"Non-standard gravity detected: {params['gravity']} m/s²."
-            )
-
-        if params["friction"] > 1:
-            mode = "Hypothetical Mode"
-            warnings.append("Friction coefficient is greater than 1.")
-
-        if params["initial_velocity"] > 3e8:
-            mode = "Hypothetical Mode"
-            warnings.append(
-                "Velocity exceeds the speed of light. Relativistic effects are ignored."
-            )
-
-        if params["planet_radius"] < 100:
-            mode = "Hypothetical Mode"
-            warnings.append(
-                "Extremely small planetary radius detected."
-            )
-
-        return ValidationResult(
-            is_valid=True,
-            mode=mode,
-            errors=[],
-            warnings=warnings,
-            validated_params=params
-        )
+        ];
 
 
-class PhysicalObject(BaseModel):
-    mass: float = 1.0
-    position: List[float] = [0.0, 0.0]
-    velocity: List[float] = [0.0, 0.0]
-    acceleration: List[float] = [0.0, 0.0]
+        const layout = {{
+
+            title: "3D Collision Simulation",
+
+            autosize: true,
+
+            scene: {{
+
+                dragmode: "orbit",
+
+                camera: {{
+                    projection: {{
+                        type: "orthographic"
+                    }}
+                }},
+
+                xaxis: {{
+                    title: "X Position (m)",
+                    range: [-9, 9],
+                    autorange: false
+                }},
+
+                yaxis: {{
+                    title: "Y Position (m)",
+                    range: [-5, 5],
+                    autorange: false
+                }},
+
+                zaxis: {{
+                    title: "Z Position (m)",
+                    range: [-5, 5],
+                    autorange: false
+                }},
+
+                aspectmode: "manual",
+
+                aspectratio: {{
+                    x: 1.6,
+                    y: 1,
+                    z: 1
+                }}
+            }},
+
+            height: 420,
+
+            margin: {{
+                l: 0,
+                r: 0,
+                t: 50,
+                b: 0
+            }},
+
+            paper_bgcolor: "rgba(0,0,0,0)",
+            plot_bgcolor: "rgba(0,0,0,0)"
+        }};
 
 
-class PhysicsEngine:
-    G = 6.67430e-11
+        Plotly.newPlot(
+            plot,
+            data,
+            layout,
+            {{
+                responsive: false,
+                scrollZoom: true,
+                displaylogo: false
+            }}
+        );
 
-    def __init__(self, dt=0.01, solver="rk4"):
-        self.dt = dt
-        self.solver = solver.lower()
 
-    def _forces(self, obj, p, spring_k=0, rest_len=0):
-        m = obj.mass
-        g = p.get("gravity", 9.81)
-        mu = p.get("friction", 0)
-        drag = p.get("air_resistance", 0)
-        tension = p.get("tension", 0)
+        play.onclick = function() {{
 
-        vx, vy = obj.velocity
-        speed = math.hypot(vx, vy)
+            if (play.disabled)
+                return;
 
-        fx = -tension if vx > 0 else tension if vx < 0 else 0
-        fy = -m * g
+            play.disabled = true;
 
-        if speed and drag:
-            f = 0.5 * drag * speed ** 2
-            fx -= f * vx / speed
-            fy -= f * vy / speed
-
-        if obj.position[1] <= 0 and abs(vx) > 0 and mu > 0:
-            friction = min(mu * m * g, abs(vx) * m / self.dt)
-            fx -= friction * (1 if vx > 0 else -1)
-
-        if spring_k:
-            fx -= spring_k * (obj.position[0] - rest_len)
-
-        return fx, fy
-
-    def _acceleration(self, position, velocity, mass, p, spring_k, rest_len):
-        temp = PhysicalObject(
-            mass=mass,
-            position=list(position),
-            velocity=list(velocity)
-        )
-        fx, fy = self._forces(temp, p, spring_k, rest_len)
-        return [fx / mass, fy / mass]
-
-    def _step_euler(self, obj, p, k, rest):
-        ax, ay = self._acceleration(
-            obj.position, obj.velocity, obj.mass, p, k, rest
-        )
-
-        obj.position[0] += obj.velocity[0] * self.dt
-        obj.position[1] += obj.velocity[1] * self.dt
-        obj.velocity[0] += ax * self.dt
-        obj.velocity[1] += ay * self.dt
-        obj.acceleration = [ax, ay]
-
-    def _step_verlet(self, obj, p, k, rest):
-        ax, ay = self._acceleration(
-            obj.position, obj.velocity, obj.mass, p, k, rest
-        )
-
-        obj.position[0] += (
-            obj.velocity[0] * self.dt
-            + 0.5 * ax * self.dt ** 2
-        )
-
-        obj.position[1] += (
-            obj.velocity[1] * self.dt
-            + 0.5 * ay * self.dt ** 2
-        )
-
-        new_ax, new_ay = self._acceleration(
-            obj.position, obj.velocity, obj.mass, p, k, rest
-        )
-
-        obj.velocity[0] += 0.5 * (ax + new_ax) * self.dt
-        obj.velocity[1] += 0.5 * (ay + new_ay) * self.dt
-        obj.acceleration = [new_ax, new_ay]
-
-    def _step_rk4(self, obj, p, k, rest):
-        m = obj.mass
-        dt = self.dt
-        p0 = list(obj.position)
-        v0 = list(obj.velocity)
-
-        def f(pos, vel):
-            acc = self._acceleration(pos, vel, m, p, k, rest)
-            return vel, acc
-
-        dp1, dv1 = f(p0, v0)
-
-        p1 = [p0[i] + dt * dp1[i] / 2 for i in range(2)]
-        v1 = [v0[i] + dt * dv1[i] / 2 for i in range(2)]
-        dp2, dv2 = f(p1, v1)
-
-        p2 = [p0[i] + dt * dp2[i] / 2 for i in range(2)]
-        v2 = [v0[i] + dt * dv2[i] / 2 for i in range(2)]
-        dp3, dv3 = f(p2, v2)
-
-        p3 = [p0[i] + dt * dp3[i] for i in range(2)]
-        v3 = [v0[i] + dt * dv3[i] for i in range(2)]
-        dp4, dv4 = f(p3, v3)
-
-        obj.position = [
-            p0[i] + dt / 6 * (
-                dp1[i] + 2 * dp2[i] + 2 * dp3[i] + dp4[i]
-            )
-            for i in range(2)
-        ]
-
-        obj.velocity = [
-            v0[i] + dt / 6 * (
-                dv1[i] + 2 * dv2[i] + 2 * dv3[i] + dv4[i]
-            )
-            for i in range(2)
-        ]
-
-        obj.acceleration = dv4
-
-    def _collision(self, obj, elasticity):
-        if obj.position[1] <= 0:
-            obj.position[1] = 0
-
-            if obj.velocity[1] < 0:
-                obj.velocity[1] *= -elasticity
-
-    def simulate(
-        self,
-        validation_result,
-        total_time=5.0,
-        spring_k=0.0,
-        spring_rest_len=0.0
-    ):
-        if not validation_result.is_valid:
-            return {
-                "status": "error",
-                "errors": validation_result.errors,
-                "trajectory": []
-            }
-
-        p = validation_result.validated_params
-        angle = math.radians(p["launch_angle"])
-        v = p["initial_velocity"]
-
-        obj = PhysicalObject(
-            mass=p["mass"],
-            position=[0, p["height"]],
-            velocity=[
-                v * math.cos(angle),
-                v * math.sin(angle)
-            ]
-        )
-
-        trajectory = []
-
-        for i in range(int(total_time / self.dt)):
-            t = i * self.dt
-            vx, vy = obj.velocity
-            speed = math.hypot(vx, vy)
-
-            ke = 0.5 * obj.mass * speed ** 2
-            pe = obj.mass * p["gravity"] * max(obj.position[1], 0)
-            fx, fy = self._forces(
-                obj, p, spring_k, spring_rest_len
-            )
-
-            trajectory.append({
-                "time": round(t, 4),
-                "x": round(obj.position[0], 4),
-                "y": round(obj.position[1], 4),
-                "vx": round(vx, 4),
-                "vy": round(vy, 4),
-                "fx": round(fx, 4),
-                "fy": round(fy, 4),
-                "ke": round(ke, 4),
-                "pe": round(pe, 4),
-                "total_e": round(ke + pe, 4),
-                "momentum": [
-                    round(obj.mass * vx, 4),
-                    round(obj.mass * vy, 4)
-                ]
-            })
-
-            if self.solver == "euler":
-                self._step_euler(
-                    obj, p, spring_k, spring_rest_len
+            const camera = JSON.parse(
+                JSON.stringify(
+                    plot.layout.scene.camera
                 )
-            elif self.solver == "verlet":
-                self._step_verlet(
-                    obj, p, spring_k, spring_rest_len
-                )
-            else:
-                self._step_rk4(
-                    obj, p, spring_k, spring_rest_len
-                )
+            );
 
-            self._collision(
-                obj,
-                p["elasticity"]
-            )
+            const totalTime =
+                pt[pt.length - 1];
 
-        return {
-            "status": "success",
-            "solver_used": self.solver,
-            "mode": validation_result.mode,
-            "warnings": validation_result.warnings,
-            "total_frames": len(trajectory),
-            "trajectory": trajectory,
-            "final_state": trajectory[-1]
-        }
+            const duration =
+                totalTime * 1000 / SPEED;
+
+            const startTime =
+                performance.now();
+
+
+            function animate(now) {{
+
+                const elapsed =
+                    now - startTime;
+
+                const simulationTime =
+                    Math.min(
+                        elapsed / duration *
+                        totalTime,
+                        totalTime
+                    );
+
+                updateObject(
+                    0,
+                    interpolate(
+                        p1,
+                        pt,
+                        simulationTime
+                    ),
+                    s1
+                );
+
+                updateObject(
+                    1,
+                    interpolate(
+                        p2,
+                        pt,
+                        simulationTime
+                    ),
+                    s2
+                );
+
+                if (simulationTime < totalTime) {{
+
+                    requestAnimationFrame(
+                        animate
+                    );
+
+                }} else {{
+
+                    Plotly.relayout(
+                        plot,
+                        {{
+                            "scene.camera": camera
+                        }}
+                    );
+
+                    play.disabled = false;
+                }}
+            }}
+
+            requestAnimationFrame(animate);
+        }};
+
+    </script>
+    """
+
+    components.html(
+        html,
+        height=540,
+        scrolling=False
+    )
+
+    initial_velocity1 = velocity1
+    initial_velocity2 = -velocity2
+
+    initial_momentum1 = mass1 * initial_velocity1
+    initial_momentum2 = mass2 * initial_velocity2
+
+    final_momentum1 = mass1 * collision_result_v1
+    final_momentum2 = mass2 * collision_result_v2
+
+    initial_energy1 = (
+        0.5 * mass1 * initial_velocity1 ** 2
+    )
+
+    initial_energy2 = (
+        0.5 * mass2 * initial_velocity2 ** 2
+    )
+
+    final_energy1 = (
+        0.5 * mass1 * collision_result_v1 ** 2
+    )
+
+    final_energy2 = (
+        0.5 * mass2 * collision_result_v2 ** 2
+    )
+
+    st.markdown("### Results")
+
+    st.html(
+        f"""
+        <style>
+            .collision-results {{
+                width: 100%;
+                border-collapse: collapse;
+                table-layout: fixed;
+                font-size: 18px;
+                font-weight: 600;
+            }}
+
+            .collision-results th,
+            .collision-results td {{
+                text-align: center !important;
+                vertical-align: middle !important;
+                padding: 14px 10px;
+                border: 1px solid #3a3f46;
+            }}
+
+            .collision-results th {{
+                font-size: 18px;
+                font-weight: 700;
+            }}
+
+            .collision-results td {{
+                font-size: 18px;
+                font-weight: 600;
+            }}
+
+            .collision-results th:first-child,
+            .collision-results td:first-child {{
+                width: 12%;
+                font-weight: 700;
+            }}
+        </style>
+
+        <table class="collision-results">
+            <thead>
+                <tr>
+                    <th>Object</th>
+                    <th>Velocity<br>BEFORE</th>
+                    <th>Velocity<br>AFTER</th>
+                    <th>Momentum<br>BEFORE</th>
+                    <th>Momentum<br>AFTER</th>
+                    <th>Energy<br>BEFORE</th>
+                    <th>Energy<br>AFTER</th>
+                </tr>
+            </thead>
+
+            <tbody>
+                <tr>
+                    <td>Object A</td>
+                    <td>{initial_velocity1:.2f} m/s</td>
+                    <td>{collision_result_v1:.2f} m/s</td>
+                    <td>{initial_momentum1:.2f} kg·m/s</td>
+                    <td>{final_momentum1:.2f} kg·m/s</td>
+                    <td>{initial_energy1:.2f} J</td>
+                    <td>{final_energy1:.2f} J</td>
+                </tr>
+
+                <tr>
+                    <td>Object B</td>
+                    <td>{initial_velocity2:.2f} m/s</td>
+                    <td>{collision_result_v2:.2f} m/s</td>
+                    <td>{initial_momentum2:.2f} kg·m/s</td>
+                    <td>{final_momentum2:.2f} kg·m/s</td>
+                    <td>{initial_energy2:.2f} J</td>
+                    <td>{final_energy2:.2f} J</td>
+                </tr>
+            </tbody>
+        </table>
+        """
+    )
