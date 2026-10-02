@@ -393,16 +393,15 @@ def create_cylinder_z(
         showlegend=False
     )
 
-
 def create_spring_coil(
     start_z,
     end_z,
     radius=0.18,
-    turns=14
+    turns=10
 ):
     n_points = max(
-        int(turns * 12),
-        24
+        int(turns * 10),
+        40
     )
 
     theta = np.linspace(
@@ -428,7 +427,6 @@ def create_spring_coil(
         line=dict(width=7),
         showlegend=False
     )
-
 
 def create_spring_figure(
     relative_displacement,
@@ -639,12 +637,12 @@ def spring_experiment():
     st.subheader("Spring Experiment")
 
     defaults = {
-        "spring_mass": 1.0,
-        "spring_k": 50.0,
-        "spring_displacement": 0.30,
-        "spring_gravity": 9.81,
-        "spring_damping": 0.02
-    }
+    "spring_mass": 1.5,
+    "spring_k": 60.0,
+    "spring_displacement": 0.25,
+    "spring_gravity": 9.81,
+    "spring_damping": 0.03
+}
 
     for key, value in defaults.items():
         if key not in st.session_state:
@@ -902,64 +900,71 @@ def spring_experiment():
     st.markdown("### 3D Spring")
 
     frame_indices = np.linspace(
-        0,
-        len(time) - 1,
-        100,
-        dtype=int
-    )
+    0,
+    len(time) - 1,
+    60,
+    dtype=int
+)
 
-    initial_fig = create_spring_figure(
-        relative_displacement[
-            frame_indices[0]
-        ],
+initial_fig = create_spring_figure(
+    relative_displacement[frame_indices[0]],
+    equilibrium_displacement
+)
+
+frames = []
+
+for i in frame_indices:
+    frame_fig = create_spring_figure(
+        relative_displacement[i],
         equilibrium_displacement
     )
 
-    frames = []
-
-    for i in frame_indices:
-        frame_fig = create_spring_figure(
-            relative_displacement[i],
-            equilibrium_displacement
+    frames.append(
+        go.Frame(
+            data=frame_fig.data,
+            name=f"{time[i]:.2f}"
         )
-
-        frames.append(
-            go.Frame(
-                data=frame_fig.data,
-                name=f"{time[i]:.2f}"
-            )
-        )
-
-    initial_fig.frames = frames
-
-    initial_fig.update_layout(
-        updatemenus=[
-            {
-                "type": "buttons",
-                "showactive": False,
-                "buttons": [
-                    {
-                        "label": "▶ Play",
-                        "method": "animate",
-                        "args": [
-                            None,
-                            {
-                                "frame": {
-                                    "duration": 100,
-                                    "redraw": True
-                                },
-                                "transition": {
-                                    "duration": 0
-                                },
-                                "fromcurrent": True,
-                                "mode": "immediate"
-                            }
-                        ]
-                    }
-                ]
-            }
-        ]
     )
+
+initial_fig.frames = frames
+
+initial_fig.update_layout(
+    updatemenus=[
+        {
+            "type": "buttons",
+            "showactive": False,
+            "x": 0.05,
+            "y": 0.05,
+            "buttons": [
+                {
+                    "label": "▶ Play",
+                    "method": "animate",
+                    "args": [
+                        None,
+                        {
+                            "frame": {
+                                "duration": 70,
+                                "redraw": True
+                            },
+                            "transition": {
+                                "duration": 0
+                            },
+                            "fromcurrent": True,
+                            "mode": "immediate"
+                        }
+                    ]
+                }
+            ]
+        }
+    ],
+    uirevision="spring"
+)
+
+st.plotly_chart(
+    initial_fig,
+    use_container_width=True,
+    key="spring_3d"
+)
 
     st.plotly_chart(
         initial_fig,
