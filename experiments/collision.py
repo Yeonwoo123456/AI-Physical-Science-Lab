@@ -1,6 +1,7 @@
 import json
 import streamlit as st
 import streamlit.components.v1 as components
+import plotly.graph_objects as go
 from app_modules import CollisionNaturalLanguageParser
 
 
@@ -217,6 +218,11 @@ def run_collision(
     positions2 = []
     times = []
 
+    velocity1_history = []
+    velocity2_history = []
+    energy1_history = []
+    energy2_history = []
+
     x1 = start1
     x2 = start2
 
@@ -231,6 +237,12 @@ def run_collision(
         positions1.append(x1)
         positions2.append(x2)
         times.append(t)
+
+        velocity1_history.append(v1)
+        velocity2_history.append(v2)
+
+        energy1_history.append(0.5 * mass1 * v1 ** 2)
+        energy2_history.append(0.5 * mass2 * v2 ** 2)
 
         next_x1 = x1 + v1 * dt
         next_x2 = x2 + v2 * dt
@@ -876,78 +888,100 @@ def run_collision(
         0.5 * mass2 * collision_result_v2 ** 2
     )
 
-    st.markdown("### Results")
+    st.markdown("### Velocity")
 
-    st.html(
-        f"""
-        <style>
-            .collision-results {{
-                width: 100%;
-                border-collapse: collapse;
-                table-layout: fixed;
-                font-size: 18px;
-                font-weight: 600;
-            }}
+    velocity_fig = go.Figure()
 
-            .collision-results th,
-            .collision-results td {{
-                text-align: center !important;
-                vertical-align: middle !important;
-                padding: 14px 10px;
-                border: 1px solid #3a3f46;
-            }}
+    velocity_fig.add_trace(
+        go.Scatter(
+            x=times,
+            y=velocity1_history,
+            mode="lines",
+            name="Object A",
+            line=dict(width=3)
+        )
+    )
 
-            .collision-results th {{
-                font-size: 18px;
-                font-weight: 700;
-            }}
+    velocity_fig.add_trace(
+        go.Scatter(
+            x=times,
+            y=velocity2_history,
+            mode="lines",
+            name="Object B",
+            line=dict(width=3)
+        )
+    )
 
-            .collision-results td {{
-                font-size: 18px;
-                font-weight: 600;
-            }}
+    velocity_fig.update_layout(
+        title="Velocity vs Time",
+        xaxis_title="Time (s)",
+        yaxis_title="Velocity (m/s)",
+        template="plotly_dark",
+        height=420,
+        margin=dict(l=60, r=30, t=60, b=60),
+        hovermode="x unified"
+    )
 
-            .collision-results th:first-child,
-            .collision-results td:first-child {{
-                width: 12%;
-                font-weight: 700;
-            }}
-        </style>
+    st.plotly_chart(
+        velocity_fig,
+        use_container_width=True,
+        config={"displayModeBar": False}
+    )
 
-        <table class="collision-results">
-            <thead>
-                <tr>
-                    <th>Object</th>
-                    <th>Velocity<br>BEFORE</th>
-                    <th>Velocity<br>AFTER</th>
-                    <th>Momentum<br>BEFORE</th>
-                    <th>Momentum<br>AFTER</th>
-                    <th>Energy<br>BEFORE</th>
-                    <th>Energy<br>AFTER</th>
-                </tr>
-            </thead>
+    st.markdown("### Energy")
 
-            <tbody>
-                <tr>
-                    <td>Object A</td>
-                    <td>{initial_velocity1:.2f} m/s</td>
-                    <td>{collision_result_v1:.2f} m/s</td>
-                    <td>{initial_momentum1:.2f} kg·m/s</td>
-                    <td>{final_momentum1:.2f} kg·m/s</td>
-                    <td>{initial_energy1:.2f} J</td>
-                    <td>{final_energy1:.2f} J</td>
-                </tr>
+    energy_fig = go.Figure()
 
-                <tr>
-                    <td>Object B</td>
-                    <td>{initial_velocity2:.2f} m/s</td>
-                    <td>{collision_result_v2:.2f} m/s</td>
-                    <td>{initial_momentum2:.2f} kg·m/s</td>
-                    <td>{final_momentum2:.2f} kg·m/s</td>
-                    <td>{initial_energy2:.2f} J</td>
-                    <td>{final_energy2:.2f} J</td>
-                </tr>
-            </tbody>
-        </table>
-        """
+    energy_fig.add_trace(
+        go.Scatter(
+            x=times,
+            y=energy1_history,
+            mode="lines",
+            name="Object A",
+            line=dict(width=3)
+        )
+    )
+
+    energy_fig.add_trace(
+        go.Scatter(
+            x=times,
+            y=energy2_history,
+            mode="lines",
+            name="Object B",
+            line=dict(width=3)
+        )
+    )
+
+    total_energy = [
+        a + b
+        for a, b in zip(
+            energy1_history,
+            energy2_history
+        )
+    ]
+
+    energy_fig.add_trace(
+        go.Scatter(
+            x=times,
+            y=total_energy,
+            mode="lines",
+            name="Total Energy",
+            line=dict(width=3, dash="dash")
+        )
+    )
+
+    energy_fig.update_layout(
+        title="Kinetic Energy vs Time",
+        xaxis_title="Time (s)",
+        yaxis_title="Energy (J)",
+        template="plotly_dark",
+        height=420,
+        margin=dict(l=60, r=30, t=60, b=60),
+        hovermode="x unified"
+    )
+
+    st.plotly_chart(
+        energy_fig,
+        use_container_width=True,
+        config={"displayModeBar": False}
     )
