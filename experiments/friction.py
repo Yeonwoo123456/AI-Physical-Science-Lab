@@ -40,14 +40,16 @@ def simulate_friction(
                 net_force[i] = 0.0
                 acceleration[i] = 0.0
                 velocity[i] = 0.0
-
                 if i > 0:
                     position[i] = position[i - 1]
                 continue
-
             moving = True
 
-        direction = np.sign(velocity[i - 1]) if i > 0 and abs(velocity[i - 1]) > 1e-9 else np.sign(applied_force)
+        direction = (
+            np.sign(velocity[i - 1])
+            if i > 0 and abs(velocity[i - 1]) > 1e-9
+            else np.sign(applied_force)
+        )
 
         friction[i] = -direction * kinetic_friction
         net_force[i] = applied_force + friction[i]
@@ -95,7 +97,6 @@ def parse_ai_friction(user_text):
 You are a physics parameter parser for a friction experiment.
 
 Return ONLY valid JSON:
-
 {
     "mass": null,
     "mu_static": null,
@@ -130,7 +131,6 @@ If the user says right / 오른쪽, applied_force should be positive.
 
         content = response.choices[0].message.content.strip()
         content = re.sub(r"```json|```", "", content).strip()
-
         parsed = json.loads(content)
 
         for key in result:
@@ -168,220 +168,441 @@ If the user says right / 오른쪽, applied_force should be positive.
     return result
 
 
-def force_arrow(
-    fig,
-    force,
-    y,
-    label,
-    scale,
-    color,
-    x0=0.0
-):
-    if abs(force) < 1e-9:
-        return
-
-    length = abs(force) * scale
-    x1 = x0 + np.sign(force) * length
-
-    fig.add_annotation(
-        x=x1,
-        y=y,
-        ax=x0,
-        ay=y,
-        xref="x",
-        yref="y",
-        axref="x",
-        ayref="y",
-        showarrow=True,
-        arrowhead=3,
-        arrowsize=1.2,
-        arrowwidth=4,
-        arrowcolor=color,
-        text=f"{label}: {abs(force):.1f} N",
-        font=dict(size=14, color=color),
-        bgcolor="rgba(14,17,23,0.85)",
-        bordercolor=color,
-        borderwidth=1,
-        borderpad=4
-    )
-
-
-def create_force_diagram(
-    mass,
+def friction_animation_html(
+    time,
+    position,
     applied_force,
-    friction_force,
-    gravity,
-    max_static_friction,
-    state
+    friction,
+    normal_force,
+    weight,
+    net_force,
+    max_static_friction
 ):
-    normal = mass * gravity
-    maximum_force = max(
-        abs(applied_force),
-        abs(friction_force),
-        abs(normal),
-        1.0
-    )
+    payload = json.dumps({
+        "time": np.asarray(time, dtype=float).tolist(),
+        "position": np.asarray(position, dtype=float).tolist(),
+        "applied": np.full(len(time), applied_force, dtype=float).tolist(),
+        "friction": np.asarray(friction, dtype=float).tolist(),
+        "normal": np.asarray(normal_force, dtype=float).tolist(),
+        "weight": np.asarray(weight, dtype=float).tolist(),
+        "net": np.asarray(net_force, dtype=float).tolist(),
+        "max_static": float(max_static_friction)
+    }, separators=(",", ":"))
 
-    scale_horizontal = 2.5 / maximum_force
-    scale_vertical = 1.6 / maximum_force
+    html = """
+<!DOCTYPE html>
+<html>
+<head>
+<style>
+* { box-sizing: border-box; }
+body {
+    margin: 0;
+    background: #0E1117;
+    color: #FFFFFF;
+    font-family: Arial, sans-serif;
+}
+#wrap {
+    border: 2px solid #FFFFFF;
+    border-radius: 10px;
+    overflow: hidden;
+    background: #0E1117;
+}
+#canvas {
+    width: 100%;
+    height: 470px;
+    display: block;
+    background: #0E1117;
+}
+#controls {
+    padding: 12px 16px 15px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    border-top: 1px solid #444;
+}
+button {
+    border: 1px solid #888;
+    background: #20242D;
+    color: white;
+    border-radius: 6px;
+    padding: 8px 16px;
+    cursor: pointer;
+}
+button:hover { background: #303641; }
+#status {
+    margin-left: auto;
+    font-weight: bold;
+}
+#values {
+    padding: 0 16px 14px;
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 8px;
+}
+.value {
+    background: #171B23;
+    border-radius: 6px;
+    padding: 9px;
+    text-align: center;
+    font-size: 13px;
+}
+.value b {
+    display: block;
+    margin-top: 4px;
+    font-size: 15px;
+}
+</style>
+</head>
+<body>
+<div id="wrap">
+<canvas id="canvas"></canvas>
 
-    fig = go.Figure()
+<div id="controls">
+    <button id="play">▶ Play</button>
+    <button id="reset">↺ Reset</button>
+    <span id="status">STATIC</span>
+</div>
 
-    fig.add_shape(
-        type="rect",
-        x0=-0.45,
-        x1=0.45,
-        y0=-0.3,
-        y1=0.3,
-        fillcolor="#B8B8B8",
-        line=dict(color="white", width=2)
-    )
+<div id="values">
+    <div class="value">Applied Force<b id="applied">0 N</b></div>
+    <div class="value">Friction<b id="friction">0 N</b></div>
+    <div class="value">Net Force<b id="net">0 N</b></div>
+    <div class="value">Time<b id="time">0.00 s</b></div>
+</div>
+</div>
 
-    fig.add_shape(
-        type="line",
-        x0=-3.2,
-        x1=3.2,
-        y0=-0.75,
-        y1=-0.75,
-        line=dict(color="#888888", width=5)
-    )
+<script>
+const data = __PAYLOAD__;
+const canvas = document.getElementById("canvas");
+const ctx = canvas.getContext("2d");
+const playButton = document.getElementById("play");
+const resetButton = document.getElementById("reset");
+const statusEl = document.getElementById("status");
 
-    force_arrow(
-        fig,
-        applied_force,
-        0.0,
-        "Applied",
-        scale_horizontal,
-        "#4DA6FF"
-    )
+let index = 0;
+let playing = false;
+let raf = null;
+let lastTimestamp = 0;
+let elapsedAccumulator = 0;
 
-    force_arrow(
-        fig,
-        friction_force,
-        -0.05,
-        "Friction",
-        scale_horizontal,
-        "#FF6B6B"
-    )
+function resize() {
+    const dpr = window.devicePixelRatio || 1;
+    const rect = canvas.getBoundingClientRect();
+    canvas.width = Math.max(1, rect.width * dpr);
+    canvas.height = Math.max(1, rect.height * dpr);
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    draw();
+}
 
-    force_arrow(
-        fig,
+function arrow(x1, y1, x2, y2, color, label) {
+    const dx = x2 - x1;
+    const dy = y2 - y1;
+    const length = Math.hypot(dx, dy);
+
+    if (length < 1) return;
+
+    const ux = dx / length;
+    const uy = dy / length;
+    const head = 11;
+
+    ctx.strokeStyle = color;
+    ctx.fillStyle = color;
+    ctx.lineWidth = 4;
+    ctx.beginPath();
+    ctx.moveTo(x1, y1);
+    ctx.lineTo(x2, y2);
+    ctx.stroke();
+
+    ctx.beginPath();
+    ctx.moveTo(x2, y2);
+    ctx.lineTo(
+        x2 - ux * head - uy * head * 0.55,
+        y2 - uy * head + ux * head * 0.55
+    );
+    ctx.lineTo(
+        x2 - ux * head + uy * head * 0.55,
+        y2 - uy * head - ux * head * 0.55
+    );
+    ctx.closePath();
+    ctx.fill();
+
+    ctx.font = "bold 14px Arial";
+    ctx.textAlign = "center";
+    ctx.fillText(label, (x1 + x2) / 2, (y1 + y2) / 2 - 9);
+}
+
+function springLine(x1, x2, y) {
+    const turns = 12;
+    const amplitude = 12;
+    const points = 100;
+
+    ctx.strokeStyle = "#DDDDDD";
+    ctx.lineWidth = 2.5;
+    ctx.beginPath();
+
+    for (let i = 0; i <= points; i++) {
+        const p = i / points;
+        const x = x1 + (x2 - x1) * p;
+        const yy = y + Math.sin(p * Math.PI * 2 * turns) * amplitude;
+
+        if (i === 0) ctx.moveTo(x, yy);
+        else ctx.lineTo(x, yy);
+    }
+
+    ctx.stroke();
+}
+
+function getScale(applied, friction, normal, weight, net) {
+    const maxForce = Math.max(
+        1,
+        Math.abs(applied),
+        Math.abs(friction),
+        Math.abs(normal),
+        Math.abs(weight),
+        Math.abs(net)
+    );
+
+    return Math.min(100, 170 / maxForce);
+}
+
+function draw() {
+    const w = canvas.clientWidth;
+    const h = canvas.clientHeight;
+
+    ctx.clearRect(0, 0, w, h);
+
+    const i = Math.max(0, Math.min(index, data.time.length - 1));
+
+    const applied = data.applied[i];
+    const friction = data.friction[i];
+    const normal = data.normal[i];
+    const weight = data.weight[i];
+    const net = data.net[i];
+
+    const position = data.position[i];
+
+    const centerX = w * 0.5;
+    const baseY = h * 0.67;
+    const blockW = 110;
+    const blockH = 75;
+
+    const positionScale = 45;
+    const blockX = centerX + position * positionScale;
+
+    ctx.strokeStyle = "#777";
+    ctx.lineWidth = 5;
+    ctx.beginPath();
+    ctx.moveTo(35, baseY + blockH / 2 + 2);
+    ctx.lineTo(w - 35, baseY + blockH / 2 + 2);
+    ctx.stroke();
+
+    ctx.fillStyle = "#B8B8B8";
+    ctx.strokeStyle = "#FFFFFF";
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.roundRect(
+        blockX - blockW / 2,
+        baseY - blockH / 2,
+        blockW,
+        blockH,
+        5
+    );
+    ctx.fill();
+    ctx.stroke();
+
+    ctx.fillStyle = "#111";
+    ctx.font = "bold 16px Arial";
+    ctx.textAlign = "center";
+    ctx.fillText("BLOCK", blockX, baseY + 6);
+
+    const scale = getScale(
+        applied,
+        friction,
         normal,
-        0.8,
-        "Normal",
-        scale_vertical,
-        "#69D391"
-    )
+        weight,
+        net
+    );
 
-    force_arrow(
-        fig,
-        -normal,
-        -1.25,
-        "Weight",
-        scale_vertical,
-        "#C084FC"
-    )
+    const horizontalMax = Math.min(
+        w * 0.38,
+        230
+    );
 
-    fig.add_annotation(
-        x=0,
-        y=1.55,
-        text=f"<b>{state}</b>",
-        showarrow=False,
-        font=dict(
-            size=20,
-            color="white"
+    const horizontalScale = Math.min(
+        scale,
+        horizontalMax / Math.max(
+            1,
+            Math.abs(applied),
+            Math.abs(friction)
         )
-    )
+    );
 
-    fig.add_annotation(
-        x=0,
-        y=1.25,
-        text=f"Maximum static friction: {max_static_friction:.2f} N",
-        showarrow=False,
-        font=dict(size=13, color="#DDDDDD")
-    )
-
-    fig.update_layout(
-        height=520,
-        margin=dict(l=20, r=20, t=20, b=20),
-        paper_bgcolor="#0E1117",
-        plot_bgcolor="#0E1117",
-        xaxis=dict(
-            range=[-3.5, 3.5],
-            visible=False,
-            fixedrange=True
-        ),
-        yaxis=dict(
-            range=[-1.7, 1.8],
-            visible=False,
-            fixedrange=True
-        ),
-        showlegend=False
-    )
-
-    return fig
-
-
-def create_motion_figure(position, time):
-    fig = go.Figure()
-
-    fig.add_trace(
-        go.Scatter(
-            x=time,
-            y=position,
-            mode="lines",
-            name="Position"
+    const verticalScale = Math.min(
+        1.7,
+        115 / Math.max(
+            1,
+            Math.abs(normal),
+            Math.abs(weight)
         )
+    );
+
+    arrow(
+        blockX,
+        baseY,
+        blockX + applied * horizontalScale,
+        baseY,
+        "#4DA6FF",
+        "Applied " + Math.abs(applied).toFixed(1) + " N"
+    );
+
+    arrow(
+        blockX,
+        baseY + 5,
+        blockX + friction * horizontalScale,
+        baseY + 5,
+        "#FF6B6B",
+        "Friction " + Math.abs(friction).toFixed(1) + " N"
+    );
+
+    arrow(
+        blockX,
+        baseY - blockH / 2,
+        blockX,
+        baseY - blockH / 2 - normal * verticalScale,
+        "#69D391",
+        "Normal " + Math.abs(normal).toFixed(1) + " N"
+    );
+
+    arrow(
+        blockX,
+        baseY + blockH / 2,
+        blockX,
+        baseY + blockH / 2 - weight * verticalScale,
+        "#C084FC",
+        "Weight " + Math.abs(weight).toFixed(1) + " N"
+    );
+
+    const state =
+        Math.abs(data.friction[i] - (-applied)) < 1e-6 &&
+        Math.abs(data.net[i]) < 1e-6
+            ? "STATIC"
+            : "KINETIC";
+
+    statusEl.textContent = state;
+    statusEl.style.color =
+        state === "STATIC" ? "#69D391" : "#FFB86B";
+
+    document.getElementById("applied").textContent =
+        applied.toFixed(2) + " N";
+
+    document.getElementById("friction").textContent =
+        Math.abs(friction).toFixed(2) + " N";
+
+    document.getElementById("net").textContent =
+        net.toFixed(2) + " N";
+
+    document.getElementById("time").textContent =
+        data.time[i].toFixed(2) + " s";
+}
+
+function step(timestamp) {
+    if (!playing) return;
+
+    if (!lastTimestamp) lastTimestamp = timestamp;
+
+    const delta = Math.min(
+        50,
+        timestamp - lastTimestamp
+    );
+
+    lastTimestamp = timestamp;
+    elapsedAccumulator += delta;
+
+    const frameInterval = 1000 / 60;
+
+    while (elapsedAccumulator >= frameInterval) {
+        index++;
+
+        if (index >= data.time.length) {
+            index = data.time.length - 1;
+            playing = false;
+            playButton.textContent = "▶ Play";
+            break;
+        }
+
+        elapsedAccumulator -= frameInterval;
+    }
+
+    draw();
+
+    if (playing) {
+        raf = requestAnimationFrame(step);
+    }
+}
+
+playButton.addEventListener("click", () => {
+    if (index >= data.time.length - 1) {
+        index = 0;
+    }
+
+    playing = !playing;
+    playButton.textContent = playing ? "⏸ Pause" : "▶ Play";
+
+    if (playing) {
+        lastTimestamp = 0;
+        elapsedAccumulator = 0;
+        raf = requestAnimationFrame(step);
+    } else if (raf) {
+        cancelAnimationFrame(raf);
+        raf = null;
+    }
+});
+
+resetButton.addEventListener("click", () => {
+    playing = false;
+
+    if (raf) {
+        cancelAnimationFrame(raf);
+        raf = null;
+    }
+
+    index = 0;
+    lastTimestamp = 0;
+    elapsedAccumulator = 0;
+    playButton.textContent = "▶ Play";
+    draw();
+});
+
+window.addEventListener("resize", resize);
+resize();
+</script>
+</body>
+</html>
+"""
+
+    html = html.replace(
+        "__PAYLOAD__",
+        payload
     )
 
-    fig.update_layout(
-        height=320,
-        xaxis_title="Time (s)",
-        yaxis_title="Position (m)"
-    )
-
-    return fig
-
-
-def create_velocity_figure(velocity, time):
-    fig = go.Figure()
-
-    fig.add_trace(
-        go.Scatter(
-            x=time,
-            y=velocity,
-            mode="lines",
-            name="Velocity"
-        )
-    )
-
-    fig.update_layout(
-        height=320,
-        xaxis_title="Time (s)",
-        yaxis_title="Velocity (m/s)"
-    )
-
-    return fig
+    return html
 
 
 def friction_experiment():
 
     st.subheader("Friction Experiment")
 
-    if "friction_mass" not in st.session_state:
-        st.session_state.friction_mass = 10.0
+    defaults = {
+        "friction_mass": 10.0,
+        "friction_mu_static": 0.50,
+        "friction_mu_kinetic": 0.30,
+        "friction_force": 50.0,
+        "friction_gravity": 9.81
+    }
 
-    if "friction_mu_static" not in st.session_state:
-        st.session_state.friction_mu_static = 0.50
-
-    if "friction_mu_kinetic" not in st.session_state:
-        st.session_state.friction_mu_kinetic = 0.30
-
-    if "friction_force" not in st.session_state:
-        st.session_state.friction_force = 40.0
-
-    if "friction_gravity" not in st.session_state:
-        st.session_state.friction_gravity = 9.81
+    for key, value in defaults.items():
+        if key not in st.session_state:
+            st.session_state[key] = value
 
     if "friction_result" not in st.session_state:
         st.session_state.friction_result = None
@@ -501,27 +722,21 @@ def friction_experiment():
             else -np.sign(applied_force) * kinetic
         )
 
-        current_state = (
-            "STATIC"
-            if abs(applied_force) <= max_static
-            else "KINETIC"
-        )
+        st.markdown("### 2D Friction Model")
 
-        st.markdown("### Force Diagram")
-
-        fig = create_force_diagram(
-            mass,
-            applied_force,
-            current_friction,
-            gravity,
-            max_static,
-            current_state
-        )
-
-        st.plotly_chart(
-            fig,
-            use_container_width=True,
-            key="friction_force_diagram_preview"
+        st.components.v1.html(
+            friction_animation_html(
+                np.array([0.0]),
+                np.array([0.0]),
+                applied_force,
+                np.array([current_friction]),
+                np.array([normal_force]),
+                np.array([-normal_force]),
+                np.array([0.0]),
+                max_static
+            ),
+            height=590,
+            scrolling=False
         )
 
     else:
@@ -532,14 +747,29 @@ def friction_experiment():
         friction = result["friction"]
         net_force = result["net_force"]
 
-        final_state = result["state"][-1]
+        st.markdown("### 2D Friction Model")
+
+        st.components.v1.html(
+            friction_animation_html(
+                time,
+                position,
+                applied_force,
+                friction,
+                result["normal_force"],
+                result["weight"],
+                net_force,
+                result["max_static_friction"]
+            ),
+            height=590,
+            scrolling=False
+        )
 
         col1, col2, col3, col4 = st.columns(4)
 
         with col1:
             st.metric(
                 "State",
-                final_state
+                result["state"][-1]
             )
 
         with col2:
@@ -560,50 +790,58 @@ def friction_experiment():
                 f"{net_force[-1]:.2f} N"
             )
 
-        st.markdown("### Force Diagram")
+        st.markdown("### Position vs Time")
 
-        diagram_index = len(time) - 1
-
-        diagram_fig = create_force_diagram(
-            mass,
-            applied_force,
-            friction[diagram_index],
-            gravity,
-            max_static,
-            final_state
+        position_fig = go.Figure()
+        position_fig.add_trace(
+            go.Scatter(
+                x=time,
+                y=position,
+                mode="lines",
+                name="Position"
+            )
         )
-
-        st.plotly_chart(
-            diagram_fig,
-            use_container_width=True,
-            key="friction_force_diagram"
+        position_fig.update_layout(
+            height=320,
+            xaxis_title="Time (s)",
+            yaxis_title="Position (m)"
         )
-
-        st.markdown("### Motion")
-
         st.plotly_chart(
-            create_motion_figure(position, time),
+            position_fig,
             use_container_width=True,
             key="friction_position_graph"
         )
 
+        st.markdown("### Velocity vs Time")
+
+        velocity_fig = go.Figure()
+        velocity_fig.add_trace(
+            go.Scatter(
+                x=time,
+                y=velocity,
+                mode="lines",
+                name="Velocity"
+            )
+        )
+        velocity_fig.update_layout(
+            height=320,
+            xaxis_title="Time (s)",
+            yaxis_title="Velocity (m/s)"
+        )
         st.plotly_chart(
-            create_velocity_figure(velocity, time),
+            velocity_fig,
             use_container_width=True,
             key="friction_velocity_graph"
         )
 
-        st.markdown("### Force Analysis")
+        st.markdown("### Force vs Time")
 
         force_fig = go.Figure()
 
         force_fig.add_trace(
             go.Scatter(
                 x=time,
-                y=np.full_like(
-                    time,
-                    applied_force
-                ),
+                y=np.full_like(time, applied_force),
                 mode="lines",
                 name="Applied Force"
             )
