@@ -35,7 +35,6 @@ def collision_experiment():
     col1, col2 = st.columns(2)
 
     with col1:
-
         shape1 = st.selectbox(
             "Shape",
             ["Sphere", "Cube"],
@@ -59,7 +58,6 @@ def collision_experiment():
         )
 
     with col2:
-
         shape2 = st.selectbox(
             "Shape",
             ["Sphere", "Cube"],
@@ -114,7 +112,6 @@ def collision_experiment():
         )
 
     if st.button("Back to Experiments"):
-
         for key in defaults:
             st.session_state.pop(key, None)
 
@@ -205,518 +202,428 @@ def run_collision(
     p2 = json.dumps(positions2)
 
     html = f"""
-    <!DOCTYPE html>
+    <style>
 
-    <html>
+        html, body {{
+            margin: 0;
+            padding: 0;
+            background: transparent;
+            overflow: hidden;
+        }}
 
-    <head>
+        #display {{
+            width: 75%;
+            margin: 0 auto;
 
-        <style>
+            padding: 8px;
 
-            html,
-            body {{
-                width: 100%;
-                height: 540px;
+            border: 1px solid #6b7280;
+            border-radius: 10px;
 
-                margin: 0;
-                padding: 0;
+            box-sizing: border-box;
+        }}
 
-                background: transparent;
+        #plot {{
+            width: 100%;
+            height: 420px;
+        }}
 
-                overflow: hidden;
-            }}
+        #play {{
+            display: block;
 
+            margin: 10px auto 4px auto;
 
-            #display {{
-                width: 75%;
-                height: 500px;
+            padding: 10px 32px;
+            min-width: 120px;
 
-                margin: 0 auto;
-                padding: 8px;
+            border: 1px solid #888;
+            border-radius: 8px;
 
-                box-sizing: border-box;
+            background: white;
+            color: #111;
 
-                border: 1px solid #6b7280;
-                border-radius: 10px;
+            font-size: 18px;
+            font-weight: 600;
 
-                overflow: hidden;
+            cursor: pointer;
+        }}
 
-                display: flex;
-                flex-direction: column;
-                align-items: center;
-            }}
+        #play:hover {{
+            background: #f2f2f2;
+        }}
 
+        #play:disabled {{
+            opacity: 0.5;
+            cursor: default;
+        }}
 
-            #plot {{
-                width: 100%;
-                height: 430px;
+    </style>
 
-                flex: 0 0 430px;
 
-                overflow: hidden;
-            }}
+    <div id="display">
 
+        <div id="plot"></div>
 
-            #play {{
-                display: block;
+        <button id="play">
+            PLAY
+        </button>
 
-                width: 120px;
-                height: 44px;
+    </div>
 
-                margin: 10px auto 0 auto;
 
-                border: 1px solid #888;
-                border-radius: 8px;
+    <script src="https://cdn.plot.ly/plotly-2.35.2.min.js"></script>
 
-                background: white;
-                color: #111;
 
-                font-size: 18px;
-                font-weight: 600;
+    <script>
 
-                cursor: pointer;
+        const p1 = {p1};
+        const p2 = {p2};
 
-                flex-shrink: 0;
-            }}
+        const s1 = "{shape1}";
+        const s2 = "{shape2}";
 
+        const SPEED = {speed};
 
-            #play:hover {{
-                background: #f2f2f2;
-            }}
+        const plot = document.getElementById("plot");
+        const play = document.getElementById("play");
 
 
-            #play:disabled {{
-                opacity: 0.5;
-                cursor: default;
-            }}
+        function sphere(x, color, name) {{
 
-        </style>
+            return {{
 
-    </head>
+                type: "scatter3d",
 
+                x: [x],
+                y: [0],
+                z: [0],
 
-    <body>
+                mode: "markers",
 
-        <div id="display">
-
-            <div id="plot"></div>
-
-            <button id="play">
-                PLAY
-            </button>
-
-        </div>
-
-
-        <script src="https://cdn.plot.ly/plotly-2.35.2.min.js"></script>
-
-
-        <script>
-
-            const p1 = {p1};
-            const p2 = {p2};
-
-            const s1 = "{shape1}";
-            const s2 = "{shape2}";
-
-            const SPEED = {speed};
-
-            const plot = document.getElementById("plot");
-            const play = document.getElementById("play");
-
-
-            function sphere(x, color, name) {{
-
-                return {{
-
-                    type: "scatter3d",
-
-                    x: [x],
-                    y: [0],
-                    z: [0],
-
-                    mode: "markers",
-
-                    marker: {{
-                        size: 22,
-                        color: color
-                    }},
-
-                    name: name
-
-                }};
-
-            }}
-
-
-            function cube(x, color, name) {{
-
-                const s = 1.25;
-
-                return {{
-
-                    type: "mesh3d",
-
-                    x: [
-                        x-s, x+s, x+s, x-s,
-                        x-s, x+s, x+s, x-s
-                    ],
-
-                    y: [
-                        -s, -s, s, s,
-                        -s, -s, s, s
-                    ],
-
-                    z: [
-                        -s, -s, -s, -s,
-                        s, s, s, s
-                    ],
-
-                    i: [
-                        0, 0,
-                        4, 4,
-                        0, 0,
-                        1, 1,
-                        2, 2,
-                        3, 3
-                    ],
-
-                    j: [
-                        1, 2,
-                        5, 6,
-                        1, 5,
-                        2, 6,
-                        3, 7,
-                        0, 4
-                    ],
-
-                    k: [
-                        2, 3,
-                        6, 7,
-                        5, 4,
-                        6, 5,
-                        7, 6,
-                        4, 7
-                    ],
-
-                    color: color,
-
-                    opacity: 1,
-
-                    flatshading: true,
-
-                    lighting: {{
-                        ambient: 0.3,
-                        diffuse: 0.8,
-                        specular: 0.5,
-                        roughness: 0.3
-                    }},
-
-                    name: name
-
-                }};
-
-            }}
-
-
-            function createObject(
-                x,
-                color,
-                shape,
-                name
-            ) {{
-
-                if (shape === "Sphere") {{
-                    return sphere(x, color, name);
-                }}
-
-                return cube(x, color, name);
-
-            }}
-
-
-            const data = [
-
-                createObject(
-                    p1[0],
-                    "blue",
-                    s1,
-                    "Object 1"
-                ),
-
-                createObject(
-                    p2[0],
-                    "red",
-                    s2,
-                    "Object 2"
-                )
-
-            ];
-
-
-            const layout = {{
-
-                title: "3D Collision Simulation",
-
-                autosize: false,
-
-                width: 1000,
-
-                height: 430,
-
-                scene: {{
-
-                    dragmode: "orbit",
-
-                    camera: {{
-
-                        projection: {{
-                            type: "orthographic"
-                        }}
-
-                    }},
-
-                    xaxis: {{
-
-                        title: "X Position (m)",
-
-                        range: [
-                            {xmin},
-                            {xmax}
-                        ]
-
-                    }},
-
-                    yaxis: {{
-
-                        title: "Y Position (m)",
-
-                        range: [
-                            -5,
-                            5
-                        ]
-
-                    }},
-
-                    zaxis: {{
-
-                        title: "Z Position (m)",
-
-                        range: [
-                            -5,
-                            5
-                        ]
-
-                    }},
-
-                    aspectmode: "cube"
-
+                marker: {{
+                    size: 22,
+                    color: color
                 }},
 
-                margin: {{
-
-                    l: 0,
-                    r: 0,
-                    t: 50,
-                    b: 0
-
-                }},
-
-                paper_bgcolor: "rgba(0,0,0,0)",
-
-                plot_bgcolor: "rgba(0,0,0,0)"
+                name: name
 
             }};
 
-
-            Plotly.newPlot(
-
-                plot,
-
-                data,
-
-                layout,
-
-                {{
-
-                    responsive: false,
-
-                    scrollZoom: true,
-
-                    displaylogo: false
-
-                }}
-
-            );
+        }}
 
 
-            play.onclick = function() {{
+        function cube(x, color, name) {{
 
-                if (play.disabled) {{
+            const s = 1.25;
+
+            return {{
+
+                type: "mesh3d",
+
+                x: [
+                    x-s, x+s, x+s, x-s,
+                    x-s, x+s, x+s, x-s
+                ],
+
+                y: [
+                    -s, -s, s, s,
+                    -s, -s, s, s
+                ],
+
+                z: [
+                    -s, -s, -s, -s,
+                    s, s, s, s
+                ],
+
+                i: [
+                    0, 0,
+                    4, 4,
+                    0, 0,
+                    1, 1,
+                    2, 2,
+                    3, 3
+                ],
+
+                j: [
+                    1, 2,
+                    5, 6,
+                    1, 5,
+                    2, 6,
+                    3, 7,
+                    0, 4
+                ],
+
+                k: [
+                    2, 3,
+                    6, 7,
+                    5, 4,
+                    6, 5,
+                    7, 6,
+                    4, 7
+                ],
+
+                color: color,
+
+                opacity: 1,
+
+                flatshading: true,
+
+                lighting: {{
+                    ambient: 0.3,
+                    diffuse: 0.8,
+                    specular: 0.5,
+                    roughness: 0.3
+                }},
+
+                name: name
+
+            }};
+
+        }}
+
+
+        function createObject(x, color, shape, name) {{
+
+            if (shape === "Sphere") {{
+                return sphere(x, color, name);
+            }}
+
+            return cube(x, color, name);
+
+        }}
+
+
+        const data = [
+
+            createObject(
+                p1[0],
+                "blue",
+                s1,
+                "Object 1"
+            ),
+
+            createObject(
+                p2[0],
+                "red",
+                s2,
+                "Object 2"
+            )
+
+        ];
+
+
+        const layout = {{
+
+            title: "3D Collision Simulation",
+
+            autosize: true,
+
+            scene: {{
+
+                dragmode: "orbit",
+
+                camera: {{
+
+                    projection: {{
+                        type: "orthographic"
+                    }}
+
+                }},
+
+                xaxis: {{
+
+                    title: "X Position (m)",
+
+                    range: [
+                        {xmin},
+                        {xmax}
+                    ]
+
+                }},
+
+                yaxis: {{
+
+                    title: "Y Position (m)",
+
+                    range: [
+                        -5,
+                        5
+                    ]
+
+                }},
+
+                zaxis: {{
+
+                    title: "Z Position (m)",
+
+                    range: [
+                        -5,
+                        5
+                    ]
+
+                }},
+
+                aspectmode: "cube"
+
+            }},
+
+            height: 420,
+
+            margin: {{
+
+                l: 0,
+                r: 0,
+                t: 50,
+                b: 0
+
+            }},
+
+            paper_bgcolor: "rgba(0,0,0,0)",
+
+            plot_bgcolor: "rgba(0,0,0,0)"
+
+        }};
+
+
+        Plotly.newPlot(
+            plot,
+            data,
+            layout,
+            {{
+                responsive: true,
+                scrollZoom: true,
+                displaylogo: false
+            }}
+        );
+
+
+        play.onclick = function() {{
+
+            if (play.disabled) {{
+                return;
+            }}
+
+            play.disabled = true;
+
+            const camera = plot.layout.scene.camera;
+
+            let i = 0;
+
+
+            function nextFrame() {{
+
+                if (i >= p1.length) {{
+
+                    play.disabled = false;
+
                     return;
+
                 }}
 
-                play.disabled = true;
 
-                const camera = plot.layout.scene.camera;
-
-                let i = 0;
-
-
-                function nextFrame() {{
-
-                    if (i >= p1.length) {{
-
-                        play.disabled = false;
-
-                        return;
-
-                    }}
-
-
-                    const x1 = p1[i];
-                    const x2 = p2[i];
-
-
-                    if (s1 === "Sphere") {{
-
-                        Plotly.restyle(
-
-                            plot,
-
-                            {{
-                                x: [[x1]],
-                                y: [[0]],
-                                z: [[0]]
-                            }},
-
-                            [0]
-
-                        );
-
-                    }}
-
-                    else {{
-
-                        const s = 1.25;
-
-                        Plotly.restyle(
-
-                            plot,
-
-                            {{
-
-                                x: [[
-
-                                    x1-s,
-                                    x1+s,
-                                    x1+s,
-                                    x1-s,
-
-                                    x1-s,
-                                    x1+s,
-                                    x1+s,
-                                    x1-s
-
-                                ]]
-
-                            }},
-
-                            [0]
-
-                        );
-
-                    }}
-
-
-                    if (s2 === "Sphere") {{
-
-                        Plotly.restyle(
-
-                            plot,
-
-                            {{
-                                x: [[x2]],
-                                y: [[0]],
-                                z: [[0]]
-                            }},
-
-                            [1]
-
-                        );
-
-                    }}
-
-                    else {{
-
-                        const s = 1.25;
-
-                        Plotly.restyle(
-
-                            plot,
-
-                            {{
-
-                                x: [[
-
-                                    x2-s,
-                                    x2+s,
-                                    x2+s,
-                                    x2-s,
-
-                                    x2-s,
-                                    x2+s,
-                                    x2+s,
-                                    x2-s
-
-                                ]]
-
-                            }},
-
-                            [1]
-
-                        );
-
-                    }}
-
-
-                    if (camera) {{
-
-                        Plotly.relayout(
-
-                            plot,
-
-                            {{
-                                "scene.camera": camera
-                            }}
-
-                        );
-
-                    }}
-
-
-                    i++;
-
-                    setTimeout(
-
-                        nextFrame,
-
-                        20 / SPEED
-
+                const x1 = p1[i];
+                const x2 = p2[i];
+
+
+                if (s1 === "Sphere") {{
+
+                    Plotly.restyle(
+                        plot,
+                        {{
+                            x: [[x1]],
+                            y: [[0]],
+                            z: [[0]]
+                        }},
+                        [0]
+                    );
+
+                }} else {{
+
+                    const s = 1.25;
+
+                    Plotly.restyle(
+                        plot,
+                        {{
+                            x: [[
+                                x1-s,
+                                x1+s,
+                                x1+s,
+                                x1-s,
+                                x1-s,
+                                x1+s,
+                                x1+s,
+                                x1-s
+                            ]]
+                        }},
+                        [0]
                     );
 
                 }}
 
 
-                nextFrame();
+                if (s2 === "Sphere") {{
 
-            }};
+                    Plotly.restyle(
+                        plot,
+                        {{
+                            x: [[x2]],
+                            y: [[0]],
+                            z: [[0]]
+                        }},
+                        [1]
+                    );
 
-        </script>
+                }} else {{
 
-    </body>
+                    const s = 1.25;
 
-    </html>
+                    Plotly.restyle(
+                        plot,
+                        {{
+                            x: [[
+                                x2-s,
+                                x2+s,
+                                x2+s,
+                                x2-s,
+                                x2-s,
+                                x2+s,
+                                x2+s,
+                                x2-s
+                            ]]
+                        }},
+                        [1]
+                    );
+
+                }}
+
+
+                if (camera) {{
+
+                    Plotly.relayout(
+                        plot,
+                        {{
+                            "scene.camera": camera
+                        }}
+                    );
+
+                }}
+
+
+                i++;
+
+                setTimeout(
+                    nextFrame,
+                    20 / SPEED
+                );
+
+            }}
+
+
+            nextFrame();
+
+        }};
+
+    </script>
     """
 
     components.html(
