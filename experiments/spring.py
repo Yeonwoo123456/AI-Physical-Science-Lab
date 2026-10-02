@@ -48,7 +48,6 @@ def simulate_spring(
         vi = v[i]
 
         k1_x = vi
-
         k1_v = acceleration(
             xi,
             vi
@@ -499,7 +498,6 @@ def create_spring_figure(
 ):
 
     ceiling_z = 1.8
-
     spring_start = 1.45
 
     mass_height = 0.45
@@ -589,13 +587,13 @@ def create_spring_figure(
 
     fig.update_layout(
 
-        height=450,
+        height=500,
 
         margin=dict(
-            l=0,
-            r=0,
-            t=0,
-            b=0
+            l=15,
+            r=15,
+            t=15,
+            b=15
         ),
 
         paper_bgcolor="#0E1117",
@@ -651,7 +649,24 @@ def create_spring_figure(
             )
         ),
 
-        showlegend=False
+        showlegend=False,
+
+        shapes=[
+            dict(
+                type="rect",
+                xref="paper",
+                yref="paper",
+                x0=0,
+                y0=0,
+                x1=1,
+                y1=1,
+                line=dict(
+                    color="rgba(255,255,255,0.85)",
+                    width=1
+                ),
+                fillcolor="rgba(0,0,0,0)"
+            )
+        ]
     )
 
     return fig
@@ -883,8 +898,17 @@ def spring_experiment():
 
             frames.append(
                 go.Frame(
-                    data=frame_fig.data,
-                    name=f"frame_{frame_number}"
+                    data=list(
+                        frame_fig.data
+                    ),
+                    name=f"frame_{frame_number}",
+                    traces=[
+                        0,
+                        1,
+                        2,
+                        3,
+                        4
+                    ]
                 )
             )
 
@@ -897,6 +921,14 @@ def spring_experiment():
                     "type": "buttons",
 
                     "showactive": False,
+
+                    "x": 0.02,
+
+                    "y": 0.98,
+
+                    "xanchor": "left",
+
+                    "yanchor": "top",
 
                     "buttons": [
 
@@ -918,7 +950,7 @@ def spring_experiment():
                                         "duration": 0
                                     },
 
-                                    "fromcurrent": False,
+                                    "fromcurrent": True,
 
                                     "mode": "immediate"
                                 }
@@ -927,21 +959,6 @@ def spring_experiment():
                     ]
                 }
             ]
-        )
-
-        st.markdown(
-            """
-            <style>
-            div[data-testid="stPlotlyChart"] {
-                border: 1px solid rgba(255, 255, 255, 0.85);
-                border-radius: 10px;
-                overflow: hidden;
-                margin-top: 8px;
-                margin-bottom: 20px;
-            }
-            </style>
-            """,
-            unsafe_allow_html=True
         )
 
         st.plotly_chart(
