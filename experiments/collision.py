@@ -1,4 +1,3 @@
-import math
 import streamlit as st
 import plotly.graph_objects as go
 
@@ -11,11 +10,12 @@ def collision_experiment():
         "collision_mass1": 2.0,
         "collision_mass2": 2.0,
         "collision_velocity1": 5.0,
-        "collision_velocity2": -3.0,
+        "collision_velocity2": 3.0,
         "collision_elasticity": 1.0
     }
 
     for key, value in defaults.items():
+
         if key not in st.session_state:
             st.session_state[key] = value
 
@@ -34,6 +34,7 @@ def collision_experiment():
     col1, col2 = st.columns(2)
 
     with col1:
+
         st.markdown("### Object 1")
 
         shape1 = st.selectbox(
@@ -59,6 +60,7 @@ def collision_experiment():
         )
 
     with col2:
+
         st.markdown("### Object 2")
 
         shape2 = st.selectbox(
@@ -113,6 +115,7 @@ def collision_experiment():
     if st.button("Back to Experiments"):
 
         for key in defaults:
+
             if key in st.session_state:
                 del st.session_state[key]
 
@@ -130,33 +133,15 @@ def make_object(
 
     if shape == "Sphere":
 
-        return go.Scatter3d(
-            x=[x],
-            y=[0],
-            z=[0],
-            mode="markers",
-            marker=dict(
-                size=25,
-                color=color,
-                symbol="circle"
-            ),
-            name=name
-        )
+        symbol = "circle"
 
-    if shape == "Cube":
+    elif shape == "Cube":
 
-        return go.Scatter3d(
-            x=[x],
-            y=[0],
-            z=[0],
-            mode="markers",
-            marker=dict(
-                size=25,
-                color=color,
-                symbol="square"
-            ),
-            name=name
-        )
+        symbol = "square"
+
+    else:
+
+        symbol = "diamond"
 
     return go.Scatter3d(
         x=[x],
@@ -164,11 +149,22 @@ def make_object(
         z=[0],
         mode="markers",
         marker=dict(
-            size=25,
+            size=20,
             color=color,
-            symbol="diamond"
+            symbol=symbol,
+            opacity=1.0
         ),
-        name=name
+        name=name,
+        hovertemplate=(
+            f"{name}"
+            "<br>"
+            "X: %{x:.2f} m"
+            "<br>"
+            "Y: %{y:.2f} m"
+            "<br>"
+            "Z: %{z:.2f} m"
+            "<extra></extra>"
+        )
     )
 
 
@@ -182,11 +178,9 @@ def run_collision(
     elasticity
 ):
 
-    radius = 1.0
+    start_distance = 12.0
 
-    start_distance = 8.0
-
-    collision_distance = radius * 2
+    contact_distance = 3.0
 
     closing_speed = velocity1 + velocity2
 
@@ -199,30 +193,20 @@ def run_collision(
         return
 
     collision_time = (
-        start_distance - collision_distance
+        start_distance - contact_distance
     ) / closing_speed
 
     collision_time = max(
         collision_time,
-        0.01
+        0.1
     )
 
-    total_time = collision_time + 2.5
+    after_collision_time = 3.0
 
-    u1 = velocity1
-    u2 = -velocity2
-
-    final_velocity1 = (
-        mass1 * u1
-        + mass2 * u2
-        - mass2 * elasticity * (u1 - u2)
-    ) / (mass1 + mass2)
-
-    final_velocity2 = (
-        mass1 * u1
-        + mass2 * u2
-        + mass1 * elasticity * (u1 - u2)
-    ) / (mass1 + mass2)
+    total_time = (
+        collision_time +
+        after_collision_time
+    )
 
     points = 120
 
@@ -231,11 +215,37 @@ def run_collision(
         for i in range(points)
     ]
 
+    final_velocity1 = (
+        (
+            mass1 * velocity1
+            +
+            mass2 * (-velocity2)
+            -
+            mass2 * elasticity *
+            (velocity1 + velocity2)
+        )
+        /
+        (mass1 + mass2)
+    )
+
+    final_velocity2 = (
+        (
+            mass1 * velocity1
+            +
+            mass2 * (-velocity2)
+            +
+            mass1 * elasticity *
+            (velocity1 + velocity2)
+        )
+        /
+        (mass1 + mass2)
+    )
+
     positions1 = []
     positions2 = []
 
-    collision_x1 = -radius
-    collision_x2 = radius
+    collision_x1 = -contact_distance / 2
+    collision_x2 = contact_distance / 2
 
     for t in times:
 
@@ -243,12 +253,14 @@ def run_collision(
 
             x1 = (
                 -start_distance / 2
-                + velocity1 * t
+                +
+                velocity1 * t
             )
 
             x2 = (
                 start_distance / 2
-                - velocity2 * t
+                -
+                velocity2 * t
             )
 
         else:
@@ -257,16 +269,26 @@ def run_collision(
 
             x1 = (
                 collision_x1
-                + final_velocity1 * dt
+                +
+                final_velocity1 * dt
             )
 
             x2 = (
                 collision_x2
-                + final_velocity2 * dt
+                +
+                final_velocity2 * dt
             )
 
         positions1.append(x1)
         positions2.append(x2)
+
+    all_positions = (
+        positions1 +
+        positions2
+    )
+
+    x_min = min(all_positions) - 3
+    x_max = max(all_positions) + 3
 
     fig = go.Figure()
 
@@ -309,26 +331,21 @@ def run_collision(
                         "Object 2"
                     )
                 ],
-
                 name=str(i)
             )
         )
 
     fig.frames = frames
 
-    all_positions = (
-        positions1 +
-        positions2
-    )
-
-    x_min = min(all_positions) - 3
-    x_max = max(all_positions) + 3
-
     fig.update_layout(
 
         title="3D Collision Simulation",
 
         scene=dict(
+
+            dragmode="orbit",
+
+            uirevision="collision-camera",
 
             xaxis=dict(
                 title="X Position (m)",
@@ -357,6 +374,8 @@ def run_collision(
             aspectmode="cube"
         ),
 
+        uirevision="collision-camera",
+
         template="plotly_dark",
 
         height=600,
@@ -381,22 +400,17 @@ def run_collision(
                     {
                         "label": "PLAY",
                         "method": "animate",
-
                         "args": [
                             None,
-
                             {
                                 "frame": {
                                     "duration": 35,
                                     "redraw": True
                                 },
-
                                 "transition": {
                                     "duration": 0
                                 },
-
-                                "fromcurrent": False,
-
+                                "fromcurrent": True,
                                 "mode": "immediate"
                             }
                         ]
@@ -412,7 +426,8 @@ def run_collision(
         fig,
         use_container_width=True,
         config={
-            "displayModeBar": True
+            "displayModeBar": True,
+            "scrollZoom": True
         }
     )
 
