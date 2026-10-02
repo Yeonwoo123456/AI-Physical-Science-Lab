@@ -22,6 +22,18 @@ def collision_experiment():
         if key not in st.session_state:
             st.session_state[key] = value
 
+    st.markdown(
+        """
+        <div style="text-align:center; margin-bottom: 42px;">
+            <div class="section-title">3D Collision</div>
+            <div class="selection-description">
+                Simulate a collision between two objects in 3D space.
+            </div>
+        </div>
+        """,
+        unsafe_allow_html=True
+    )
+
     st.markdown("### AI Experiment Assistant")
 
     st.markdown("Describe the collision experiment in natural language. Only values explicitly mentioned will be changed.")
@@ -83,17 +95,7 @@ def collision_experiment():
             else:
                 st.warning("No valid collision values were found. The current values were kept.")
 
-    st.markdown(
-        """
-        <div class="selection-header">
-            <div class="section-title">3D Collision</div>
-            <div class="selection-description">
-                Simulate a collision between two objects in 3D space.
-            </div>
-        </div>
-        """,
-        unsafe_allow_html=True
-    )
+    st.markdown("### Parameters")
 
     col1, col2 = st.columns(2)
 
