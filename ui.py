@@ -200,33 +200,23 @@ def selection_page():
 
         st.rerun()
 
-
 def experiment_page():
 
     experiment = st.session_state.experiment
 
     if experiment == "projectile":
-
         projectile_experiment()
-
         return
 
     if experiment == "collision":
-
         collision_experiment()
-
         return
 
     names = {
-
         "pendulum": "Pendulum",
-
         "spring": "Spring",
-
         "friction": "Friction",
-
         "orbit": "Gravity & Orbit"
-
     }
 
     name = names.get(
@@ -240,14 +230,10 @@ def experiment_page():
         "This experiment is currently under development."
     )
 
-    if st.button(
-        "Back to Experiments"
-    ):
+    if st.button("Back to Experiments"):
 
         st.session_state.page = "select"
-
         st.query_params.clear()
-
         st.rerun()
 
 
