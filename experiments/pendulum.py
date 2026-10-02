@@ -1,5 +1,6 @@
 import math
 import json
+import re
 import numpy as np
 import streamlit as st
 import plotly.graph_objects as go
@@ -159,54 +160,169 @@ def simulate_pendulum(
 
 def parse_ai_pendulum(prompt):
 
-    system = """
-Convert the user's pendulum description into JSON.
+    defaults = {
+        "length": 2.0,
+        "initial_angle": -45.0,
+        "mass": 1.0,
+        "damping": 0.02,
+        "gravity": 9.81
+    }
 
-Use only numerical values explicitly mentioned.
+    values = defaults.copy()
 
-Defaults:
-length = 2.0
-initial_angle = -45.0
-mass = 1.0
-damping = 0.02
-gravity = 9.81
+    patterns = {
+        "length": [
+            r"(?:길이|length|rope|줄)\s*(?:은|는|이|을|=|:)?\s*(-?\d+(?:\.\d+)?)\s*(?:m(?![A-Za-z])|meters?|미터)",
+            r"(?<![\w.])(-?\d+(?:\.\d+)?)\s*(?:m(?![A-Za-z/])|meters?|미터)"
+        ],
+
+        "mass": [
+            r"(?:질량|mass|무게|weight)\s*(?:은|는|이|을|=|:)?\s*(-?\d+(?:\.\d+)?)\s*(?:kg(?![A-Za-z])|kilograms?|킬로그램)",
+            r"(?<![\w.])(-?\d+(?:\.\d+)?)\s*(?:kg(?![A-Za-z])|kilograms?|킬로그램)"
+        ],
+
+        "initial_angle": [
+            r"(?:처음\s*)?(?:각도|initial\s+angle|angle)\s*(?:은|는|이|을|=|:)?\s*(-?\d+(?:\.\d+)?)\s*(?:도|°|degrees?)?",
+            r"(?<![\w.])(-?\d+(?:\.\d+)?)\s*(?:도|°|degrees?)"
+        ],
+
+        "gravity": [
+            r"(?:중력|gravity)\s*(?:은|는|이|을|=|:)?\s*(-?\d+(?:\.\d+)?)\s*(?:m\s*/\s*s(?:\^?2|²)?|m/s²|m/s2)",
+            r"(?<![\w.])(-?\d+(?:\.\d+)?)\s*m\s*/\s*s(?:\^?2|²)?"
+        ],
+
+        "damping": [
+            r"(?:감쇠|damping)\s*(?:은|는|이|을|=|:)?\s*(-?\d+(?:\.\d+)?)"
+        ]
+    }
+
+    explicit = {}
+
+    for key, pattern_list in patterns.items():
+
+        for pattern in pattern_list:
+
+            match = re.search(
+                pattern,
+                prompt,
+                re.IGNORECASE
+            )
+
+            if match:
+                number = next(
+                    (
+                        group
+                        for group in match.groups()
+                        if group is not None
+                    ),
+                    None
+                )
+
+                if number is not None:
+                    explicit[key] = float(number)
+                    break
+
+    try:
+
+        response = client.chat.completions.create(
+            model="openai/gpt-oss-120b",
+            messages=[
+                {
+                    "role": "system",
+                    "content": """
+Extract pendulum parameters from the user's natural language.
+
+Return JSON only.
+
+Keys:
+length
+initial_angle
+mass
+damping
+gravity
+
+Use only values explicitly stated by the user.
+If a value is not explicitly stated, return null.
+Never guess or calculate a missing value.
 
 Left / 왼쪽 = negative angle.
 Right / 오른쪽 = positive angle.
 
-Do not guess missing values.
-
-Return JSON only:
+Example:
 {
-    "length": number,
-    "initial_angle": number,
-    "mass": number,
-    "damping": number,
-    "gravity": number
+    "length": 3,
+    "initial_angle": 45,
+    "mass": 2,
+    "damping": null,
+    "gravity": null
 }
 """
-
-    response = client.chat.completions.create(
-        model="openai/gpt-oss-120b",
-        messages=[
-            {
-                "role": "system",
-                "content": system
+                },
+                {
+                    "role": "user",
+                    "content": prompt
+                }
+            ],
+            response_format={
+                "type": "json_object"
             },
-            {
-                "role": "user",
-                "content": prompt
-            }
-        ],
-        response_format={
-            "type": "json_object"
-        },
-        temperature=0
-    )
+            temperature=0
+        )
 
-    return json.loads(
-        response.choices[0].message.content
-    )
+        ai_values = json.loads(
+            response.choices[0].message.content
+        )
+
+    except Exception:
+        ai_values = {}
+
+    for key in values:
+
+        if key not in explicit:
+
+            value = ai_values.get(key)
+
+            if isinstance(value, (int, float)):
+
+                values[key] = float(value)
+
+    for key, value in explicit.items():
+        values[key] = value
+
+    if re.search(
+        r"(왼쪽|left)",
+        prompt,
+        re.IGNORECASE
+    ):
+        values["initial_angle"] = -abs(
+            values["initial_angle"]
+        )
+
+    elif re.search(
+        r"(오른쪽|right)",
+        prompt,
+        re.IGNORECASE
+    ):
+        values["initial_angle"] = abs(
+            values["initial_angle"]
+        )
+
+    if not 0.1 <= values["length"] <= 10:
+        values["length"] = defaults["length"]
+
+    if not 0.1 <= values["mass"] <= 20:
+        values["mass"] = defaults["mass"]
+
+    if not 0.01 <= values["gravity"] <= 1000:
+        values["gravity"] = defaults["gravity"]
+
+    if not -89 <= values["initial_angle"] <= 89:
+        values["initial_angle"] = defaults["initial_angle"]
+
+    if not 0 <= values["damping"] <= 1:
+        values["damping"] = defaults["damping"]
+
+    return values
 
 
 def create_info_text(result, index):
@@ -716,8 +832,8 @@ def pendulum_experiment():
     ai_prompt = st.text_area(
         "AI Natural Language",
         placeholder=(
-            "Example: 3m pendulum, 2kg mass, "
-            "30 degrees to the left"
+            "Example: 처음 각도 45도에서 시작하고 "
+            "길이는 3m, 질량은 2kg으로 해줘"
         ),
         height=80
     )
@@ -730,9 +846,30 @@ def pendulum_experiment():
         if ai_prompt.strip():
 
             try:
+
                 params = parse_ai_pendulum(
                     ai_prompt
                 )
+
+                st.session_state[
+                    "length_slider"
+                ] = params["length"]
+
+                st.session_state[
+                    "mass_slider"
+                ] = params["mass"]
+
+                st.session_state[
+                    "gravity_input"
+                ] = params["gravity"]
+
+                st.session_state[
+                    "angle_slider"
+                ] = params["initial_angle"]
+
+                st.session_state[
+                    "damping_slider"
+                ] = params["damping"]
 
                 st.session_state[
                     "pendulum_result"
@@ -744,15 +881,24 @@ def pendulum_experiment():
                     params["damping"]
                 )
 
-                st.success(
-                    "AI parameters applied."
-                )
+                st.session_state[
+                    "ai_applied"
+                ] = True
 
             except Exception as e:
 
                 st.error(
                     f"AI error: {e}"
                 )
+
+    if st.session_state.pop(
+        "ai_applied",
+        False
+    ):
+
+        st.success(
+            "AI parameters applied."
+        )
 
     left, right = st.columns(2)
 
@@ -763,7 +909,8 @@ def pendulum_experiment():
             0.1,
             10.0,
             2.0,
-            0.1
+            0.1,
+            key="length_slider"
         )
 
         mass = st.slider(
@@ -771,7 +918,8 @@ def pendulum_experiment():
             0.1,
             20.0,
             1.0,
-            0.1
+            0.1,
+            key="mass_slider"
         )
 
         gravity = st.number_input(
@@ -779,7 +927,8 @@ def pendulum_experiment():
             0.01,
             1000.0,
             9.81,
-            0.1
+            0.1,
+            key="gravity_input"
         )
 
     with right:
@@ -789,7 +938,8 @@ def pendulum_experiment():
             -89.0,
             89.0,
             45.0,
-            1.0
+            1.0,
+            key="angle_slider"
         )
 
         damping = st.slider(
@@ -797,7 +947,8 @@ def pendulum_experiment():
             0.0,
             1.0,
             0.02,
-            0.01
+            0.01,
+            key="damping_slider"
         )
 
     if st.button(
@@ -874,6 +1025,31 @@ def pendulum_experiment():
 
         st.session_state.pop(
             "pendulum_result",
+            None
+        )
+
+        st.session_state.pop(
+            "length_slider",
+            None
+        )
+
+        st.session_state.pop(
+            "mass_slider",
+            None
+        )
+
+        st.session_state.pop(
+            "gravity_input",
+            None
+        )
+
+        st.session_state.pop(
+            "angle_slider",
+            None
+        )
+
+        st.session_state.pop(
+            "damping_slider",
             None
         )
 
