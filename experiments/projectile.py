@@ -4,6 +4,7 @@ import plotly.graph_objects as go
 
 
 def projectile_experiment():
+
     st.markdown(
         """
         <div class="selection-header">
@@ -26,8 +27,7 @@ def projectile_experiment():
             min_value=0.1,
             max_value=100.0,
             value=20.0,
-            step=1.0,
-            key="projectile_velocity"
+            step=1.0
         )
 
     with col2:
@@ -36,8 +36,7 @@ def projectile_experiment():
             min_value=0.0,
             max_value=90.0,
             value=45.0,
-            step=1.0,
-            key="projectile_angle"
+            step=1.0
         )
 
     with col3:
@@ -46,8 +45,7 @@ def projectile_experiment():
             min_value=0.0,
             max_value=500.0,
             value=0.0,
-            step=1.0,
-            key="projectile_height"
+            step=1.0
         )
 
     col1, col2 = st.columns(2)
@@ -58,8 +56,7 @@ def projectile_experiment():
             min_value=0.01,
             max_value=30.0,
             value=9.81,
-            step=0.1,
-            key="projectile_gravity"
+            step=0.1
         )
 
     with col2:
@@ -68,8 +65,7 @@ def projectile_experiment():
             min_value=0.01,
             max_value=1000.0,
             value=1.0,
-            step=0.1,
-            key="projectile_mass"
+            step=0.1
         )
 
     st.markdown("<br>", unsafe_allow_html=True)
@@ -106,6 +102,7 @@ def run_projectile_simulation(
     gravity,
     mass
 ):
+
     theta = math.radians(angle)
 
     vx = velocity * math.cos(theta)
@@ -135,8 +132,14 @@ def run_projectile_simulation(
     y_values = []
 
     for t in times:
+
         x = vx * t
-        y = height + vy * t - 0.5 * gravity * t ** 2
+
+        y = (
+            height
+            + vy * t
+            - 0.5 * gravity * t ** 2
+        )
 
         x_values.append(x)
         y_values.append(max(0.0, y))
@@ -172,6 +175,7 @@ def run_projectile_simulation(
     frames = []
 
     for i in range(point_count):
+
         frames.append(
             go.Frame(
                 data=[
@@ -206,79 +210,14 @@ def run_projectile_simulation(
         ),
         template="plotly_dark",
         height=550,
-        showlegend=True,
-        updatemenus=[]
+        showlegend=True
     )
 
     st.markdown("### Simulation")
 
-    chart_id = (
-        f"projectile_{velocity}_{angle}_"
-        f"{height}_{gravity}_{mass}"
-    )
-
     st.plotly_chart(
         fig,
-        use_container_width=True,
-        key=chart_id
-    )
-
-    st.markdown(
-        """
-        <script>
-        setTimeout(() => {
-            const plots = window.parent.document.querySelectorAll(
-                '.js-plotly-plot'
-            );
-
-            const plot = plots[plots.length - 1];
-
-            if (plot && plot._fullLayout) {
-                Plotly.animate(
-                    plot,
-                    null,
-                    {
-                        frame: {
-                            duration: 25,
-                            redraw: true
-                        },
-                        transition: {
-                            duration: 0
-                        },
-                        fromcurrent: false,
-                        mode: "afterall"
-                    }
-                );
-
-                setTimeout(function loop() {
-                    if (
-                        plot &&
-                        plot.isConnected
-                    ) {
-                        Plotly.animate(
-                            plot,
-                            null,
-                            {
-                                frame: {
-                                    duration: 25,
-                                    redraw: true
-                                },
-                                transition: {
-                                    duration: 0
-                                },
-                                fromcurrent: false,
-                                mode: "afterall"
-                            }
-                        );
-
-                        setTimeout(loop, 2600);
-                    }
-                }, 2600);
-            }
-        }, 300);
-        </script>
-        """,
-        height=0
+        use_container_width=True
     )
 
     st.markdown("### Results")
