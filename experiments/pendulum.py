@@ -759,13 +759,18 @@ def create_energy_graph(result):
 
 def pendulum_experiment():
 
-    _, title_col, _ = st.columns([1, 2, 1])
-
-    with title_col:
-        st.title("Pendulum Motion")
-        st.caption(
-            "Explore how length, gravity, angle, mass, and damping affect pendulum motion."
-        )
+    st.html(
+        """
+        <div style="text-align:center; margin:10px 0 55px 0;">
+            <div style="font-size:42px; font-weight:700; color:white;">
+                Pendulum Motion
+            </div>
+            <div style="font-size:18px; color:#AAB4C3; margin-top:18px;">
+                Explore how length, gravity, angle, mass, and damping affect pendulum motion.
+            </div>
+        </div>
+        """
+    )
 
     st.markdown("### AI Experiment Assistant")
 
