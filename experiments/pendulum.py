@@ -38,22 +38,26 @@ def simulate_pendulum(
         py = -length * math.cos(theta)
         v = abs(length * omega)
 
-        return (
-            px,
-            py,
-            v,
-            mass * (
-                v ** 2 / length
-                + gravity * math.cos(theta)
-            ),
-            0.5 * mass * v ** 2,
-            mass * gravity * length
+        tension_value = mass * (
+            v ** 2 / length
+            + gravity * math.cos(theta)
+        )
+
+        ke = 0.5 * mass * v ** 2
+
+        pe = (
+            mass
+            * gravity
+            * length
             * (1 - math.cos(theta))
         )
+
+        return px, py, v, tension_value, ke, pe
 
     steps = int(duration / dt)
 
     for i in range(steps + 1):
+
         t = i * dt
 
         px, py, v, tension_value, ke, pe = state()
@@ -72,92 +76,148 @@ def simulate_pendulum(
         k1_theta = omega
         k1_omega = acceleration(theta, omega)
 
-        k2_theta = omega + 0.5 * dt * k1_omega
+        k2_theta = (
+            omega
+            + 0.5 * dt * k1_omega
+        )
+
         k2_omega = acceleration(
             theta + 0.5 * dt * k1_theta,
             omega + 0.5 * dt * k1_omega
         )
 
-        k3_theta = omega + 0.5 * dt * k2_omega
+        k3_theta = (
+            omega
+            + 0.5 * dt * k2_omega
+        )
+
         k3_omega = acceleration(
             theta + 0.5 * dt * k2_theta,
             omega + 0.5 * dt * k2_omega
         )
 
-        k4_theta = omega + dt * k3_omega
+        k4_theta = (
+            omega
+            + dt * k3_omega
+        )
+
         k4_omega = acceleration(
             theta + dt * k3_theta,
             omega + dt * k3_omega
         )
 
-        theta += dt / 6 * (
-            k1_theta
-            + 2 * k2_theta
-            + 2 * k3_theta
-            + k4_theta
+        theta += (
+            dt / 6
+            * (
+                k1_theta
+                + 2 * k2_theta
+                + 2 * k3_theta
+                + k4_theta
+            )
         )
 
-        omega += dt / 6 * (
-            k1_omega
-            + 2 * k2_omega
-            + 2 * k3_omega
-            + k4_omega
+        omega += (
+            dt / 6
+            * (
+                k1_omega
+                + 2 * k2_omega
+                + 2 * k3_omega
+                + k4_omega
+            )
         )
 
     return {
         "time": np.array(time),
         "angle": np.array(angle),
-        "angular_velocity": np.array(angular_velocity),
+        "angular_velocity": np.array(
+            angular_velocity
+        ),
         "x": np.array(x),
         "y": np.array(y),
         "velocity": np.array(velocity),
         "tension": np.array(tension),
-        "kinetic_energy": np.array(kinetic_energy),
-        "potential_energy": np.array(potential_energy),
-        "total_energy": np.array(total_energy)
+        "kinetic_energy": np.array(
+            kinetic_energy
+        ),
+        "potential_energy": np.array(
+            potential_energy
+        ),
+        "total_energy": np.array(
+            total_energy
+        )
     }
+
+
+def create_info_text(result, index):
+
+    return (
+        f"<b>Time:</b> "
+        f"{result['time'][index]:.1f} s"
+        "&nbsp;&nbsp;&nbsp;&nbsp;"
+        f"<b>Angle:</b> "
+        f"{result['angle'][index]:.2f}°"
+        "&nbsp;&nbsp;&nbsp;&nbsp;"
+        f"<b>Angular Velocity:</b> "
+        f"{result['angular_velocity'][index]:.2f} rad/s"
+        "<br>"
+        f"<b>Velocity:</b> "
+        f"{result['velocity'][index]:.2f} m/s"
+        "&nbsp;&nbsp;&nbsp;&nbsp;"
+        f"<b>Tension:</b> "
+        f"{result['tension'][index]:.2f} N"
+        "&nbsp;&nbsp;&nbsp;&nbsp;"
+        f"<b>Total Energy:</b> "
+        f"{result['total_energy'][index]:.2f} J"
+    )
 
 
 def create_pendulum_figure(result):
 
-    animation_step = 5
-    frames = []
-
     length = math.sqrt(
-        result["x"][0] ** 2 +
-        result["y"][0] ** 2
+        result["x"][0] ** 2
+        + result["y"][0] ** 2
     )
 
-    ground = max(3.0, length * 1.5)
+    ground = max(
+        3.0,
+        length * 1.5
+    )
+
+    frames = []
+
+    animation_step = 5
 
     for i in range(
         0,
         len(result["time"]),
         animation_step
     ):
+
         x = result["x"][i]
         y = result["y"][i]
 
         angle = result["angle"][i]
         omega = result["angular_velocity"][i]
 
+        angle_rad = math.radians(angle)
+
         vx = (
             omega
             * length
-            * math.cos(math.radians(angle))
+            * math.cos(angle_rad)
         )
 
         vy = (
             -omega
             * length
-            * math.sin(math.radians(angle))
+            * math.sin(angle_rad)
         )
 
-        # 수치는 0.5초마다 갱신
+        # 0.5초 단위 수치 갱신
         display_index = int(
-            round(result["time"][i] / 0.5)
-            * 0.5
-            / 0.01
+            round(
+                result["time"][i] / 0.5
+            ) * 0.5 / 0.01
         )
 
         display_index = min(
@@ -165,44 +225,36 @@ def create_pendulum_figure(result):
             len(result["time"]) - 1
         )
 
-        display_time = result["time"][display_index]
-
-        display_angle = result["angle"][display_index]
-        display_omega = result["angular_velocity"][display_index]
-        display_velocity = result["velocity"][display_index]
-        display_tension = result["tension"][display_index]
-        display_energy = result["total_energy"][display_index]
-
-        info_text = (
-            f"Time: {display_time:.1f} s<br>"
-            f"Angle: {display_angle:.2f}°<br>"
-            f"Angular Velocity: {display_omega:.2f} rad/s<br>"
-            f"Velocity: {display_velocity:.2f} m/s<br>"
-            f"Tension: {display_tension:.2f} N<br>"
-            f"Total Energy: {display_energy:.2f} J"
+        info_text = create_info_text(
+            result,
+            display_index
         )
 
         frames.append(
             go.Frame(
                 name=f"frame{i}",
+
                 data=[
+                    # Rod
                     go.Scatter3d(
                         x=[0, x],
                         y=[0, y],
                         z=[0, 0]
                     ),
 
+                    # Bob
                     go.Scatter3d(
                         x=[x],
                         y=[y],
                         z=[0],
                         customdata=[[
-                            display_time,
-                            display_angle,
-                            display_velocity
+                            result["time"][display_index],
+                            result["angle"][display_index],
+                            result["velocity"][display_index]
                         ]]
                     ),
 
+                    # Velocity vector
                     go.Scatter3d(
                         x=[
                             x,
@@ -212,48 +264,53 @@ def create_pendulum_figure(result):
                             y,
                             y + vy * 0.3
                         ],
-                        z=[0, 0],
-                        customdata=[
-                            display_omega,
-                            display_omega
-                        ]
-                    ),
-
-                    go.Scatter3d(
-                        x=[0],
-                        y=[ground * 0.55],
-                        z=[0.45],
-                        mode="text",
-                        text=[info_text],
-                        textfont=dict(
-                            size=14,
-                            color="white"
-                        ),
-                        hoverinfo="skip"
+                        z=[0, 0]
                     )
                 ],
-                traces=[1, 3, 4, 5]
+
+                traces=[1, 3, 4],
+
+                layout=go.Layout(
+                    annotations=[
+                        dict(
+                            x=0.5,
+                            y=0.045,
+                            xref="paper",
+                            yref="paper",
+                            text=info_text,
+                            showarrow=False,
+                            align="center",
+                            font=dict(
+                                size=17,
+                                color="white"
+                            )
+                        )
+                    ]
+                )
             )
         )
 
     first_x = result["x"][0]
     first_y = result["y"][0]
 
-    initial_info = (
-        f"Time: {result['time'][0]:.1f} s<br>"
-        f"Angle: {result['angle'][0]:.2f}°<br>"
-        f"Angular Velocity: "
-        f"{result['angular_velocity'][0]:.2f} rad/s<br>"
-        f"Velocity: {result['velocity'][0]:.2f} m/s<br>"
-        f"Tension: {result['tension'][0]:.2f} N<br>"
-        f"Total Energy: {result['total_energy'][0]:.2f} J"
+    initial_info = create_info_text(
+        result,
+        0
     )
 
     fig = go.Figure(
         data=[
+
+            # Ground / reference
             go.Scatter3d(
-                x=[-ground, ground],
-                y=[-length, -length],
+                x=[
+                    -ground,
+                    ground
+                ],
+                y=[
+                    -length,
+                    -length
+                ],
                 z=[0, 0],
                 mode="lines",
                 line=dict(
@@ -263,43 +320,56 @@ def create_pendulum_figure(result):
                 hoverinfo="skip"
             ),
 
+            # Rod
             go.Scatter3d(
-                x=[0, first_x],
-                y=[0, first_y],
+                x=[
+                    0,
+                    first_x
+                ],
+                y=[
+                    0,
+                    first_y
+                ],
                 z=[0, 0],
                 mode="lines",
                 line=dict(
-                    width=8,
+                    width=9,
                     color="#D1D5DB"
                 ),
                 name="Rod",
                 hovertemplate=(
-                    "Length: %{customdata:.2f} m"
+                    "Length: "
+                    "%{customdata:.2f} m"
                     "<extra></extra>"
                 ),
-                customdata=[length, length]
+                customdata=[
+                    length,
+                    length
+                ]
             ),
 
+            # Pivot
             go.Scatter3d(
                 x=[0],
                 y=[0],
                 z=[0],
                 mode="markers",
                 marker=dict(
-                    size=10,
+                    size=11,
                     color="white"
                 ),
                 name="Pivot",
                 hoverinfo="skip"
             ),
 
+            # Bob
             go.Scatter3d(
                 x=[first_x],
                 y=[first_y],
                 z=[0],
                 mode="markers",
                 marker=dict(
-                    size=16,
+                    size=17,
                     color="#F6D77A",
                     line=dict(
                         width=2,
@@ -308,9 +378,12 @@ def create_pendulum_figure(result):
                 ),
                 name="Bob",
                 hovertemplate=(
-                    "Time: %{customdata[0]:.2f} s<br>"
-                    "Angle: %{customdata[1]:.2f}°<br>"
-                    "Velocity: %{customdata[2]:.2f} m/s"
+                    "Time: "
+                    "%{customdata[0]:.2f} s<br>"
+                    "Angle: "
+                    "%{customdata[1]:.2f}°<br>"
+                    "Velocity: "
+                    "%{customdata[2]:.2f} m/s"
                     "<extra></extra>"
                 ),
                 customdata=[[
@@ -320,16 +393,25 @@ def create_pendulum_figure(result):
                 ]]
             ),
 
+            # Velocity vector
             go.Scatter3d(
-                x=[first_x, first_x],
-                y=[first_y, first_y],
+                x=[
+                    first_x,
+                    first_x
+                ],
+                y=[
+                    first_y,
+                    first_y
+                ],
                 z=[0, 0],
                 mode="lines+markers",
                 line=dict(
                     width=6,
                     color="#60A5FA"
                 ),
-                marker=dict(size=4),
+                marker=dict(
+                    size=4
+                ),
                 name="Velocity",
                 hovertemplate=(
                     "Angular Velocity: "
@@ -340,86 +422,121 @@ def create_pendulum_figure(result):
                     result["angular_velocity"][0],
                     result["angular_velocity"][0]
                 ]
-            ),
-
-            go.Scatter3d(
-                x=[0],
-                y=[ground * 0.55],
-                z=[0.45],
-                mode="text",
-                text=[initial_info],
-                textfont=dict(
-                    size=14,
-                    color="white"
-                ),
-                hoverinfo="skip",
-                showlegend=False
             )
         ],
+
         frames=frames
     )
 
     fig.update_layout(
-        height=620,
+
+        height=680,
 
         margin=dict(
             l=0,
             r=0,
-            t=0,
+            t=10,
             b=0
         ),
 
         paper_bgcolor="#0d1117",
-        font=dict(color="white"),
+
+        plot_bgcolor="#0d1117",
+
+        font=dict(
+            color="white"
+        ),
 
         scene=dict(
+
             xaxis=dict(
                 title="X",
                 backgroundcolor="#0d1117",
-                gridcolor="#30363d"
+                gridcolor="#30363d",
+                range=[
+                    -ground,
+                    ground
+                ]
             ),
 
             yaxis=dict(
                 title="Y",
                 backgroundcolor="#0d1117",
-                gridcolor="#30363d"
+                gridcolor="#30363d",
+                range=[
+                    -length * 1.25,
+                    length * 0.25
+                ]
             ),
 
             zaxis=dict(
                 title="Z",
                 backgroundcolor="#0d1117",
-                gridcolor="#30363d"
+                gridcolor="#30363d",
+                range=[
+                    -1.0,
+                    1.0
+                ]
             ),
 
-            aspectmode="cube",
+            aspectmode="manual",
+
+            aspectratio=dict(
+                x=1.8,
+                y=1.5,
+                z=0.7
+            ),
 
             camera=dict(
+
+                # 정면에서 바라보는 고정 시점
                 eye=dict(
-                    x=1.8,
-                    y=-2.8,
-                    z=0.35
+                    x=0,
+                    y=-0.15,
+                    z=3.2
                 ),
+
                 center=dict(
                     x=0,
-                    y=0,
-                    z=-0.15
+                    y=-length * 0.45,
+                    z=0
                 ),
+
+                # Y축을 화면의 위쪽으로
                 up=dict(
                     x=0,
-                    y=0,
-                    z=1
+                    y=1,
+                    z=0
                 )
             )
         ),
+
+        annotations=[
+            dict(
+                x=0.5,
+                y=0.045,
+                xref="paper",
+                yref="paper",
+                text=initial_info,
+                showarrow=False,
+                align="center",
+                font=dict(
+                    size=17,
+                    color="white"
+                )
+            )
+        ],
 
         updatemenus=[
             dict(
                 type="buttons",
                 showactive=False,
+
                 x=0.02,
-                y=1.02,
+                y=0.98,
+
                 xanchor="left",
-                yanchor="bottom",
+                yanchor="top",
 
                 buttons=[
                     dict(
@@ -461,6 +578,7 @@ def create_angle_graph(result):
             y=result["angle"],
             mode="lines",
             name="Angle",
+
             hovertemplate=(
                 "Time: %{x:.2f} s<br>"
                 "Angle: %{y:.2f}°"
@@ -485,16 +603,27 @@ def create_energy_graph(result):
     fig = go.Figure()
 
     for key, name in [
-        ("kinetic_energy", "Kinetic Energy"),
-        ("potential_energy", "Potential Energy"),
-        ("total_energy", "Total Energy")
+        (
+            "kinetic_energy",
+            "Kinetic Energy"
+        ),
+        (
+            "potential_energy",
+            "Potential Energy"
+        ),
+        (
+            "total_energy",
+            "Total Energy"
+        )
     ]:
+
         fig.add_trace(
             go.Scatter(
                 x=result["time"],
                 y=result[key],
                 mode="lines",
                 name=name,
+
                 hovertemplate=(
                     "Time: %{x:.2f} s<br>"
                     f"{name}: "
@@ -520,13 +649,14 @@ def pendulum_experiment():
     st.title("Pendulum")
 
     st.caption(
-        "Explore how length, gravity, angle, mass, "
-        "and damping affect pendulum motion."
+        "Explore how length, gravity, angle, "
+        "mass, and damping affect pendulum motion."
     )
 
     left, right = st.columns(2)
 
     with left:
+
         length = st.slider(
             "Length (m)",
             0.1,
@@ -552,6 +682,7 @@ def pendulum_experiment():
         )
 
     with right:
+
         initial_angle = st.slider(
             "Initial Angle (°)",
             -89.0,
@@ -573,7 +704,10 @@ def pendulum_experiment():
         type="primary",
         use_container_width=True
     ):
-        st.session_state["pendulum_result"] = simulate_pendulum(
+
+        st.session_state[
+            "pendulum_result"
+        ] = simulate_pendulum(
             length,
             mass,
             gravity,
@@ -582,18 +716,23 @@ def pendulum_experiment():
         )
 
     if "pendulum_result" not in st.session_state:
+
         st.info(
             "Set the parameters and run the experiment."
         )
+
         return
 
-    result = st.session_state["pendulum_result"]
+    result = st.session_state[
+        "pendulum_result"
+    ]
 
     st.subheader("3D Simulation")
 
     st.plotly_chart(
         create_pendulum_figure(result),
         use_container_width=True,
+
         config={
             "displaylogo": False
         }
@@ -608,12 +747,14 @@ def pendulum_experiment():
     )
 
     with tab1:
+
         st.plotly_chart(
             create_angle_graph(result),
             use_container_width=True
         )
 
     with tab2:
+
         st.plotly_chart(
             create_energy_graph(result),
             use_container_width=True
@@ -621,12 +762,19 @@ def pendulum_experiment():
 
     st.divider()
 
-    if st.button("← Back to Experiments"):
+    if st.button(
+        "← Back to Experiments"
+    ):
+
         st.session_state.page = "select"
+
         st.session_state.experiment = None
+
         st.session_state.pop(
             "pendulum_result",
             None
         )
+
         st.query_params.clear()
+
         st.rerun()
