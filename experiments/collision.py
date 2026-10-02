@@ -1,10 +1,12 @@
 import json
+import math
 import streamlit as st
 import streamlit.components.v1 as components
 
+from app_modules import CollisionNaturalLanguageParser
+
 
 def collision_experiment():
-
     defaults = {
         "collision_shape1": "Sphere",
         "collision_shape2": "Cube",
@@ -13,871 +15,577 @@ def collision_experiment():
         "collision_velocity1": 5.0,
         "collision_velocity2": 3.0,
         "collision_elasticity": 1.0,
-        "collision_speed": 1.0
+        "collision_speed": 1.0,
     }
 
     for key, value in defaults.items():
         if key not in st.session_state:
             st.session_state[key] = value
 
-    st.markdown(
-        """
-        <div class="selection-header">
-            <div class="section-title">3D Collision</div>
-            <div class="selection-description">
-                Simulate a collision between two objects in 3D space.
-            </div>
-        </div>
-        """,
-        unsafe_allow_html=True
+    st.markdown("### AI Experiment Assistant")
+
+    ai_input = st.text_input(
+        "Describe your collision experiment",
+        placeholder="Example: Object A is 4 kg and moves at 8 m/s. Object B is 1 kg and moves at 3 m/s.",
+        key="collision_ai_input",
     )
+
+    if st.button("Run AI Analysis", key="collision_ai_button", type="primary"):
+        if not ai_input.strip():
+            st.warning("Describe a collision experiment first.")
+        else:
+            with st.spinner("AI is analyzing your experiment..."):
+                result = CollisionNaturalLanguageParser.parse(ai_input)
+
+            if result.get("needs_clarification") and not result.get("parameters"):
+                st.warning(
+                    result.get(
+                        "clarification_message",
+                        "Please describe the values more specifically.",
+                    )
+                )
+            else:
+                parameters = result.get("parameters", {})
+                mapping = {
+                    "mass1": "collision_mass1",
+                    "mass2": "collision_mass2",
+                    "velocity1": "collision_velocity1",
+                    "velocity2": "collision_velocity2",
+                    "elasticity": "collision_elasticity",
+                }
+                limits = {
+                    "mass1": (0.01, 1000.0),
+                    "mass2": (0.01, 1000.0),
+                    "velocity1": (0.0, 100.0),
+                    "velocity2": (0.0, 100.0),
+                    "elasticity": (0.0, 1.0),
+                }
+                applied = []
+                ignored = []
+
+                for parameter, session_key in mapping.items():
+                    value = parameters.get(parameter)
+                    if value is None:
+                        continue
+                    try:
+                        value = float(value)
+                    except (TypeError, ValueError):
+                        ignored.append(parameter)
+                        continue
+
+                    minimum, maximum = limits[parameter]
+                    if minimum <= value <= maximum:
+                        st.session_state[session_key] = value
+                        applied.append(parameter)
+                    else:
+                        ignored.append(parameter)
+
+                if applied:
+                    st.success("AI analysis completed. Mentioned values were applied.")
+                elif ignored:
+                    st.warning("The detected values were outside the allowed ranges.")
+                else:
+                    st.info("No collision values were explicitly mentioned, so the current values were kept.")
+
+    st.markdown("### Collision Setup")
 
     col1, col2 = st.columns(2)
 
     with col1:
-
-        shape1 = st.selectbox(
+        st.markdown("**Object A**")
+        st.selectbox(
             "Shape",
             ["Sphere", "Cube"],
-            key="collision_shape1"
+            key="collision_shape1",
         )
-
-        mass1 = st.number_input(
+        st.number_input(
             "Mass (kg)",
-            min_value=0.1,
+            min_value=0.01,
             max_value=1000.0,
-            step=0.1,
-            key="collision_mass1"
+            step=0.01,
+            format="%.2f",
+            key="collision_mass1",
         )
-
-        velocity1 = st.number_input(
+        st.number_input(
             "Velocity (m/s)",
             min_value=0.0,
             max_value=100.0,
-            step=0.5,
-            key="collision_velocity1"
+            step=0.1,
+            format="%.2f",
+            key="collision_velocity1",
         )
 
     with col2:
-
-        shape2 = st.selectbox(
+        st.markdown("**Object B**")
+        st.selectbox(
             "Shape",
             ["Sphere", "Cube"],
-            key="collision_shape2"
+            key="collision_shape2",
         )
-
-        mass2 = st.number_input(
+        st.number_input(
             "Mass (kg)",
-            min_value=0.1,
+            min_value=0.01,
             max_value=1000.0,
-            step=0.1,
-            key="collision_mass2"
+            step=0.01,
+            format="%.2f",
+            key="collision_mass2",
         )
-
-        velocity2 = st.number_input(
+        st.number_input(
             "Velocity (m/s)",
             min_value=0.0,
             max_value=100.0,
-            step=0.5,
-            key="collision_velocity2"
+            step=0.1,
+            format="%.2f",
+            key="collision_velocity2",
         )
 
-    elasticity = st.slider(
+    st.number_input(
         "Coefficient of Restitution",
-        0.0,
-        1.0,
-        key="collision_elasticity"
+        min_value=0.0,
+        max_value=1.0,
+        step=0.01,
+        format="%.2f",
+        key="collision_elasticity",
     )
 
-    speed = st.select_slider(
+    st.select_slider(
         "Animation Speed",
         options=[0.25, 0.5, 1.0, 1.5, 2.0],
-        value=1.0,
-        format_func=lambda x: f"{x}x",
-        key="collision_speed"
+        format_func=lambda x: f"{x:.2f}x",
+        key="collision_speed",
     )
 
-    if st.button(
-        "Run Experiment",
-        type="primary",
-        use_container_width=True
-    ):
-        run_collision(
-            shape1,
-            shape2,
+    mass1 = float(st.session_state.collision_mass1)
+    mass2 = float(st.session_state.collision_mass2)
+    velocity1 = float(st.session_state.collision_velocity1)
+    velocity2 = float(st.session_state.collision_velocity2)
+    elasticity = float(st.session_state.collision_elasticity)
+    shape1 = st.session_state.collision_shape1
+    shape2 = st.session_state.collision_shape2
+    animation_speed = float(st.session_state.collision_speed)
+
+    run = st.button("PLAY", key="collision_run", type="primary", use_container_width=True)
+
+    if run:
+        positions1, positions2, collision_index, final_v1, final_v2 = simulate_collision(
             mass1,
             mass2,
             velocity1,
             velocity2,
             elasticity,
-            speed
+        )
+        render_collision(
+            positions1,
+            positions2,
+            collision_index,
+            shape1,
+            shape2,
+            animation_speed,
         )
 
-    if st.button("Back to Experiments"):
+        initial_momentum1 = mass1 * velocity1
+        initial_momentum2 = -mass2 * velocity2
+        final_momentum1 = mass1 * final_v1
+        final_momentum2 = mass2 * final_v2
+        initial_energy1 = 0.5 * mass1 * velocity1 ** 2
+        initial_energy2 = 0.5 * mass2 * velocity2 ** 2
+        final_energy1 = 0.5 * mass1 * final_v1 ** 2
+        final_energy2 = 0.5 * mass2 * final_v2 ** 2
 
-        for key in defaults:
+        st.markdown("### Results")
+        st.html(
+            f"""
+            <style>
+                .collision-results {{
+                    width: 100%;
+                    border-collapse: collapse;
+                    table-layout: fixed;
+                    font-size: 18px;
+                    font-weight: 600;
+                }}
+                .collision-results th,
+                .collision-results td {{
+                    text-align: center !important;
+                    vertical-align: middle !important;
+                    padding: 14px 10px;
+                    border: 1px solid #3a3f46;
+                }}
+                .collision-results th {{
+                    font-size: 18px;
+                    font-weight: 700;
+                }}
+                .collision-results td {{
+                    font-size: 18px;
+                    font-weight: 600;
+                }}
+                .collision-results th:first-child,
+                .collision-results td:first-child {{
+                    width: 12%;
+                    font-weight: 700;
+                }}
+            </style>
+            <table class="collision-results">
+                <thead>
+                    <tr>
+                        <th>Object</th>
+                        <th>Velocity<br>BEFORE</th>
+                        <th>Velocity<br>AFTER</th>
+                        <th>Momentum<br>BEFORE</th>
+                        <th>Momentum<br>AFTER</th>
+                        <th>Energy<br>BEFORE</th>
+                        <th>Energy<br>AFTER</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>Object A</td>
+                        <td>{velocity1:.2f} m/s</td>
+                        <td>{final_v1:.2f} m/s</td>
+                        <td>{initial_momentum1:.2f} kg·m/s</td>
+                        <td>{final_momentum1:.2f} kg·m/s</td>
+                        <td>{initial_energy1:.2f} J</td>
+                        <td>{final_energy1:.2f} J</td>
+                    </tr>
+                    <tr>
+                        <td>Object B</td>
+                        <td>{velocity2:.2f} m/s</td>
+                        <td>{final_v2:.2f} m/s</td>
+                        <td>{initial_momentum2:.2f} kg·m/s</td>
+                        <td>{final_momentum2:.2f} kg·m/s</td>
+                        <td>{initial_energy2:.2f} J</td>
+                        <td>{final_energy2:.2f} J</td>
+                    </tr>
+                </tbody>
+            </table>
+            """
+        )
+
+    if st.button("Back to Experiments", key="collision_back"):
+        keys = [
+            "collision_shape1",
+            "collision_shape2",
+            "collision_mass1",
+            "collision_mass2",
+            "collision_velocity1",
+            "collision_velocity2",
+            "collision_elasticity",
+            "collision_speed",
+            "collision_ai_input",
+        ]
+        for key in keys:
             st.session_state.pop(key, None)
-
-        st.session_state.page = "select"
-        st.query_params.clear()
+        st.session_state.page = "experiments"
         st.rerun()
 
 
-def run_collision(
-    shape1,
-    shape2,
-    mass1,
-    mass2,
-    velocity1,
-    velocity2,
-    elasticity,
-    speed
-):
-
+def simulate_collision(mass1, mass2, velocity1, velocity2, elasticity):
+    dt = 1 / 240
+    total_time = 6.0
     radius = 1.25
-
     wall_left = -9.0
     wall_right = 9.0
-
-    center_left = wall_left + radius
-    center_right = wall_right - radius
-
     start1 = -6.0
     start2 = 6.0
-
-    v1 = velocity1
-    v2 = -velocity2
-
-    collision_result_v1 = None
-    collision_result_v2 = None
-
-    dt = 1 / 240
-    simulation_time = 6.0
-
-    positions1 = []
-    positions2 = []
-    times = []
+    contact_distance = 3.5
 
     x1 = start1
     x2 = start2
+    v1 = velocity1
+    v2 = -velocity2
+    collision_index = None
+    final_v1 = v1
+    final_v2 = v2
+    cooldown = 0.0
 
-    collision_cooldown = 0.0
+    positions1 = []
+    positions2 = []
+    steps = int(total_time / dt)
 
-    steps = int(simulation_time / dt)
-
-    for step in range(steps + 1):
-
-        t = step * dt
-
+    for i in range(steps):
         positions1.append(x1)
         positions2.append(x2)
-        times.append(t)
 
         next_x1 = x1 + v1 * dt
         next_x2 = x2 + v2 * dt
 
-        if next_x1 <= center_left:
-            next_x1 = center_left
+        if next_x1 >= wall_right - radius:
+            x1 = wall_right - radius
             v1 = 0.0
-
-        elif next_x1 >= center_right:
-            next_x1 = center_right
+        elif next_x1 <= wall_left + radius:
+            x1 = wall_left + radius
             v1 = 0.0
+        else:
+            x1 = next_x1
 
-        if next_x2 <= center_left:
-            next_x2 = center_left
+        if next_x2 >= wall_right - radius:
+            x2 = wall_right - radius
             v2 = 0.0
-
-        elif next_x2 >= center_right:
-            next_x2 = center_right
+        elif next_x2 <= wall_left + radius:
+            x2 = wall_left + radius
             v2 = 0.0
+        else:
+            x2 = next_x2
 
-        x1 = next_x1
-        x2 = next_x2
+        cooldown = max(0.0, cooldown - dt)
+        distance = abs(x2 - x1)
 
-        collision_cooldown = max(
-            0.0,
-            collision_cooldown - dt
-        )
+        if distance <= contact_distance and cooldown <= 0 and abs(v1 - v2) > 0.001:
+            midpoint = (x1 + x2) / 2
+            if x1 < x2:
+                x1 = midpoint - contact_distance / 2
+                x2 = midpoint + contact_distance / 2
+            else:
+                x1 = midpoint + contact_distance / 2
+                x2 = midpoint - contact_distance / 2
 
-        distance = x2 - x1
+            new_v1 = (
+                (mass1 - elasticity * mass2) * v1
+                + (1 + elasticity) * mass2 * v2
+            ) / (mass1 + mass2)
 
-        if (
-            distance <= radius * 2
-            and collision_cooldown <= 0
-            and abs(v1 - v2) > 0.001
-        ):
+            new_v2 = (
+                (1 + elasticity) * mass1 * v1
+                + (mass2 - elasticity * mass1) * v2
+            ) / (mass1 + mass2)
 
-            center = (x1 + x2) / 2
+            v1 = new_v1
+            v2 = new_v2
+            final_v1 = v1
+            final_v2 = v2
+            collision_index = i
+            cooldown = 0.25
 
-            x1 = center - radius
-            x2 = center + radius
+    positions1.append(x1)
+    positions2.append(x2)
 
-            relative_velocity = v1 - v2
+    if collision_index is None:
+        collision_index = len(positions1) // 2
+        final_v1 = v1
+        final_v2 = v2
 
-            if relative_velocity > 0:
+    return positions1, positions2, collision_index, final_v1, final_v2
 
-                new_v1 = (
-                    (
-                        mass1 - elasticity * mass2
-                    ) * v1
-                    + (
-                        1 + elasticity
-                    ) * mass2 * v2
-                ) / (mass1 + mass2)
 
-                new_v2 = (
-                    (
-                        1 + elasticity
-                    ) * mass1 * v1
-                    + (
-                        mass2 - elasticity * mass1
-                    ) * v2
-                ) / (mass1 + mass2)
+def sphere_vertices(cx, cy, cz, radius=1.25, segments=32, rings=20):
+    x = []
+    y = []
+    z = []
 
-                v1 = new_v1
-                v2 = new_v2
+    for i in range(rings + 1):
+        phi = math.pi * i / rings
+        sin_phi = math.sin(phi)
+        cos_phi = math.cos(phi)
+        for j in range(segments):
+            theta = 2 * math.pi * j / segments
+            x.append(cx + radius * sin_phi * math.cos(theta))
+            y.append(cy + radius * sin_phi * math.sin(theta))
+            z.append(cz + radius * cos_phi)
 
-                if collision_result_v1 is None:
-                    collision_result_v1 = v1
-                    collision_result_v2 = v2
+    ii = []
+    jj = []
+    kk = []
+    for i in range(rings):
+        for j in range(segments):
+            a = i * segments + j
+            b = i * segments + (j + 1) % segments
+            c = (i + 1) * segments + (j + 1) % segments
+            d = (i + 1) * segments + j
+            ii.extend([a, a])
+            jj.extend([b, c])
+            kk.extend([c, d])
 
-            collision_cooldown = 0.08
+    return x, y, z, ii, jj, kk
 
-    if collision_result_v1 is None:
-        collision_result_v1 = v1
-        collision_result_v2 = v2
 
-    p1 = json.dumps(positions1)
-    p2 = json.dumps(positions2)
-    pt = json.dumps(times)
+def cube_vertices(cx, cy, cz, size=2.5):
+    h = size / 2
+    x = [cx - h, cx + h, cx + h, cx - h, cx - h, cx + h, cx + h, cx - h]
+    y = [cy - h, cy - h, cy + h, cy + h, cy - h, cy - h, cy + h, cy + h]
+    z = [cz - h, cz - h, cz - h, cz - h, cz + h, cz + h, cz + h, cz + h]
+
+    ii = [0, 0, 0, 1, 1, 2, 4, 4, 5, 6, 3, 3]
+    jj = [1, 2, 4, 2, 5, 3, 5, 6, 6, 7, 7, 0]
+    kk = [2, 4, 1, 5, 6, 7, 6, 7, 2, 3, 0, 4]
+
+    return x, y, z, ii, jj, kk
+
+
+def render_collision(positions1, positions2, collision_index, shape1, shape2, speed):
+    initial1 = geometry_for_position(shape1, positions1[0])
+    initial2 = geometry_for_position(shape2, positions2[0])
+
+    payload = {
+        "positions1": positions1,
+        "positions2": positions2,
+        "collisionIndex": collision_index,
+        "shape1": shape1,
+        "shape2": shape2,
+        "speed": speed,
+        "geometry1": initial1,
+        "geometry2": initial2,
+    }
 
     html = f"""
-    <style>
-
-        html,
-        body {{
-            width: 100%;
-            height: 540px;
-            margin: 0;
-            padding: 0;
-            background: transparent;
-            overflow: hidden;
-        }}
-
-        #display {{
-            width: 75%;
-            height: 500px;
-            margin: 0 auto;
-            padding: 8px;
-            box-sizing: border-box;
-            border: 1px solid #6b7280;
-            border-radius: 10px;
-            overflow: hidden;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-        }}
-
-        #plot {{
-            width: 100%;
-            height: 430px;
-            flex: 0 0 430px;
-        }}
-
-        #play {{
-            display: block;
-            width: 120px;
-            height: 44px;
-            margin: 10px auto 0;
-            border: 1px solid #888;
-            border-radius: 8px;
-            background: white;
-            color: #111;
-            font-size: 18px;
-            font-weight: 600;
-            cursor: pointer;
-            flex-shrink: 0;
-        }}
-
-        #play:hover {{
-            background: #f2f2f2;
-        }}
-
-        #play:disabled {{
-            opacity: 0.5;
-            cursor: default;
-        }}
-
-    </style>
-
-    <div id="display">
-        <div id="plot"></div>
-        <button id="play">PLAY</button>
+    <div id="collision-root" style="width:75%;height:500px;margin:0 auto;">
+      <div id="plot" style="width:100%;height:430px;"></div>
+      <button id="play" style="display:block;margin:8px auto 0;width:150px;height:44px;font-size:20px;font-weight:700;cursor:pointer;">PLAY</button>
     </div>
-
     <script src="https://cdn.plot.ly/plotly-2.35.2.min.js"></script>
-
     <script>
+    const data = {json.dumps(payload)};
+    const g1 = data.geometry1;
+    const g2 = data.geometry2;
 
-        const p1 = {p1};
-        const p2 = {p2};
-        const pt = {pt};
+    const traces = [
+      {{
+        type:'mesh3d',
+        x:g1.x, y:g1.y, z:g1.z,
+        i:g1.i, j:g1.j, k:g1.k,
+        name:'Object A',
+        opacity:0.98,
+        flatshading:false,
+        lighting:{{ambient:0.55,diffuse:1.0,specular:1.0,fresnel:0.45,roughness:0.05}},
+        lightposition:{{x:100,y:150,z:300}}
+      }},
+      {{
+        type:'mesh3d',
+        x:g2.x, y:g2.y, z:g2.z,
+        i:g2.i, j:g2.j, k:g2.k,
+        name:'Object B',
+        opacity:0.98,
+        flatshading:false,
+        lighting:{{ambient:0.55,diffuse:1.0,specular:1.0,fresnel:0.45,roughness:0.05}},
+        lightposition:{{x:100,y:150,z:300}}
+      }},
+      {{
+        type:'scatter3d',
+        x:[-9,9,-9,9], y:[0,0,0,0], z:[0,0,0,0],
+        mode:'lines',
+        line:{{width:8}},
+        name:'Track'
+      }}
+    ];
 
-        const s1 = "{shape1}";
-        const s2 = "{shape2}";
-        const SPEED = {speed};
+    const layout = {{
+      height:430,
+      margin:{{l:0,r:0,t:10,b:0}},
+      showlegend:false,
+      scene:{{
+        xaxis:{{range:[-11,11],title:'X'}},
+        yaxis:{{range:[-5,5],title:'Y'}},
+        zaxis:{{range:[-5,5],title:'Z'}},
+        aspectmode:'cube',
+        camera:{{eye:{{x:1.65,y:1.45,z:1.15}}}}
+      }}
+    }};
 
-        const plot = document.getElementById("plot");
-        const play = document.getElementById("play");
+    Plotly.newPlot('plot', traces, layout, {{responsive:true,displayModeBar:false}}).then(() => {{
+      const plot = document.getElementById('plot');
+      const play = document.getElementById('play');
+      let running = false;
+      let frame = 0;
+      let startTime = 0;
+      let camera = null;
 
+      function geometry(shape, cx) {{
+        if (shape === 'Sphere') return sphere(cx);
+        return cube(cx);
+      }}
 
-        function sphere(x, color, name) {{
-
-            const radius = 1.25;
-            const segments = 32;
-            const rings = 20;
-
-            const X = [];
-            const Y = [];
-            const Z = [];
-
-            const I = [];
-            const J = [];
-            const K = [];
-
-            for (let r = 0; r <= rings; r++) {{
-
-                const phi = Math.PI * r / rings;
-
-                for (let s = 0; s < segments; s++) {{
-
-                    const theta =
-                        2 * Math.PI * s / segments;
-
-                    X.push(
-                        x +
-                        radius *
-                        Math.sin(phi) *
-                        Math.cos(theta)
-                    );
-
-                    Y.push(
-                        radius *
-                        Math.sin(phi) *
-                        Math.sin(theta)
-                    );
-
-                    Z.push(
-                        radius *
-                        Math.cos(phi)
-                    );
-                }}
-            }}
-
-            for (let r = 0; r < rings; r++) {{
-
-                for (let s = 0; s < segments; s++) {{
-
-                    const next =
-                        (s + 1) % segments;
-
-                    const a =
-                        r * segments + s;
-
-                    const b =
-                        r * segments + next;
-
-                    const c =
-                        (r + 1) * segments + next;
-
-                    const d =
-                        (r + 1) * segments + s;
-
-                    I.push(a);
-                    J.push(b);
-                    K.push(c);
-
-                    I.push(a);
-                    J.push(c);
-                    K.push(d);
-                }}
-            }}
-
-            return {{
-                type: "mesh3d",
-
-                x: X,
-                y: Y,
-                z: Z,
-
-                i: I,
-                j: J,
-                k: K,
-
-                color:
-                    color === "blue"
-                        ? "#4DA3FF"
-                        : "#FF5C5C",
-
-                opacity: 1,
-                flatshading: false,
-
-                lighting: {{
-                    ambient: 0.55,
-                    diffuse: 1.0,
-                    specular: 1.0,
-                    fresnel: 0.45,
-                    roughness: 0.05
-                }},
-
-                lightposition: {{
-                    x: 100,
-                    y: 150,
-                    z: 300
-                }},
-
-                name: name
-            }};
+      function sphere(cx) {{
+        const radius=1.25, segments=32, rings=20;
+        const x=[], y=[], z=[], i=[], j=[], k=[];
+        for(let a=0;a<=rings;a++) {{
+          const phi=Math.PI*a/rings;
+          const sp=Math.sin(phi), cp=Math.cos(phi);
+          for(let b=0;b<segments;b++) {{
+            const theta=2*Math.PI*b/segments;
+            x.push(cx+radius*sp*Math.cos(theta));
+            y.push(radius*sp*Math.sin(theta));
+            z.push(radius*cp);
+          }}
         }}
-
-
-        function cube(x, color, name) {{
-
-            const s = 1.25;
-
-            return {{
-                type: "mesh3d",
-
-                x: [
-                    x-s, x+s, x+s, x-s,
-                    x-s, x+s, x+s, x-s
-                ],
-
-                y: [
-                    -s, -s, s, s,
-                    -s, -s, s, s
-                ],
-
-                z: [
-                    -s, -s, -s, -s,
-                    s, s, s, s
-                ],
-
-                i: [
-                    0, 0,
-                    4, 4,
-                    0, 0,
-                    1, 1,
-                    2, 2,
-                    3, 3
-                ],
-
-                j: [
-                    1, 2,
-                    5, 6,
-                    1, 5,
-                    2, 6,
-                    3, 7,
-                    0, 4
-                ],
-
-                k: [
-                    2, 3,
-                    6, 7,
-                    5, 4,
-                    6, 5,
-                    7, 6,
-                    4, 7
-                ],
-
-                color: color,
-                opacity: 1,
-                flatshading: true,
-
-                lighting: {{
-                    ambient: 0.3,
-                    diffuse: 0.8,
-                    specular: 0.5,
-                    roughness: 0.3
-                }},
-
-                name: name
-            }};
+        for(let a=0;a<rings;a++) {{
+          for(let b=0;b<segments;b++) {{
+            const p=a*segments+b;
+            const q=a*segments+(b+1)%segments;
+            const r=(a+1)*segments+(b+1)%segments;
+            const s=(a+1)*segments+b;
+            i.push(p,p); j.push(q,r); k.push(r,s);
+          }}
         }}
+        return {{x,y,z,i,j,k}};
+      }}
 
-
-        function createObject(x, color, shape, name) {{
-
-            return shape === "Sphere"
-                ? sphere(x, color, name)
-                : cube(x, color, name);
-        }}
-
-
-        function updateSphere(objectIndex, x) {{
-
-            const radius = 1.25;
-            const segments = 32;
-            const rings = 20;
-
-            const X = [];
-
-            for (let r = 0; r <= rings; r++) {{
-
-                const phi = Math.PI * r / rings;
-
-                for (let s = 0; s < segments; s++) {{
-
-                    const theta =
-                        2 * Math.PI * s / segments;
-
-                    X.push(
-                        x +
-                        radius *
-                        Math.sin(phi) *
-                        Math.cos(theta)
-                    );
-                }}
-            }}
-
-            Plotly.restyle(
-                plot,
-                {{x: [X]}},
-                [objectIndex]
-            );
-        }}
-
-
-        function updateCube(objectIndex, x) {{
-
-            const s = 1.25;
-
-            const X = [
-                x-s, x+s, x+s, x-s,
-                x-s, x+s, x+s, x-s
-            ];
-
-            Plotly.restyle(
-                plot,
-                {{x: [X]}},
-                [objectIndex]
-            );
-        }}
-
-
-        function updateObject(objectIndex, x, shape) {{
-
-            if (shape === "Sphere")
-                updateSphere(objectIndex, x);
-            else
-                updateCube(objectIndex, x);
-        }}
-
-
-        function interpolate(values, times, time) {{
-
-            if (time <= times[0])
-                return values[0];
-
-            if (time >= times[times.length - 1])
-                return values[values.length - 1];
-
-            let low = 0;
-            let high = times.length - 1;
-
-            while (low < high) {{
-
-                const mid =
-                    Math.floor((low + high) / 2);
-
-                if (times[mid] < time)
-                    low = mid + 1;
-                else
-                    high = mid;
-            }}
-
-            const i = Math.max(0, low - 1);
-
-            const ratio =
-                (time - times[i]) /
-                (times[i + 1] - times[i]);
-
-            return (
-                values[i] +
-                (values[i + 1] - values[i]) * ratio
-            );
-        }}
-
-
-        const data = [
-            createObject(
-                p1[0],
-                "blue",
-                s1,
-                "Object A"
-            ),
-            createObject(
-                p2[0],
-                "red",
-                s2,
-                "Object B"
-            )
-        ];
-
-
-        const layout = {{
-
-            title: "3D Collision Simulation",
-
-            autosize: true,
-
-            scene: {{
-
-                dragmode: "orbit",
-
-                camera: {{
-                    projection: {{
-                        type: "orthographic"
-                    }}
-                }},
-
-                xaxis: {{
-                    title: "X Position (m)",
-                    range: [-9, 9],
-                    autorange: false
-                }},
-
-                yaxis: {{
-                    title: "Y Position (m)",
-                    range: [-5, 5],
-                    autorange: false
-                }},
-
-                zaxis: {{
-                    title: "Z Position (m)",
-                    range: [-5, 5],
-                    autorange: false
-                }},
-
-                aspectmode: "manual",
-
-                aspectratio: {{
-                    x: 1.6,
-                    y: 1,
-                    z: 1
-                }}
-            }},
-
-            height: 420,
-
-            margin: {{
-                l: 0,
-                r: 0,
-                t: 50,
-                b: 0
-            }},
-
-            paper_bgcolor: "rgba(0,0,0,0)",
-            plot_bgcolor: "rgba(0,0,0,0)"
+      function cube(cx) {{
+        const h=1.25;
+        return {{
+          x:[cx-h,cx+h,cx+h,cx-h,cx-h,cx+h,cx+h,cx-h],
+          y:[-h,-h,h,h,-h,-h,h,h],
+          z:[-h,-h,-h,-h,h,h,h,h],
+          i:[0,0,0,1,1,2,4,4,5,6,3,3],
+          j:[1,2,4,2,5,3,5,6,6,7,7,0],
+          k:[2,4,1,5,6,7,6,7,2,3,0,4]
         }};
+      }}
 
+      function update(index) {{
+        const a=geometry(data.shape1,data.positions1[index]);
+        const b=geometry(data.shape2,data.positions2[index]);
+        Plotly.restyle(plot, {{x:[a.x,b.x],y:[a.y,b.y],z:[a.z,b.z]}}, [0,1]);
+      }}
 
-        Plotly.newPlot(
-            plot,
-            data,
-            layout,
-            {{
-                responsive: false,
-                scrollZoom: true,
-                displaylogo: false
-            }}
-        );
+      function stop() {{
+        running=false;
+        frame=data.positions1.length-1;
+        update(frame);
+        if(camera) Plotly.relayout(plot, {{'scene.camera':camera}});
+        play.textContent='PLAY';
+      }}
 
+      function animate(timestamp) {{
+        if(!running) return;
+        const elapsed=(timestamp-startTime)*0.001*data.speed;
+        const duration=6.0;
+        const index=Math.min(data.positions1.length-1,Math.floor(elapsed/duration*(data.positions1.length-1)));
+        update(index);
+        if(index>=data.positions1.length-1) {{
+          stop();
+          return;
+        }}
+        requestAnimationFrame(animate);
+      }}
 
-        play.onclick = function() {{
-
-            if (play.disabled)
-                return;
-
-            play.disabled = true;
-
-            const camera = JSON.parse(
-                JSON.stringify(
-                    plot.layout.scene.camera
-                )
-            );
-
-            const totalTime =
-                pt[pt.length - 1];
-
-            const duration =
-                totalTime * 1000 / SPEED;
-
-            const startTime =
-                performance.now();
-
-
-            function animate(now) {{
-
-                const elapsed =
-                    now - startTime;
-
-                const simulationTime =
-                    Math.min(
-                        elapsed / duration *
-                        totalTime,
-                        totalTime
-                    );
-
-                updateObject(
-                    0,
-                    interpolate(
-                        p1,
-                        pt,
-                        simulationTime
-                    ),
-                    s1
-                );
-
-                updateObject(
-                    1,
-                    interpolate(
-                        p2,
-                        pt,
-                        simulationTime
-                    ),
-                    s2
-                );
-
-                if (simulationTime < totalTime) {{
-
-                    requestAnimationFrame(
-                        animate
-                    );
-
-                }} else {{
-
-                    Plotly.relayout(
-                        plot,
-                        {{
-                            "scene.camera": camera
-                        }}
-                    );
-
-                    play.disabled = false;
-                }}
-            }}
-
-            requestAnimationFrame(animate);
-        }};
-
+      play.addEventListener('click', () => {{
+        if(running) return;
+        Plotly.relayout(plot, {{}}).then(() => {{
+          camera=JSON.parse(JSON.stringify(plot.layout.scene.camera));
+          frame=0;
+          update(0);
+          running=true;
+          startTime=performance.now();
+          play.textContent='PLAYING...';
+          requestAnimationFrame(animate);
+        }});
+      }});
+    }});
     </script>
     """
 
-    components.html(
-        html,
-        height=540,
-        scrolling=False
-    )
+    components.html(html, height=540, scrolling=False)
 
-    initial_velocity1 = velocity1
-    initial_velocity2 = -velocity2
 
-    initial_momentum1 = mass1 * initial_velocity1
-    initial_momentum2 = mass2 * initial_velocity2
+def geometry_for_position(shape, x):
+    if shape == "Sphere":
+        x_values, y_values, z_values, i, j, k = sphere_vertices(x, 0, 0)
+    else:
+        x_values, y_values, z_values, i, j, k = cube_vertices(x, 0, 0)
 
-    final_momentum1 = mass1 * collision_result_v1
-    final_momentum2 = mass2 * collision_result_v2
-
-    initial_energy1 = (
-        0.5 * mass1 * initial_velocity1 ** 2
-    )
-
-    initial_energy2 = (
-        0.5 * mass2 * initial_velocity2 ** 2
-    )
-
-    final_energy1 = (
-        0.5 * mass1 * collision_result_v1 ** 2
-    )
-
-    final_energy2 = (
-        0.5 * mass2 * collision_result_v2 ** 2
-    )
-
-    st.markdown("### Results")
-
-    st.html(
-        f"""
-        <style>
-            .collision-results {{
-                width: 100%;
-                border-collapse: collapse;
-                table-layout: fixed;
-                font-size: 18px;
-                font-weight: 600;
-            }}
-
-            .collision-results th,
-            .collision-results td {{
-                text-align: center !important;
-                vertical-align: middle !important;
-                padding: 14px 10px;
-                border: 1px solid #3a3f46;
-            }}
-
-            .collision-results th {{
-                font-size: 18px;
-                font-weight: 700;
-            }}
-
-            .collision-results td {{
-                font-size: 18px;
-                font-weight: 600;
-            }}
-
-            .collision-results th:first-child,
-            .collision-results td:first-child {{
-                width: 12%;
-                font-weight: 700;
-            }}
-        </style>
-
-        <table class="collision-results">
-            <thead>
-                <tr>
-                    <th>Object</th>
-                    <th>Velocity<br>BEFORE</th>
-                    <th>Velocity<br>AFTER</th>
-                    <th>Momentum<br>BEFORE</th>
-                    <th>Momentum<br>AFTER</th>
-                    <th>Energy<br>BEFORE</th>
-                    <th>Energy<br>AFTER</th>
-                </tr>
-            </thead>
-
-            <tbody>
-                <tr>
-                    <td>Object A</td>
-                    <td>{initial_velocity1:.2f} m/s</td>
-                    <td>{collision_result_v1:.2f} m/s</td>
-                    <td>{initial_momentum1:.2f} kg·m/s</td>
-                    <td>{final_momentum1:.2f} kg·m/s</td>
-                    <td>{initial_energy1:.2f} J</td>
-                    <td>{final_energy1:.2f} J</td>
-                </tr>
-
-                <tr>
-                    <td>Object B</td>
-                    <td>{initial_velocity2:.2f} m/s</td>
-                    <td>{collision_result_v2:.2f} m/s</td>
-                    <td>{initial_momentum2:.2f} kg·m/s</td>
-                    <td>{final_momentum2:.2f} kg·m/s</td>
-                    <td>{initial_energy2:.2f} J</td>
-                    <td>{final_energy2:.2f} J</td>
-                </tr>
-            </tbody>
-        </table>
-        """
-    )
+    return {
+        "x": x_values,
+        "y": y_values,
+        "z": z_values,
+        "i": i,
+        "j": j,
+        "k": k,
+    }
