@@ -248,9 +248,11 @@ def run_projectile_simulation(
         (2 * gravity)
     )
 
-    horizontal_range = (
-        vx * total_time
-    )
+    time_to_max = vy / gravity
+
+    max_height_x = vx * time_to_max
+
+    horizontal_range = vx * total_time
 
     point_count = 100
 
@@ -298,10 +300,34 @@ def run_projectile_simulation(
             y=y_values,
             mode="lines",
             line=dict(
-                width=2,
-                dash="dot"
+                width=4
             ),
-            name="Trajectory"
+            name="Trajectory",
+            hovertemplate=(
+                "Height: %{y:.2f} m"
+                "<br>"
+                "Horizontal Distance: %{x:.2f} m"
+                "<extra></extra>"
+            )
+        )
+    )
+
+    fig.add_trace(
+        go.Scatter(
+            x=[max_height_x],
+            y=[max_height],
+            mode="markers",
+            marker=dict(
+                size=15,
+                symbol="circle"
+            ),
+            name="Maximum Height",
+            hovertemplate=(
+                "Maximum Height: %{y:.2f} m"
+                "<br>"
+                "Horizontal Distance: %{x:.2f} m"
+                "<extra></extra>"
+            )
         )
     )
 
@@ -313,7 +339,13 @@ def run_projectile_simulation(
             marker=dict(
                 size=20
             ),
-            name="Projectile"
+            name="Projectile",
+            hovertemplate=(
+                "Height: %{y:.2f} m"
+                "<br>"
+                "Horizontal Distance: %{x:.2f} m"
+                "<extra></extra>"
+            )
         )
     )
 
@@ -330,6 +362,28 @@ def run_projectile_simulation(
                         mode="lines",
                         line=dict(
                             width=4
+                        ),
+                        hovertemplate=(
+                            "Height: %{y:.2f} m"
+                            "<br>"
+                            "Horizontal Distance: %{x:.2f} m"
+                            "<extra></extra>"
+                        )
+                    ),
+
+                    go.Scatter(
+                        x=[max_height_x],
+                        y=[max_height],
+                        mode="markers",
+                        marker=dict(
+                            size=15,
+                            symbol="circle"
+                        ),
+                        hovertemplate=(
+                            "Maximum Height: %{y:.2f} m"
+                            "<br>"
+                            "Horizontal Distance: %{x:.2f} m"
+                            "<extra></extra>"
                         )
                     ),
 
@@ -339,6 +393,12 @@ def run_projectile_simulation(
                         mode="markers",
                         marker=dict(
                             size=20
+                        ),
+                        hovertemplate=(
+                            "Height: %{y:.2f} m"
+                            "<br>"
+                            "Horizontal Distance: %{x:.2f} m"
+                            "<extra></extra>"
                         )
                     )
                 ],
