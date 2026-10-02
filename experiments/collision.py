@@ -1,5 +1,4 @@
 import json
-import pandas as pd
 import streamlit as st
 import streamlit.components.v1 as components
 
@@ -807,66 +806,78 @@ def run_collision(
         0.5 * mass2 * collision_result_v2 ** 2
     )
 
-    results = pd.DataFrame({
-        "Object": [
-            "Object A",
-            "Object B"
-        ],
-        "Velocity BEFORE": [
-            f"{initial_velocity1:.2f} m/s",
-            f"{initial_velocity2:.2f} m/s"
-        ],
-        "Velocity AFTER": [
-            f"{collision_result_v1:.2f} m/s",
-            f"{collision_result_v2:.2f} m/s"
-        ],
-        "Momentum BEFORE": [
-            f"{initial_momentum1:.2f} kg·m/s",
-            f"{initial_momentum2:.2f} kg·m/s"
-        ],
-        "Momentum AFTER": [
-            f"{final_momentum1:.2f} kg·m/s",
-            f"{final_momentum2:.2f} kg·m/s"
-        ],
-        "Energy BEFORE": [
-            f"{initial_energy1:.2f} J",
-            f"{initial_energy2:.2f} J"
-        ],
-        "Energy AFTER": [
-            f"{final_energy1:.2f} J",
-            f"{final_energy2:.2f} J"
-        ]
-    })
-
-    styled_results = (
-        results.style
-        .set_properties(
-            **{
-                "text-align": "center",
-                "font-size": "18px",
-                "font-weight": "600"
-            }
-        )
-        .set_table_styles([
-            {
-                "selector": "th",
-                "props": [
-                    ("text-align", "center"),
-                    ("font-size", "18px"),
-                    ("font-weight", "700")
-                ]
-            },
-            {
-                "selector": "td",
-                "props": [
-                    ("text-align", "center"),
-                    ("font-size", "18px"),
-                    ("font-weight", "600")
-                ]
-            }
-        ])
-        .hide(axis="index")
-    )
-
     st.markdown("### Results")
-    st.table(styled_results)
+
+    st.html(
+        f"""
+        <style>
+            .collision-results {{
+                width: 100%;
+                border-collapse: collapse;
+                table-layout: fixed;
+                font-size: 18px;
+                font-weight: 600;
+            }}
+
+            .collision-results th,
+            .collision-results td {{
+                text-align: center !important;
+                vertical-align: middle !important;
+                padding: 14px 10px;
+                border: 1px solid #3a3f46;
+            }}
+
+            .collision-results th {{
+                font-size: 18px;
+                font-weight: 700;
+            }}
+
+            .collision-results td {{
+                font-size: 18px;
+                font-weight: 600;
+            }}
+
+            .collision-results th:first-child,
+            .collision-results td:first-child {{
+                width: 12%;
+                font-weight: 700;
+            }}
+        </style>
+
+        <table class="collision-results">
+            <thead>
+                <tr>
+                    <th>Object</th>
+                    <th>Velocity<br>BEFORE</th>
+                    <th>Velocity<br>AFTER</th>
+                    <th>Momentum<br>BEFORE</th>
+                    <th>Momentum<br>AFTER</th>
+                    <th>Energy<br>BEFORE</th>
+                    <th>Energy<br>AFTER</th>
+                </tr>
+            </thead>
+
+            <tbody>
+                <tr>
+                    <td>Object A</td>
+                    <td>{initial_velocity1:.2f} m/s</td>
+                    <td>{collision_result_v1:.2f} m/s</td>
+                    <td>{initial_momentum1:.2f} kg·m/s</td>
+                    <td>{final_momentum1:.2f} kg·m/s</td>
+                    <td>{initial_energy1:.2f} J</td>
+                    <td>{final_energy1:.2f} J</td>
+                </tr>
+
+                <tr>
+                    <td>Object B</td>
+                    <td>{initial_velocity2:.2f} m/s</td>
+                    <td>{collision_result_v2:.2f} m/s</td>
+                    <td>{initial_momentum2:.2f} kg·m/s</td>
+                    <td>{final_momentum2:.2f} kg·m/s</td>
+                    <td>{initial_energy2:.2f} J</td>
+                    <td>{final_energy2:.2f} J</td>
+                </tr>
+            </tbody>
+        </table>
+        """
+    )
