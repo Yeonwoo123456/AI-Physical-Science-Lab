@@ -445,7 +445,6 @@ button:hover {{
 
     <div class="controls">
         <button id="play">▶ Play</button>
-        <button id="reset">↻ Reset</button>
         <span id="status"
               style="margin-left:auto;font-weight:bold;">
             {data["orbit_type"]}
@@ -484,8 +483,6 @@ const canvas = document.getElementById("canvas");
 const ctx = canvas.getContext("2d");
 
 const playButton = document.getElementById("play");
-const resetButton = document.getElementById("reset");
-
 const timeEl = document.getElementById("time");
 const speedEl = document.getElementById("speed");
 const distanceEl = document.getElementById("distance");
@@ -716,10 +713,11 @@ function animate(timestamp) {{
     index = Math.floor(simulationTime / dt);
 
     if (index >= data.time.length - 1) {{
-        index = data.time.length - 1;
-        simulationTime = data.time[index];
-        playing = false;
-        playButton.textContent = "▶ Play";
+        // Keep the model running until Pause is pressed.
+        // The precomputed trajectory is replayed from the beginning
+        // when the end of the available trajectory is reached.
+        index = 0;
+        simulationTime = 0;
     }}
 
     draw();
@@ -730,10 +728,6 @@ function animate(timestamp) {{
 }}
 
 playButton.addEventListener("click", () => {{
-    if (index >= data.time.length - 1) {{
-        index = 0;
-    }}
-
     playing = !playing;
 
     if (playing) {{
@@ -745,14 +739,6 @@ playButton.addEventListener("click", () => {{
     }}
 }});
 
-resetButton.addEventListener("click", () => {{
-    playing = false;
-    index = 0;
-    lastTimestamp = 0;
-    simulationTime = 0;
-    playButton.textContent = "▶ Play";
-    draw();
-}});
 
 window.addEventListener("resize", resize);
 resize();
@@ -796,46 +782,64 @@ def orbit_experiment():
                 st.error(result["error"])
             else:
                 st.session_state["orbit_ai"] = result
-                st.success("AI analysis completed.")
+
+                # Apply AI-parsed values directly to the widget state so the
+                # next Run Experiment always uses the newly analyzed values.
+                if result.get("planet_mass") is not None:
+                    st.session_state.orbit_planet_mass_t = float(result["planet_mass"]) / 1000.0
+                if result.get("planet_radius") is not None:
+                    st.session_state.orbit_planet_radius_km = float(result["planet_radius"]) / 1000.0
+                if result.get("satellite_mass") is not None:
+                    st.session_state.orbit_satellite_mass_t = float(result["satellite_mass"]) / 1000.0
+                if result.get("initial_altitude") is not None:
+                    st.session_state.orbit_initial_altitude_km = float(result["initial_altitude"]) / 1000.0
+                if result.get("initial_velocity") is not None:
+                    st.session_state.orbit_initial_velocity_kms = float(result["initial_velocity"]) / 1000.0
+                if result.get("angle_deg") is not None:
+                    st.session_state.orbit_angle_deg = float(result["angle_deg"])
+
+                st.success("AI analysis completed and parameters updated.")
 
     ai_values = st.session_state.get("orbit_ai", {})
 
-    # AI parser returns SI units, so convert them back to the UI units.
-    planet_mass_default = (
-        float(ai_values["planet_mass"]) / 1000.0
-        if ai_values.get("planet_mass") is not None
-        else defaults["planet_mass"]
-    )
-
-    planet_radius_default = (
-        float(ai_values["planet_radius"]) / 1000.0
-        if ai_values.get("planet_radius") is not None
-        else defaults["planet_radius"]
-    )
-
-    satellite_mass_default = (
-        float(ai_values["satellite_mass"]) / 1000.0
-        if ai_values.get("satellite_mass") is not None
-        else defaults["satellite_mass"]
-    )
-
-    altitude_default = (
-        float(ai_values["initial_altitude"]) / 1000.0
-        if ai_values.get("initial_altitude") is not None
-        else defaults["initial_altitude"]
-    )
-
-    velocity_default = (
-        float(ai_values["initial_velocity"]) / 1000.0
-        if ai_values.get("initial_velocity") is not None
-        else defaults["initial_velocity"]
-    )
-
-    angle_default = (
-        float(ai_values["angle_deg"])
-        if ai_values.get("angle_deg") is not None
-        else defaults["angle_deg"]
-    )
+    # Keep each input in Streamlit session state. This prevents stale widget
+    # defaults from being reused when the user changes a value and clicks Run.
+    if "orbit_planet_mass_t" not in st.session_state:
+        st.session_state.orbit_planet_mass_t = (
+            float(ai_values["planet_mass"]) / 1000.0
+            if ai_values.get("planet_mass") is not None
+            else defaults["planet_mass"]
+        )
+    if "orbit_planet_radius_km" not in st.session_state:
+        st.session_state.orbit_planet_radius_km = (
+            float(ai_values["planet_radius"]) / 1000.0
+            if ai_values.get("planet_radius") is not None
+            else defaults["planet_radius"]
+        )
+    if "orbit_satellite_mass_t" not in st.session_state:
+        st.session_state.orbit_satellite_mass_t = (
+            float(ai_values["satellite_mass"]) / 1000.0
+            if ai_values.get("satellite_mass") is not None
+            else defaults["satellite_mass"]
+        )
+    if "orbit_initial_altitude_km" not in st.session_state:
+        st.session_state.orbit_initial_altitude_km = (
+            float(ai_values["initial_altitude"]) / 1000.0
+            if ai_values.get("initial_altitude") is not None
+            else defaults["initial_altitude"]
+        )
+    if "orbit_initial_velocity_kms" not in st.session_state:
+        st.session_state.orbit_initial_velocity_kms = (
+            float(ai_values["initial_velocity"]) / 1000.0
+            if ai_values.get("initial_velocity") is not None
+            else defaults["initial_velocity"]
+        )
+    if "orbit_angle_deg" not in st.session_state:
+        st.session_state.orbit_angle_deg = (
+            float(ai_values["angle_deg"])
+            if ai_values.get("angle_deg") is not None
+            else defaults["angle_deg"]
+        )
 
     st.markdown("### Parameters")
 
@@ -845,50 +849,53 @@ def orbit_experiment():
         planet_mass_t = st.number_input(
             "Planet Mass (t)",
             min_value=1.0,
-            value=planet_mass_default,
+            key="orbit_planet_mass_t",
             format="%.4e",
         )
 
         planet_radius_km = st.number_input(
             "Planet Radius (km)",
             min_value=1.0,
-            value=planet_radius_default,
+            key="orbit_planet_radius_km",
         )
 
     with c2:
         satellite_mass_t = st.number_input(
             "Satellite Mass (t)",
             min_value=0.001,
-            value=satellite_mass_default,
+            key="orbit_satellite_mass_t",
         )
 
         initial_altitude_km = st.number_input(
             "Initial Altitude (km)",
             min_value=0.0,
-            value=altitude_default,
+            key="orbit_initial_altitude_km",
         )
 
     with c3:
         initial_velocity_kms = st.number_input(
             "Initial Velocity (km/s)",
             min_value=0.0,
-            value=velocity_default,
+            key="orbit_initial_velocity_kms",
         )
 
         angle_deg = st.slider(
             "Velocity Direction (degrees)",
             min_value=0.0,
             max_value=360.0,
-            value=angle_default,
+            value=st.session_state.orbit_angle_deg,
+            key="orbit_angle_deg",
             step=1.0,
         )
 
     # Convert fixed UI units to SI units for the physics engine.
-    planet_mass_si = planet_mass_t * 1000.0
-    planet_radius_si = planet_radius_km * 1000.0
-    satellite_mass_si = satellite_mass_t * 1000.0
-    initial_altitude_si = initial_altitude_km * 1000.0
-    initial_velocity_si = initial_velocity_kms * 1000.0
+    # Read the current widget values on every rerun. These are the exact
+    # values visible in the controls when Run Experiment is pressed.
+    planet_mass_si = float(planet_mass_t) * 1000.0
+    planet_radius_si = float(planet_radius_km) * 1000.0
+    satellite_mass_si = float(satellite_mass_t) * 1000.0
+    initial_altitude_si = float(initial_altitude_km) * 1000.0
+    initial_velocity_si = float(initial_velocity_kms) * 1000.0
 
     # Fixed physics settings.
     # The physics engine always uses a 0.75-second time step and
@@ -902,6 +909,7 @@ def orbit_experiment():
         max_value=2000,
         value=100,
         step=1,
+        key="orbit_playback_ratio",
         help="Controls how many simulation seconds pass during 1 real second. 100× means 1 real second = 100 simulated seconds.",
     )
 
@@ -923,11 +931,33 @@ def orbit_experiment():
             )
 
             st.session_state["orbit_result"] = result
+            st.session_state["orbit_result_signature"] = (
+                float(planet_mass_si),
+                float(planet_radius_si),
+                float(satellite_mass_si),
+                float(initial_altitude_si),
+                float(initial_velocity_si),
+                float(angle_deg),
+            )
 
         except Exception as exc:
             st.error(f"Simulation error: {exc}")
 
     result = st.session_state.get("orbit_result")
+    current_signature = (
+        float(planet_mass_si),
+        float(planet_radius_si),
+        float(satellite_mass_si),
+        float(initial_altitude_si),
+        float(initial_velocity_si),
+        float(angle_deg),
+    )
+    stored_signature = st.session_state.get("orbit_result_signature")
+
+    # Never show a previous simulation as if it represented newly edited
+    # parameters. A fresh Run Experiment is required after any change.
+    if stored_signature != current_signature:
+        result = None
 
     if result is not None:
         st.markdown("### 2D Orbit Simulation")
@@ -1030,3 +1060,4 @@ def orbit_experiment():
         st.session_state.experiment = None
         st.query_params.clear()
         st.rerun()
+
