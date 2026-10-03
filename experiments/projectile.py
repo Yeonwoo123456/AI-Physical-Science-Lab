@@ -569,9 +569,9 @@ def run_projectile_simulation(
         full_html=False,
         auto_play=False,
         post_script=post_script,
-        config={{
+        config={
             "displayModeBar": False
-        }}
+        }
     )
 
     audio_html = f"""
