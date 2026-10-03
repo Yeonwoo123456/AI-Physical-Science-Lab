@@ -222,41 +222,30 @@ def selection_page():
         image = get_image(f"assets/{key}.png")
 
         cards += f"""
-        <a href="?experiment={key}"
-   class="physics-card"
-   onclick="
-       event.preventDefault();
-
-       const target = this.href;
-
-       const audio = new Audio(
-           'data:audio/mpeg;base64,{card_pop_sound_data}'
-       );
-
-       audio.volume = 1.0;
-
-       audio.play().catch(function(error) {{
-           console.log('Audio error:', error);
-       }});
-
-       setTimeout(function() {{
-           window.location.href = target;
-       }}, 300);
-   "
-           style="
-               background-color:{color};
-               background-image:url(
-                   'data:image/png;base64,{image}'
-               );
-           ">
+        <div
+            class="physics-card"
+            role="link"
+            tabindex="0"
+            data-target="?experiment={key}"
+            style="
+                background-color:{color};
+                background-image:url(
+                    'data:image/png;base64,{image}'
+                );
+            "
+        >
+            <audio
+                class="card-pop-audio"
+                preload="auto"
+                src="data:audio/mpeg;base64,{card_pop_sound_data}">
+            </audio>
 
             <div class="card-text">
                 <div class="card-title">{title}</div>
                 <div class="card-concept">{concept}</div>
                 <div class="card-parameters">{params}</div>
             </div>
-
-        </a>
+        </div>
         """
 
     st.html(
@@ -264,6 +253,56 @@ def selection_page():
         <div class="physics-grid">
             {cards}
         </div>
+
+        <script>
+        (function() {{
+            const cards = document.querySelectorAll(".physics-card");
+
+            cards.forEach(function(card) {{
+
+                function playAndNavigate(event) {{
+                    event.preventDefault();
+
+                    const audio = card.querySelector(".card-pop-audio");
+                    const target = card.getAttribute("data-target");
+
+                    if (!audio) {{
+                        window.parent.location.href = target;
+                        return;
+                    }}
+
+                    audio.currentTime = 0;
+                    audio.volume = 1.0;
+
+                    const playPromise = audio.play();
+
+                    if (playPromise !== undefined) {{
+                        playPromise.catch(function(error) {{
+                            console.log("Card audio error:", error);
+                        }});
+                    }}
+
+                    setTimeout(function() {{
+                        window.parent.location.href = target;
+                    }}, 500);
+                }}
+
+                card.addEventListener(
+                    "pointerdown",
+                    playAndNavigate
+                );
+
+                card.addEventListener(
+                    "keydown",
+                    function(event) {{
+                        if (event.key === "Enter" || event.key === " ") {{
+                            playAndNavigate(event);
+                        }}
+                    }}
+                );
+            }});
+        }})();
+        </script>
         """
     )
 
