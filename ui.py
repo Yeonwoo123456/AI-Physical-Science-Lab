@@ -25,17 +25,6 @@ def get_click_sound_data():
     ).decode()
 
 
-def get_card_pop_sound_data():
-    sound_path = Path(__file__).parent / "assets" / "card-pop.mp3"
-
-    if not sound_path.exists():
-        return ""
-
-    return base64.b64encode(
-        sound_path.read_bytes()
-    ).decode()
-
-
 def add_button_sound():
     sound_data = get_click_sound_data()
 
@@ -169,8 +158,6 @@ def selection_page():
         """
     )
 
-    card_pop_sound_data = get_card_pop_sound_data()
-
     experiments = [
         (
             "projectile",
@@ -224,70 +211,27 @@ def selection_page():
         cards += f"""
         <a href="?experiment={key}"
            class="physics-card"
-           data-experiment="{key}"
            style="
                background-color:{color};
                background-image:url(
                    'data:image/png;base64,{image}'
                );
            ">
+
             <div class="card-text">
                 <div class="card-title">{title}</div>
                 <div class="card-concept">{concept}</div>
                 <div class="card-parameters">{params}</div>
             </div>
+
         </a>
         """
 
     st.html(
         f"""
-        <div class="physics-grid" id="physics-experiment-grid">
+        <div class="physics-grid">
             {cards}
         </div>
-
-        <script>
-        (function() {{
-            const soundBase64 = "{card_pop_sound_data}";
-
-            if (!soundBase64) {{
-                return;
-            }}
-
-            // Convert the base64 MP3 into a Blob URL once.
-            const raw = atob(soundBase64);
-            const bytes = new Uint8Array(raw.length);
-
-            for (let i = 0; i < raw.length; i++) {{
-                bytes[i] = raw.charCodeAt(i);
-            }}
-
-            const blob = new Blob(
-                [bytes],
-                {{ type: "audio/mpeg" }}
-            );
-
-            const soundURL = URL.createObjectURL(blob);
-
-            document
-                .querySelectorAll("#physics-experiment-grid .physics-card")
-                .forEach(function(card) {{
-
-                    card.addEventListener("pointerdown", function() {{
-                        const audio = new Audio(soundURL);
-
-                        audio.preload = "auto";
-                        audio.volume = 1.0;
-
-                        audio.play().catch(function(error) {{
-                            console.log(
-                                "Card pop playback failed:",
-                                error
-                            );
-                        }});
-                    }});
-                }});
-        }})();
-        </script>
         """
     )
 
