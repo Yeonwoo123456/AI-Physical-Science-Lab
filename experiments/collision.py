@@ -46,9 +46,8 @@ def collision_experiment():
     )
 
     if st.button(
-        "Run AI Analysis",
+        "Analyze with AI",
         key="collision_ai_button",
-        type="primary",
         use_container_width=True
     ):
         if not ai_input.strip():
