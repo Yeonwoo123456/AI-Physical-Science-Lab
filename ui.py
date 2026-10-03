@@ -89,13 +89,13 @@ def add_button_sound():
 
 @st.cache_data
 def get_image(path):
-    p = Path(__file__).parent / path
+    image_path = Path(__file__).parent / path
 
-    if not p.exists():
+    if not image_path.exists():
         return ""
 
     return base64.b64encode(
-        p.read_bytes()
+        image_path.read_bytes()
     ).decode()
 
 
@@ -158,7 +158,6 @@ def selection_page():
         """
     )
 
-    # 기존 6개 실험은 그대로 유지
     experiments = [
         (
             "projectile",
@@ -228,7 +227,6 @@ def selection_page():
         </a>
         """
 
-    # 기존 6개 카드
     st.html(
         f"""
         <div class="physics-grid">
@@ -237,15 +235,19 @@ def selection_page():
         """
     )
 
-    # Real-World Physics만 별도로 3열 중앙에 배치
-    real_world_image_path = Path(__file__).parent / "assets" / "real_world.png"
+    real_world_image_path = (
+        Path(__file__).parent / "assets" / "real_world.png"
+    )
 
     if real_world_image_path.exists():
         real_world_image = base64.b64encode(
             real_world_image_path.read_bytes()
         ).decode()
+
         real_world_background = (
-            f"background-image:url('data:image/png;base64,{real_world_image}');"
+            "background-image:url("
+            f"'data:image/png;base64,{real_world_image}'"
+            ");"
         )
     else:
         real_world_background = "background-color:#C7B8EA;"
