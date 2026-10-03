@@ -106,6 +106,7 @@ def init_state():
     if "experiment" not in st.session_state:
         st.session_state.experiment = None
 
+
 def home_page():
     st.markdown(
         '<div class="home-title">What happens if…?</div>',
@@ -138,6 +139,7 @@ def home_page():
             st.session_state.page = "select"
             st.rerun()
 
+
 def selection_page():
     st.html(
         """
@@ -156,57 +158,51 @@ def selection_page():
         """
     )
 
+    # 기존 6개 실험은 그대로 유지
     experiments = [
-    (
-        "projectile",
-        "Projectile Motion",
-        "Kinematics",
-        "Speed · Angle · Gravity",
-        "#9FC5F8"
-    ),
-    (
-        "collision",
-        "Collision",
-        "Momentum & Energy",
-        "Mass · Speed · Elasticity",
-        "#F4A6A6"
-    ),
-    (
-        "real_world",
-        "Real-World Physics",
-        "Camera Experiment",
-        "Projectile · Collision",
-        "#C7B8EA"
-    ),
-    (
-        "pendulum",
-        "Pendulum",
-        "Periodic Motion",
-        "Length · Gravity · Angle",
-        "#F6D77A"
-    ),
-    (
-        "spring",
-        "Spring",
-        "Hooke's Law",
-        "Mass · k · Displacement",
-        "#9ED6A8"
-    ),
-    (
-        "friction",
-        "Friction",
-        "Friction Force",
-        "μ · Mass · Gravity",
-        "#8FD3D3"
-    ),
-    (
-        "orbit",
-        "Gravity & Orbit",
-        "Gravity",
-        "Mass · Distance · Velocity",
-        "#B7A4E8"
-    )
-]
+        (
+            "projectile",
+            "Projectile Motion",
+            "Kinematics",
+            "Speed · Angle · Gravity",
+            "#9FC5F8"
+        ),
+        (
+            "collision",
+            "Collision",
+            "Momentum & Energy",
+            "Mass · Speed · Elasticity",
+            "#F4A6A6"
+        ),
+        (
+            "pendulum",
+            "Pendulum",
+            "Periodic Motion",
+            "Length · Gravity · Angle",
+            "#F6D77A"
+        ),
+        (
+            "spring",
+            "Spring",
+            "Hooke's Law",
+            "Mass · k · Displacement",
+            "#9ED6A8"
+        ),
+        (
+            "friction",
+            "Friction",
+            "Friction Force",
+            "μ · Mass · Gravity",
+            "#8FD3D3"
+        ),
+        (
+            "orbit",
+            "Gravity & Orbit",
+            "Gravity",
+            "Mass · Distance · Velocity",
+            "#B7A4E8"
+        )
+    ]
 
     cards = ""
 
@@ -232,10 +228,44 @@ def selection_page():
         </a>
         """
 
+    # 기존 6개 카드
     st.html(
         f"""
         <div class="physics-grid">
             {cards}
+        </div>
+        """
+    )
+
+    # Real-World Physics만 별도로 3열 중앙에 배치
+    real_world_image = get_image("assets/real_world.png")
+
+    st.html(
+        f"""
+        <div style="
+            display:flex;
+            justify-content:center;
+            margin-top:20px;
+        ">
+            <a href="?experiment=real_world"
+               class="physics-card"
+               style="
+                   background-color:#C7B8EA;
+                   width:calc((100% - 40px) / 3);
+                   background-image:url(
+                       'data:image/png;base64,{real_world_image}'
+                   );
+               ">
+
+                <div class="card-text">
+                    <div class="card-title">Real-World Physics</div>
+                    <div class="card-concept">Camera Experiment</div>
+                    <div class="card-parameters">
+                        Projectile · Collision
+                    </div>
+                </div>
+
+            </a>
         </div>
         """
     )
