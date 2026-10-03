@@ -517,55 +517,49 @@ def run_projectile_simulation(
         "freesound_community-plastic-ball-bounce-14790.mp3",
     ])
 
-    post_script = f"""
-    const plot = document.getElementById('{{plot_id}}');
+    post_script = """
+    const plot = document.getElementById('{plot_id}');
     const whoosh = document.getElementById('projectile-whoosh');
     const bounce = document.getElementById('projectile-bounce');
 
     let bounceTimer = null;
 
-    plot.on('plotly_buttonclicked', function(event) {{
-        if (!event.button || event.button.label !== 'PLAY') {{
+    plot.on('plotly_buttonclicked', function(event) {
+        if (!event.button || event.button.label !== 'PLAY') {
             return;
-        }}
+        }
 
-        if (bounceTimer) {{
+        if (bounceTimer) {
             clearTimeout(bounceTimer);
-        }}
+        }
 
-        if (whoosh) {{
+        if (whoosh) {
+            whoosh.pause();
             whoosh.currentTime = 0;
-            whoosh.play().catch(() => {{}});
+            whoosh.play().catch(() => {});
 
-            setTimeout(() => {{
+            setTimeout(() => {
                 whoosh.pause();
-            }}, 1000);
-        }}
+                whoosh.currentTime = 0;
+            }, 1000);
+        }
 
-        if (bounce) {{
+        if (bounce) {
             bounce.pause();
             bounce.currentTime = 0;
+        }
 
-            const unlock = bounce.play();
-            if (unlock) {{
-                unlock.then(() => {{
-                    bounce.pause();
-                    bounce.currentTime = 0;
-                }}).catch(() => {{}});
-            }}
-        }}
-
-        bounceTimer = setTimeout(() => {{
-            if (bounce) {{
+        bounceTimer = setTimeout(() => {
+            if (bounce) {
                 bounce.currentTime = 0;
-                bounce.play().catch(() => {{}});
-            }}
-        }}, 2970);
-    }});
+                bounce.play().catch(() => {});
+            }
+        }, 3000);
+    });
     """
 
     chart_html = fig.to_html(
-        include_plotlyjs="cdn",
+        include_plotlyjs=True,
         full_html=False,
         auto_play=False,
         post_script=post_script,
@@ -575,17 +569,8 @@ def run_projectile_simulation(
     )
 
     audio_html = f"""
-    <audio
-        id="projectile-whoosh"
-        preload="auto"
-        src="data:audio/mpeg;base64,{whoosh_data}">
-    </audio>
-
-    <audio
-        id="projectile-bounce"
-        preload="auto"
-        src="data:audio/mpeg;base64,{bounce_data}">
-    </audio>
+    <audio id="projectile-whoosh" preload="auto" src="data:audio/mpeg;base64,{whoosh_data}"></audio>
+    <audio id="projectile-bounce" preload="auto" src="data:audio/mpeg;base64,{bounce_data}"></audio>
     """
 
     components.html(
