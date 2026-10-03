@@ -183,109 +183,167 @@ def selection_page():
         st.rerun()
 
 
-def experiment_page():
-
-    experiment = st.session_state.experiment
-
-    # ----------------------------------------
-    # Projectile Motion
-    # ----------------------------------------
-    if experiment == "projectile":
-
-        from experiments.projectile import projectile_experiment
-
-        projectile_experiment()
-
-        return
-
-    # ----------------------------------------
-    # Collision
-    # ----------------------------------------
-    if experiment == "collision":
-
-        from experiments.collision import collision_experiment
-
-        collision_experiment()
-
-        return
-
-    # ----------------------------------------
-    # Pendulum
-    # ----------------------------------------
-    if experiment == "pendulum":
-
-        from experiments.pendulum import pendulum_experiment
-
-        pendulum_experiment()
-
-        return
-
-    # ----------------------------------------
-    # Spring
-    # ----------------------------------------
-    if experiment == "spring":
-
-        from experiments.spring import spring_experiment
-
-        spring_experiment()
-
-        return
-
-    # ----------------------------------------
-    # Friction
-    # ----------------------------------------
-    if experiment == "friction":
-
-        from experiments.friction import friction_experiment
-
-        friction_experiment()
-
-        return
-
-    # ----------------------------------------
-    # Gravity & Orbit
-    # ----------------------------------------
-    if experiment == "orbit":
-
-        from experiments.orbit import orbit_experiment
-
-        orbit_experiment()
-
-        return
-
-    # ----------------------------------------
-    # Unknown experiment
-    # ----------------------------------------
-    st.title("Physics Experiment")
-
-    st.write(
-        "This experiment is currently under development."
+def show_experiment_error(name, error):
+    st.error(
+        f"{name} could not be loaded."
     )
 
-    if st.button("Back to Experiments"):
+    # Show the actual exception so deployment logs are not the
+    # only way to find the problem.
+    with st.expander("Show error details"):
+        st.code(
+            f"{type(error).__name__}: {error}"
+        )
 
+    if st.button(
+        "Back to Experiments",
+        key=f"{name}_error_back"
+    ):
         st.session_state.page = "select"
         st.session_state.experiment = None
-
         st.query_params.clear()
-
         st.rerun()
+
+
+def run_experiment_safely(
+    experiment,
+    module_name,
+    function_name,
+    display_name
+):
+    try:
+        module = __import__(
+            module_name,
+            fromlist=[function_name]
+        )
+
+        experiment_function = getattr(
+            module,
+            function_name
+        )
+
+        if not callable(experiment_function):
+            raise TypeError(
+                f"{function_name} is not callable."
+            )
+
+        experiment_function()
+
+    except ImportError as error:
+        show_experiment_error(
+            display_name,
+            error
+        )
+
+    except AttributeError as error:
+        show_experiment_error(
+            display_name,
+            error
+        )
+
+    except Exception as error:
+        show_experiment_error(
+            display_name,
+            error
+        )
+
+
+def experiment_page():
+
+    experiment = st.session_state.get(
+        "experiment"
+    )
+
+    experiment_map = {
+        "projectile": (
+            "experiments.projectile",
+            "projectile_experiment",
+            "Projectile Motion"
+        ),
+        "collision": (
+            "experiments.collision",
+            "collision_experiment",
+            "Collision"
+        ),
+        "pendulum": (
+            "experiments.pendulum",
+            "pendulum_experiment",
+            "Pendulum"
+        ),
+        "spring": (
+            "experiments.spring",
+            "spring_experiment",
+            "Spring"
+        ),
+        "friction": (
+            "experiments.friction",
+            "friction_experiment",
+            "Friction"
+        ),
+        "orbit": (
+            "experiments.orbit",
+            "orbit_experiment",
+            "Gravity & Orbit"
+        )
+    }
+
+    config = experiment_map.get(
+        experiment
+    )
+
+    if config is None:
+        st.warning(
+            "This experiment is not available."
+        )
+
+        if st.button(
+            "Back to Experiments",
+            key="unknown_experiment_back"
+        ):
+            st.session_state.page = "select"
+            st.session_state.experiment = None
+            st.query_params.clear()
+            st.rerun()
+
+        return
+
+    module_name, function_name, display_name = config
+
+    run_experiment_safely(
+        experiment,
+        module_name,
+        function_name,
+        display_name
+    )
 
 
 def render_app():
 
     load_css()
-
     init_state()
 
     experiment = st.query_params.get(
         "experiment"
     )
 
-    if experiment:
+    # Only allow experiments that are explicitly registered above.
+    valid_experiments = {
+        "projectile",
+        "collision",
+        "pendulum",
+        "spring",
+        "friction",
+        "orbit"
+    }
 
+    if experiment in valid_experiments:
         st.session_state.experiment = experiment
         st.session_state.page = "experiment"
+
+    elif experiment is not None:
+        st.session_state.experiment = None
+        st.session_state.page = "select"
+        st.query_params.clear()
 
     if st.session_state.page == "home":
 
