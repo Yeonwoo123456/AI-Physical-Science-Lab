@@ -828,7 +828,10 @@ def orbit_experiment():
         ),
     )
 
-    if st.button("Run AI Analysis"):
+    if st.button(
+                "Analyze with AI"
+                use_container_width=True
+                ):
         if not ai_prompt.strip():
             st.warning("Please describe an experiment first.")
         else:
