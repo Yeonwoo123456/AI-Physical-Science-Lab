@@ -6,7 +6,6 @@ import streamlit as st
 import plotly.graph_objects as go
 from app_modules import client
 
-
 def simulate_pendulum(
     length,
     mass,
@@ -18,7 +17,6 @@ def simulate_pendulum(
 ):
     theta = math.radians(initial_angle)
     omega = 0.0
-
     time = []
     angle = []
     angular_velocity = []
@@ -40,27 +38,22 @@ def simulate_pendulum(
         px = length * math.sin(theta)
         py = -length * math.cos(theta)
         v = abs(length * omega)
-
         tension_value = mass * (
             v ** 2 / length
             + gravity * math.cos(theta)
         )
-
         ke = 0.5 * mass * v ** 2
-
         pe = (
             mass
             * gravity
             * length
             * (1 - math.cos(theta))
         )
-
         return px, py, v, tension_value, ke, pe
 
     steps = int(duration / dt)
 
     for i in range(steps + 1):
-
         t = i * dt
 
         (
@@ -90,7 +83,6 @@ def simulate_pendulum(
             omega
             + 0.5 * dt * k1_omega
         )
-
         k2_omega = acceleration(
             theta + 0.5 * dt * k1_theta,
             omega + 0.5 * dt * k1_omega
@@ -100,7 +92,6 @@ def simulate_pendulum(
             omega
             + 0.5 * dt * k2_omega
         )
-
         k3_omega = acceleration(
             theta + 0.5 * dt * k2_theta,
             omega + 0.5 * dt * k2_omega
@@ -110,7 +101,6 @@ def simulate_pendulum(
             omega
             + dt * k3_omega
         )
-
         k4_omega = acceleration(
             theta + dt * k3_theta,
             omega + dt * k3_omega
@@ -139,27 +129,17 @@ def simulate_pendulum(
     return {
         "time": np.array(time),
         "angle": np.array(angle),
-        "angular_velocity": np.array(
-            angular_velocity
-        ),
+        "angular_velocity": np.array(angular_velocity),
         "x": np.array(x),
         "y": np.array(y),
         "velocity": np.array(velocity),
         "tension": np.array(tension),
-        "kinetic_energy": np.array(
-            kinetic_energy
-        ),
-        "potential_energy": np.array(
-            potential_energy
-        ),
-        "total_energy": np.array(
-            total_energy
-        )
+        "kinetic_energy": np.array(kinetic_energy),
+        "potential_energy": np.array(potential_energy),
+        "total_energy": np.array(total_energy)
     }
 
-
 def parse_ai_pendulum(prompt):
-
     defaults = {
         "length": 2.0,
         "mass": 1.0,
@@ -214,21 +194,18 @@ Rules:
         ai_values = json.loads(
             response.choices[0].message.content
         )
-
     except Exception:
         ai_values = {}
 
     values = defaults.copy()
 
     for key in values:
-
         value = ai_values.get(key)
 
         if isinstance(value, (int, float)):
             values[key] = float(value)
 
     def extract(pattern):
-
         match = re.search(
             pattern,
             prompt,
@@ -297,7 +274,6 @@ Rules:
         values["initial_angle"] = -abs(
             values["initial_angle"]
         )
-
     elif re.search(
         r"오른쪽|right",
         prompt,
@@ -334,9 +310,7 @@ Rules:
 
     return values
 
-
 def create_info_text(result, index):
-
     return (
         f"<b>Time:</b> "
         f"{result['time'][index]:.1f} s"
@@ -357,9 +331,7 @@ def create_info_text(result, index):
         f"{result['total_energy'][index]:.2f} J"
     )
 
-
 def create_pendulum_figure(result):
-
     length = math.sqrt(
         result["x"][0] ** 2
         + result["y"][0] ** 2
@@ -378,13 +350,10 @@ def create_pendulum_figure(result):
         len(result["time"]),
         animation_step
     ):
-
         x = result["x"][i]
         y = result["y"][i]
-
         angle = result["angle"][i]
         omega = result["angular_velocity"][i]
-
         angle_rad = math.radians(angle)
 
         vx = (
@@ -691,9 +660,7 @@ def create_pendulum_figure(result):
 
     return fig
 
-
 def create_angle_graph(result):
-
     fig = go.Figure()
 
     fig.add_trace(
@@ -720,9 +687,7 @@ def create_angle_graph(result):
 
     return fig
 
-
 def create_energy_graph(result):
-
     fig = go.Figure()
 
     for key, name in [
@@ -730,7 +695,6 @@ def create_energy_graph(result):
         ("potential_energy", "Potential Energy"),
         ("total_energy", "Total Energy")
     ]:
-
         fig.add_trace(
             go.Scatter(
                 x=result["time"],
@@ -756,9 +720,7 @@ def create_energy_graph(result):
 
     return fig
 
-
 def pendulum_experiment():
-
     st.html(
         """
         <div style="text-align:center; margin:10px 0 55px 0;">
@@ -774,7 +736,6 @@ def pendulum_experiment():
 
     st.markdown("### AI Experiment Assistant")
 
-
     ai_prompt = st.text_area(
         "AI Natural Language",
         placeholder=(
@@ -788,38 +749,19 @@ def pendulum_experiment():
         "Analyze with AI",
         use_container_width=True
     ):
-
         if ai_prompt.strip():
-
             try:
-
                 params = parse_ai_pendulum(
                     ai_prompt
                 )
 
-                st.session_state[
-                    "length_value"
-                ] = params["length"]
+                st.session_state["length_value"] = params["length"]
+                st.session_state["mass_value"] = params["mass"]
+                st.session_state["gravity_value"] = params["gravity"]
+                st.session_state["angle_value"] = params["initial_angle"]
+                st.session_state["damping_value"] = params["damping"]
 
-                st.session_state[
-                    "mass_value"
-                ] = params["mass"]
-
-                st.session_state[
-                    "gravity_value"
-                ] = params["gravity"]
-
-                st.session_state[
-                    "angle_value"
-                ] = params["initial_angle"]
-
-                st.session_state[
-                    "damping_value"
-                ] = params["damping"]
-
-                st.session_state[
-                    "pendulum_result"
-                ] = simulate_pendulum(
+                st.session_state["pendulum_result"] = simulate_pendulum(
                     params["length"],
                     params["mass"],
                     params["gravity"],
@@ -827,24 +769,16 @@ def pendulum_experiment():
                     params["damping"]
                 )
 
-                st.session_state[
-                    "ai_applied"
-                ] = True
-
+                st.session_state["ai_applied"] = True
                 st.rerun()
-
             except Exception as e:
-
-                st.error(
-                    f"AI error: {e}"
-                )
+                st.error(f"AI error: {e}")
 
     st.markdown("### Parameters")
 
     left, right = st.columns(2)
 
     with left:
-
         length = st.slider(
             "Length (m)",
             0.1,
@@ -879,7 +813,6 @@ def pendulum_experiment():
         )
 
     with right:
-
         initial_angle = st.slider(
             "Initial Angle (°)",
             -89.0,
@@ -906,20 +839,14 @@ def pendulum_experiment():
         "ai_applied",
         False
     ):
-
-        st.success(
-            "AI parameters applied."
-        )
+        st.success("AI parameters applied.")
 
     if st.button(
         "Run Pendulum Experiment",
         type="primary",
         use_container_width=True
     ):
-
-        st.session_state[
-            "pendulum_result"
-        ] = simulate_pendulum(
+        st.session_state["pendulum_result"] = simulate_pendulum(
             length,
             mass,
             gravity,
@@ -928,21 +855,13 @@ def pendulum_experiment():
         )
 
     if "pendulum_result" not in st.session_state:
-
-        st.info(
-            "Set the parameters and run the experiment."
-        )
-
+        st.info("Set the parameters and run the experiment.")
     else:
-
-        result = st.session_state[
-            "pendulum_result"
-        ]
+        result = st.session_state["pendulum_result"]
 
         st.subheader("3D Simulation")
 
         with st.container(border=True):
-
             st.plotly_chart(
                 create_pendulum_figure(result),
                 use_container_width=True,
@@ -952,7 +871,6 @@ def pendulum_experiment():
             )
 
         st.divider()
-
         st.subheader("Analysis")
 
         tab1, tab2 = st.tabs(
@@ -960,14 +878,12 @@ def pendulum_experiment():
         )
 
         with tab1:
-
             st.plotly_chart(
                 create_angle_graph(result),
                 use_container_width=True
             )
 
         with tab2:
-
             st.plotly_chart(
                 create_energy_graph(result),
                 use_container_width=True
@@ -979,7 +895,6 @@ def pendulum_experiment():
         "← Back to Experiments",
         key="pendulum_back_bottom"
     ):
-
         st.session_state.page = "select"
         st.session_state.experiment = None
 
@@ -987,32 +902,26 @@ def pendulum_experiment():
             "pendulum_result",
             None
         )
-
         st.session_state.pop(
             "length_value",
             None
         )
-
         st.session_state.pop(
             "mass_value",
             None
         )
-
         st.session_state.pop(
             "gravity_value",
             None
         )
-
         st.session_state.pop(
             "angle_value",
             None
         )
-
         st.session_state.pop(
             "damping_value",
             None
         )
 
         st.query_params.clear()
-
         st.rerun()
