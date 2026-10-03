@@ -3,3 +3,8 @@ plotly
 groq
 pydantic
 numpy
+streamlit-webrtc
+opencv-python-headless
+numpy
+pandas
+av
