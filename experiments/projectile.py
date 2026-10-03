@@ -456,40 +456,8 @@ def run_projectile_simulation(
             l=70,
             r=40,
             t=80,
-            b=130
-        ),
-
-        updatemenus=[
-            {
-                "type": "buttons",
-                "direction": "left",
-                "showactive": False,
-                "x": 0.5,
-                "xanchor": "center",
-                "y": -0.20,
-                "yanchor": "top",
-                "buttons": [
-                    {
-                        "label": "PLAY",
-                        "method": "animate",
-                        "args": [
-                            None,
-                            {
-                                "frame": {
-                                    "duration": 30,
-                                    "redraw": True
-                                },
-                                "transition": {
-                                    "duration": 0
-                                },
-                                "fromcurrent": False,
-                                "mode": "immediate"
-                            }
-                        ]
-                    }
-                ]
-            }
-        ]
+            b=40
+        )
     )
 
     st.markdown("### Simulation")
@@ -517,65 +485,178 @@ def run_projectile_simulation(
         "freesound_community-plastic-ball-bounce-14790.mp3",
     ])
 
-    post_script = """
-    const plot = document.getElementById('{plot_id}');
-    const whoosh = document.getElementById('projectile-whoosh');
-    const bounce = document.getElementById('projectile-bounce');
-
-    let bounceTimer = null;
-
-    plot.on('plotly_buttonclicked', function(event) {
-        if (!event.button || event.button.label !== 'PLAY') {
-            return;
-        }
-
-        if (bounceTimer) {
-            clearTimeout(bounceTimer);
-        }
-
-        if (whoosh) {
-            whoosh.pause();
-            whoosh.currentTime = 0;
-            whoosh.play().catch(() => {});
-
-            setTimeout(() => {
-                whoosh.pause();
-                whoosh.currentTime = 0;
-            }, 1000);
-        }
-
-        if (bounce) {
-            bounce.pause();
-            bounce.currentTime = 0;
-        }
-
-        bounceTimer = setTimeout(() => {
-            if (bounce) {
-                bounce.currentTime = 0;
-                bounce.play().catch(() => {});
-            }
-        }, 3000);
-    });
-    """
-
+    # Plotly의 기본 PLAY 버튼 대신 일반 HTML 버튼을 사용합니다.
+    # 일반 버튼의 click 이벤트에서 audio.play()를 직접 호출하면
+    # 브라우저의 autoplay 정책에 막힐 가능성이 훨씬 낮습니다.
     chart_html = fig.to_html(
         include_plotlyjs=True,
         full_html=False,
         auto_play=False,
-        post_script=post_script,
         config={
             "displayModeBar": False
         }
     )
 
     audio_html = f"""
-    <audio id="projectile-whoosh" preload="auto" src="data:audio/mpeg;base64,{whoosh_data}"></audio>
-    <audio id="projectile-bounce" preload="auto" src="data:audio/mpeg;base64,{bounce_data}"></audio>
+    <style>
+        #projectile-simulation-wrapper {{
+            width: 100%;
+            box-sizing: border-box;
+            background: #0d1117;
+            border: 1px solid #30363d;
+            border-radius: 10px;
+            padding: 8px 8px 14px 8px;
+        }}
+
+        #projectile-play-button {{
+            display: block;
+            width: 130px;
+            height: 42px;
+            margin: 8px auto 0 auto;
+            border: 1px solid #777;
+            border-radius: 8px;
+            background: white;
+            color: #111;
+            font-size: 17px;
+            font-weight: 600;
+            cursor: pointer;
+        }}
+
+        #projectile-play-button:hover {{
+            background: #eeeeee;
+        }}
+
+        #projectile-play-button:active {{
+            transform: translateY(1px);
+        }}
+    </style>
+
+    <div id="projectile-simulation-wrapper">
+        {chart_html}
+        <button id="projectile-play-button" type="button">▶ PLAY</button>
+    </div>
+
+    <audio
+        id="projectile-whoosh"
+        preload="auto"
+        src="data:audio/mpeg;base64,{whoosh_data}">
+    </audio>
+
+    <audio
+        id="projectile-bounce"
+        preload="auto"
+        src="data:audio/mpeg;base64,{bounce_data}">
+    </audio>
+
+    <script>
+    (function() {{
+        const playButton = document.getElementById(
+            'projectile-play-button'
+        );
+        const whoosh = document.getElementById(
+            'projectile-whoosh'
+        );
+        const bounce = document.getElementById(
+            'projectile-bounce'
+        );
+        const plot = document.querySelector(
+            '#projectile-simulation-wrapper .plotly-graph-div'
+        );
+
+        const FRAME_DURATION = 30;
+        const FRAME_COUNT = {point_count};
+        const ANIMATION_DURATION =
+            Math.max(0, FRAME_COUNT - 1) * FRAME_DURATION;
+
+        let bounceTimer = null;
+
+        function stopSound(audio) {{
+            if (!audio) return;
+
+            audio.pause();
+
+            try {{
+                audio.currentTime = 0;
+            }} catch (e) {{}}
+        }}
+
+        function playWhooshForOneSecond() {{
+            if (!whoosh || !whoosh.getAttribute('src')) return;
+
+            stopSound(whoosh);
+            whoosh.loop = true;
+
+            const promise = whoosh.play();
+
+            if (promise && promise.catch) {{
+                promise.catch(function(error) {{
+                    console.log('Whoosh playback failed:', error);
+                }});
+            }}
+
+            setTimeout(function() {{
+                whoosh.loop = false;
+                stopSound(whoosh);
+            }}, 1000);
+        }}
+
+        function playBounce() {{
+            if (!bounce || !bounce.getAttribute('src')) return;
+
+            stopSound(bounce);
+
+            const promise = bounce.play();
+
+            if (promise && promise.catch) {{
+                promise.catch(function(error) {{
+                    console.log('Bounce playback failed:', error);
+                }});
+            }}
+        }}
+
+        if (playButton) {{
+            playButton.addEventListener('click', function() {{
+
+                if (!plot || !window.Plotly) {{
+                    return;
+                }}
+
+                if (bounceTimer) {{
+                    clearTimeout(bounceTimer);
+                    bounceTimer = null;
+                }}
+
+                stopSound(bounce);
+                playWhooshForOneSecond();
+
+                Plotly.animate(
+                    plot,
+                    null,
+                    {{
+                        frame: {{
+                            duration: FRAME_DURATION,
+                            redraw: true
+                        }},
+                        transition: {{
+                            duration: 0
+                        }},
+                        fromcurrent: false,
+                        mode: 'immediate'
+                    }}
+                );
+
+                bounceTimer = setTimeout(function() {{
+                    playBounce();
+                }}, ANIMATION_DURATION);
+            }});
+        }}
+    }})();
+    </script>
     """
 
     components.html(
-        audio_html + chart_html,
-        height=650,
+        audio_html,
+        height=670,
         scrolling=False
     )
 
