@@ -25,25 +25,18 @@ def get_click_sound_data():
     ).decode()
 
 
-def add_button_sound():
-    sound_path = Path(__file__).parent / "assets" / "click.mp3"
+def get_card_pop_sound_data():
+    sound_path = Path(__file__).parent / "assets" / "card-pop.mp3"
 
     if not sound_path.exists():
-        st.error(f"Sound file not found: {sound_path}")
-        return
+        return ""
 
-    st.success(f"Sound file loaded: {sound_path}")
-
-    audio_data = base64.b64encode(
+    return base64.b64encode(
         sound_path.read_bytes()
     ).decode()
 
-    st.audio(
-        sound_path,
-        format="audio/mp3"
-    )
 
-    
+def add_button_sound():
     sound_data = get_click_sound_data()
 
     if not sound_data:
@@ -176,7 +169,7 @@ def selection_page():
         """
     )
 
-    click_sound_data = get_click_sound_data()
+    card_pop_sound_data = get_card_pop_sound_data()
 
     experiments = [
         (
@@ -228,18 +221,6 @@ def selection_page():
     for key, title, concept, params, color in experiments:
         image = get_image(f"assets/{key}.png")
 
-        sound_attribute = ""
-
-        if click_sound_data:
-            sound_attribute = (
-                f"""onclick="(function() {{
-                    const audio = new Audio(
-                        'data:audio/mpeg;base64,{click_sound_data}'
-                    );
-                    audio.play().catch(function() {{}});
-                }})()" """
-            )
-
         cards += f"""
         <a href="?experiment={key}"
    class="physics-card"
@@ -249,7 +230,7 @@ def selection_page():
        const target = this.href;
 
        const audio = new Audio(
-           'data:audio/mpeg;base64,{click_sound_data}'
+           'data:audio/mpeg;base64,{card_pop_sound_data}'
        );
 
        audio.volume = 1.0;
@@ -260,7 +241,7 @@ def selection_page():
 
        setTimeout(function() {{
            window.location.href = target;
-       }}, 180);
+       }}, 300);
    "
            style="
                background-color:{color};
