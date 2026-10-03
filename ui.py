@@ -224,8 +224,26 @@ def selection_page():
 
         cards += f"""
         <a href="?experiment={key}"
-           class="physics-card"
-           {sound_attribute}
+   class="physics-card"
+   onclick="
+       event.preventDefault();
+
+       const target = this.href;
+
+       const audio = new Audio(
+           'data:audio/mpeg;base64,{click_sound_data}'
+       );
+
+       audio.volume = 1.0;
+
+       audio.play().catch(function(error) {{
+           console.log('Audio error:', error);
+       }});
+
+       setTimeout(function() {{
+           window.location.href = target;
+       }}, 180);
+   "
            style="
                background-color:{color};
                background-image:url(
