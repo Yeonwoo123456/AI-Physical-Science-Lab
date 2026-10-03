@@ -620,7 +620,11 @@ def spring_experiment():
 
     st.info(f"Equilibrium displacement: {equilibrium_displacement:.3f} m")
 
-    if st.button("Run Experiment", type="primary", key="spring_run_button"):
+    if st.button(
+    "Run Experiment",
+    key="spring_run_button",
+    use_container_width=True
+):
         try:
             result = simulate_spring(
                 mass=mass,
