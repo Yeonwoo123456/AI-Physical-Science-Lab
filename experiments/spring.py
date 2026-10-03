@@ -622,6 +622,7 @@ def spring_experiment():
 
     if st.button(
     "Run Experiment",
+    type="primary",
     key="spring_run_button",
     use_container_width=True
 ):
