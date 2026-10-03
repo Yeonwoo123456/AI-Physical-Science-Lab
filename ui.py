@@ -68,16 +68,21 @@ def home_page():
 
 
 def selection_page():
-    st.markdown(
-        '<div class="section-title">Choose Your Experiment</div>',
-        unsafe_allow_html=True
-    )
-
-    st.markdown(
-        '<div class="selection-description">'
-        'Explore different physical phenomena through simulation.'
-        '</div>',
-        unsafe_allow_html=True
+    st.html(
+        """
+        <div style="text-align:center; margin:10px 0 45px 0;">
+            <div style="font-size:42px; font-weight:700; color:white;">
+                Choose Your Experiment
+            </div>
+            <div style="
+                font-size:20px;
+                color:#AAB4C3;
+                margin-top:18px;
+            ">
+                Explore different physical phenomena through simulation.
+            </div>
+        </div>
+        """
     )
 
     experiments = [
