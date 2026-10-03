@@ -10,7 +10,9 @@ try:
 except Exception:
     Groq = None
 
+
 G = 6.67430e-11
+
 
 def simulate_orbit(
     planet_mass,
@@ -22,6 +24,14 @@ def simulate_orbit(
     duration=7200.0,
     dt=2.0,
 ):
+    """
+    2D two-body approximation:
+    the planet is fixed at the origin and the satellite moves under
+    the planet's gravity.
+
+    Initial position is on +x axis.
+    angle_deg is measured from +x direction for the initial velocity.
+    """
 
     r0 = planet_radius + initial_altitude
 
@@ -131,10 +141,12 @@ def simulate_orbit(
         if r <= planet_radius:
             impact_index = i
 
+            # Keep the final frame exactly on the planet surface.
             scale = planet_radius / max(r, 1e-30)
             xs[i] = px * scale
             ys[i] = py * scale
 
+            # Stop after impact.
             for j in range(i + 1, n):
                 time[j] = time[i]
                 xs[j] = xs[i]
@@ -155,6 +167,7 @@ def simulate_orbit(
 
     if impact_index is not None:
         last = impact_index
+        # Trim after impact to keep animation clean.
         end = last + 1
         arrays = [
             time[:end],
@@ -197,6 +210,8 @@ def simulate_orbit(
     elif initial_specific_energy >= 0:
         orbit_type = "Escape Trajectory"
     else:
+        # Bound trajectory: classify circular vs elliptical using
+        # initial speed relative to local circular speed.
         circular_velocity = math.sqrt(
             G * planet_mass / r0
         )
@@ -229,6 +244,7 @@ def simulate_orbit(
             G * planet_mass / r0
         ),
     }
+
 
 def parse_ai_orbit(prompt):
     if Groq is None:
@@ -329,7 +345,16 @@ Conversions:
             "error": str(exc)
         }
 
+
 def orbit_animation_html(data, planet_radius, playback_ratio=100.0, planet_mass=0.0, initial_altitude=0.0, initial_velocity=0.0, angle_deg=90.0):
+    """
+    Browser-side continuous orbit animation.
+
+    The Python RK4 simulation is still used for analysis/graphs, but the
+    animation itself integrates the orbit continuously in JavaScript. This
+    removes the old 20,000-second playback limit and prevents the animation
+    from jumping back to the initial position when the precomputed data ends.
+    """
     payload = json.dumps(
         {
             "x": data["x"],
@@ -354,6 +379,7 @@ html, body {{
     overflow: hidden;
 }}
 
+#wrap {{
     box-sizing: border-box;
     width: 100%;
     height: 680px;
@@ -769,6 +795,7 @@ draw();
 </html>
 """
 
+
 def orbit_experiment():
 
     st.html(
@@ -793,20 +820,15 @@ def orbit_experiment():
         "angle_deg": 90.0,
     }
 
-    st.markdown("### AI Experiment Assistant")
-
     ai_prompt = st.text_input(
-        "AI Natural Language",
+        "Describe your orbit experiment",
         placeholder=(
             "Example: Put a 1 t satellite 400 km above Earth "
             "with an initial velocity of 7.67 km/s."
         ),
     )
 
-    if st.button(
-        "Analyze with AI",
-        use_container_width=True
-    ):
+    if st.button("Run AI Analysis"):
         if not ai_prompt.strip():
             st.warning("Please describe an experiment first.")
         else:
@@ -817,6 +839,8 @@ def orbit_experiment():
             else:
                 st.session_state["orbit_ai"] = result
 
+                # Apply AI-parsed values directly to the widget state so the
+                # next Run Experiment always uses the newly analyzed values.
                 if result.get("planet_mass") is not None:
                     st.session_state.orbit_planet_mass_t = float(result["planet_mass"]) / 1000.0
                 if result.get("planet_radius") is not None:
@@ -834,6 +858,8 @@ def orbit_experiment():
 
     ai_values = st.session_state.get("orbit_ai", {})
 
+    # Keep each input in Streamlit session state. This prevents stale widget
+    # defaults from being reused when the user changes a value and clicks Run.
     if "orbit_planet_mass_t" not in st.session_state:
         st.session_state.orbit_planet_mass_t = (
             float(ai_values["planet_mass"]) / 1000.0
@@ -918,12 +944,19 @@ def orbit_experiment():
             step=1.0,
         )
 
+    # Convert fixed UI units to SI units for the physics engine.
+    # Read the current widget values on every rerun. These are the exact
+    # values visible in the controls when Run Experiment is pressed.
     planet_mass_si = float(planet_mass_t) * 1000.0
     planet_radius_si = float(planet_radius_km) * 1000.0
     satellite_mass_si = float(satellite_mass_t) * 1000.0
     initial_altitude_si = float(initial_altitude_km) * 1000.0
     initial_velocity_si = float(initial_velocity_kms) * 1000.0
 
+    # Physics settings. The animation uses the same fixed 0.75-second
+    # physics step, but it is integrated continuously in the browser with
+    # no playback time limit. 20,000 s is kept only as the analysis/graph
+    # window and is not an animation endpoint.
     duration = 20000.0
     dt = 0.75
 
@@ -934,6 +967,7 @@ def orbit_experiment():
         value=100,
         step=1,
         key="orbit_playback_ratio",
+        help="Controls how many simulation seconds pass during 1 real second. 100× means 1 real second = 100 simulated seconds.",
     )
 
     if st.button(
@@ -977,6 +1011,8 @@ def orbit_experiment():
     )
     stored_signature = st.session_state.get("orbit_result_signature")
 
+    # Never show a previous simulation as if it represented newly edited
+    # parameters. A fresh Run Experiment is required after any change.
     if stored_signature != current_signature:
         result = None
 
