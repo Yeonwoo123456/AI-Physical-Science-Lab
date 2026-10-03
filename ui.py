@@ -26,6 +26,24 @@ def get_click_sound_data():
 
 
 def add_button_sound():
+    sound_path = Path(__file__).parent / "assets" / "click.mp3"
+
+    if not sound_path.exists():
+        st.error(f"Sound file not found: {sound_path}")
+        return
+
+    st.success(f"Sound file loaded: {sound_path}")
+
+    audio_data = base64.b64encode(
+        sound_path.read_bytes()
+    ).decode()
+
+    st.audio(
+        sound_path,
+        format="audio/mp3"
+    )
+
+    
     sound_data = get_click_sound_data()
 
     if not sound_data:
