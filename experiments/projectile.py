@@ -1,15 +1,12 @@
 import math
-from pathlib import Path
 
 import streamlit as st
-import streamlit.components.v1 as components
 import plotly.graph_objects as go
 
 from app_modules import NaturalLanguageParser, PhysicsValidator
 
 
 def projectile_experiment():
-
     if "projectile_velocity" not in st.session_state:
         st.session_state.projectile_velocity = 20.0
 
@@ -53,81 +50,42 @@ def projectile_experiment():
         "Analyze with AI",
         use_container_width=True
     ):
-
         if not user_input.strip():
-
-            st.warning(
-                "Please describe your experiment first."
-            )
-
+            st.warning("Please describe your experiment first.")
         else:
-
             with st.spinner("Analyzing your experiment..."):
+                result = NaturalLanguageParser.parse(user_input)
 
-                result = NaturalLanguageParser.parse(
-                    user_input
-                )
-
-            if result.get(
-                "needs_clarification",
-                False
-            ):
-
+            if result.get("needs_clarification", False):
                 st.warning(
                     result.get(
                         "clarification_message",
                         "More information is needed."
                     )
                 )
-
             else:
-
-                validation = PhysicsValidator.validate(
-                    result
-                )
+                validation = PhysicsValidator.validate(result)
 
                 if not validation.is_valid:
-
                     for error in validation.errors:
                         st.error(error)
-
                 else:
-
                     params = validation.validated_params
 
                     st.session_state.projectile_velocity = float(
-                        params.get(
-                            "initial_velocity",
-                            20.0
-                        )
+                        params.get("initial_velocity", 20.0)
                     )
-
                     st.session_state.projectile_angle = float(
-                        params.get(
-                            "launch_angle",
-                            0.0
-                        )
+                        params.get("launch_angle", 0.0)
                     )
-
                     st.session_state.projectile_height = float(
-                        params.get(
-                            "height",
-                            0.0
-                        )
+                        params.get("height", 0.0)
                     )
-
                     st.session_state.projectile_gravity = float(
-                        params.get(
-                            "gravity",
-                            9.81
-                        )
+                        params.get("gravity", 9.81)
                     )
-
                     st.session_state.projectile_mass = float(
-                        params.get(
-                            "mass",
-                            1.0
-                        )
+                        params.get("mass", 1.0)
                     )
 
                     st.success(
@@ -139,7 +97,6 @@ def projectile_experiment():
     col1, col2, col3 = st.columns(3)
 
     with col1:
-
         velocity = st.number_input(
             "Initial Speed (m/s)",
             min_value=0.0,
@@ -149,7 +106,6 @@ def projectile_experiment():
         )
 
     with col2:
-
         angle = st.number_input(
             "Launch Angle (°)",
             min_value=0.0,
@@ -159,7 +115,6 @@ def projectile_experiment():
         )
 
     with col3:
-
         height = st.number_input(
             "Initial Height (m)",
             min_value=0.0,
@@ -171,7 +126,6 @@ def projectile_experiment():
     col1, col2 = st.columns(2)
 
     with col1:
-
         gravity = st.number_input(
             "Gravity (m/s²)",
             min_value=0.01,
@@ -181,7 +135,6 @@ def projectile_experiment():
         )
 
     with col2:
-
         mass = st.number_input(
             "Mass (kg)",
             min_value=0.01,
@@ -197,15 +150,9 @@ def projectile_experiment():
         type="primary",
         use_container_width=True
     ):
-
         if angle > 90:
-
-            st.warning(
-                "Launch angle cannot be greater than 90°."
-            )
-
+            st.warning("Launch angle cannot be greater than 90°.")
         else:
-
             run_projectile_simulation(
                 velocity,
                 angle,
@@ -217,7 +164,6 @@ def projectile_experiment():
     st.markdown("<br>", unsafe_allow_html=True)
 
     if st.button("Back to Experiments"):
-
         for key in [
             "projectile_velocity",
             "projectile_angle",
@@ -230,9 +176,7 @@ def projectile_experiment():
                 del st.session_state[key]
 
         st.session_state.page = "select"
-
         st.query_params.clear()
-
         st.rerun()
 
 
@@ -243,70 +187,50 @@ def run_projectile_simulation(
     gravity,
     mass
 ):
-
     theta = math.radians(angle)
 
     vx = velocity * math.cos(theta)
-
     vy = velocity * math.sin(theta)
 
     total_time = (
-        vy +
-        math.sqrt(
-            vy ** 2 +
-            2 * gravity * height
+        vy
+        + math.sqrt(
+            vy ** 2 + 2 * gravity * height
         )
     ) / gravity
 
     max_height = (
-        height +
-        vy ** 2 /
-        (2 * gravity)
+        height
+        + vy ** 2 / (2 * gravity)
     )
 
     time_to_max = vy / gravity
-
     max_height_x = vx * time_to_max
-
     horizontal_range = vx * total_time
 
     point_count = 100
 
     times = [
-        total_time * i /
-        (point_count - 1)
+        total_time * i / (point_count - 1)
         for i in range(point_count)
     ]
 
     x_values = []
-
     y_values = []
 
     for t in times:
-
         x = vx * t
-
         y = (
-            height +
-            vy * t -
-            0.5 * gravity * t ** 2
+            height
+            + vy * t
+            - 0.5 * gravity * t ** 2
         )
 
         x_values.append(x)
+        y_values.append(max(0.0, y))
 
-        y_values.append(
-            max(0.0, y)
-        )
-
-    x_max = max(
-        horizontal_range * 1.1,
-        10
-    )
-
-    y_max = max(
-        max_height * 1.15,
-        10
-    )
+    x_max = max(horizontal_range * 1.1, 10)
+    y_max = max(max_height * 1.15, 10)
 
     fig = go.Figure()
 
@@ -315,9 +239,7 @@ def run_projectile_simulation(
             x=[],
             y=[],
             mode="lines",
-            line=dict(
-                width=4
-            ),
+            line=dict(width=4),
             name="Trajectory",
             hovertemplate=(
                 "Height: %{y:.2f} m"
@@ -352,9 +274,7 @@ def run_projectile_simulation(
             x=[x_values[0]],
             y=[y_values[0]],
             mode="markers",
-            marker=dict(
-                size=20
-            ),
+            marker=dict(size=20),
             name="Projectile",
             hovertemplate=(
                 "Height: %{y:.2f} m"
@@ -366,10 +286,12 @@ def run_projectile_simulation(
     )
 
     frames = []
-    apex_index = max(range(point_count), key=lambda i: y_values[i])
+    apex_index = max(
+        range(point_count),
+        key=lambda i: y_values[i]
+    )
 
     for i in range(point_count):
-
         frames.append(
             go.Frame(
                 data=[
@@ -377,9 +299,7 @@ def run_projectile_simulation(
                         x=x_values[:i + 1],
                         y=y_values[:i + 1],
                         mode="lines",
-                        line=dict(
-                            width=4
-                        ),
+                        line=dict(width=4),
                         hovertemplate=(
                             "Height: %{y:.2f} m"
                             "<br>"
@@ -387,10 +307,17 @@ def run_projectile_simulation(
                             "<extra></extra>"
                         )
                     ),
-
                     go.Scatter(
-                        x=([max_height_x] if i >= apex_index else []),
-                        y=([max_height] if i >= apex_index else []),
+                        x=(
+                            [max_height_x]
+                            if i >= apex_index
+                            else []
+                        ),
+                        y=(
+                            [max_height]
+                            if i >= apex_index
+                            else []
+                        ),
                         mode="markers",
                         marker=dict(
                             size=15,
@@ -403,14 +330,11 @@ def run_projectile_simulation(
                             "<extra></extra>"
                         )
                     ),
-
                     go.Scatter(
                         x=[x_values[i]],
                         y=[y_values[i]],
                         mode="markers",
-                        marker=dict(
-                            size=20
-                        ),
+                        marker=dict(size=20),
                         hovertemplate=(
                             "Height: %{y:.2f} m"
                             "<br>"
@@ -426,38 +350,24 @@ def run_projectile_simulation(
     fig.frames = frames
 
     fig.update_layout(
-
         title="Projectile Motion",
-
         xaxis=dict(
             title="Horizontal Distance (m)",
-            range=[
-                0,
-                x_max
-            ]
+            range=[0, x_max]
         ),
-
         yaxis=dict(
             title="Height (m)",
-            range=[
-                0,
-                y_max
-            ]
+            range=[0, y_max]
         ),
-
         template="plotly_dark",
-
         height=600,
-
         showlegend=True,
-
         margin=dict(
             l=70,
             r=40,
             t=80,
             b=130
         ),
-
         updatemenus=[
             dict(
                 type="buttons",
@@ -492,7 +402,6 @@ def run_projectile_simulation(
     )
 
     st.markdown("### Simulation")
-
     st.plotly_chart(fig, use_container_width=True)
 
     st.markdown("### Results")
@@ -500,21 +409,18 @@ def run_projectile_simulation(
     col1, col2, col3 = st.columns(3)
 
     with col1:
-
         st.metric(
             "Flight Time",
             f"{total_time:.2f} s"
         )
 
     with col2:
-
         st.metric(
             "Maximum Height",
             f"{max_height:.2f} m"
         )
 
     with col3:
-
         st.metric(
             "Horizontal Range",
             f"{horizontal_range:.2f} m"
@@ -525,21 +431,18 @@ def run_projectile_simulation(
     col1, col2, col3 = st.columns(3)
 
     with col1:
-
         st.metric(
             "Initial Speed",
             f"{velocity:.2f} m/s"
         )
 
     with col2:
-
         st.metric(
             "Horizontal Velocity",
             f"{vx:.2f} m/s"
         )
 
     with col3:
-
         st.metric(
             "Vertical Velocity",
             f"{vy:.2f} m/s"
@@ -550,21 +453,18 @@ def run_projectile_simulation(
     col1, col2, col3 = st.columns(3)
 
     with col1:
-
         st.metric(
             "Launch Angle",
             f"{angle:.1f}°"
         )
 
     with col2:
-
         st.metric(
             "Gravity",
             f"{gravity:.2f} m/s²"
         )
 
     with col3:
-
         st.metric(
             "Mass",
             f"{mass:.2f} kg"
