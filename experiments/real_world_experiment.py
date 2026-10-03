@@ -9,9 +9,6 @@ import streamlit as st
 from streamlit_webrtc import VideoProcessorBase, WebRtcMode, webrtc_streamer
 
 
-# ============================================================
-# Camera Tracking
-# ============================================================
 
 class ProjectileProcessor(VideoProcessorBase):
     def __init__(self):
@@ -24,7 +21,6 @@ class ProjectileProcessor(VideoProcessorBase):
         image = frame.to_ndarray(format="bgr24")
         hsv = cv2.cvtColor(image, cv2.COLOR_BGR2HSV)
 
-        # Detect a bright orange/red object.
         lower = np.array([0, 100, 80])
         upper = np.array([25, 255, 255])
         mask = cv2.inRange(hsv, lower, upper)
@@ -89,7 +85,6 @@ class CollisionProcessor(VideoProcessorBase):
         image = frame.to_ndarray(format="bgr24")
         hsv = cv2.cvtColor(image, cv2.COLOR_BGR2HSV)
 
-        # Red object mask.
         red1 = cv2.inRange(
             hsv,
             np.array([0, 100, 80]),
@@ -102,7 +97,6 @@ class CollisionProcessor(VideoProcessorBase):
         )
         red_mask = red1 | red2
 
-        # Blue object mask.
         blue_mask = cv2.inRange(
             hsv,
             np.array([90, 100, 80]),
@@ -178,9 +172,6 @@ class CollisionProcessor(VideoProcessorBase):
         self.start_time = None
 
 
-# ============================================================
-# Analysis
-# ============================================================
 
 def analyze_projectile(data, pixels_per_meter):
     if len(data) < 5:
@@ -192,7 +183,6 @@ def analyze_projectile(data, pixels_per_meter):
     )
 
     df["x"] = df["x_px"] / pixels_per_meter
-    # Image y increases downward, so physics y increases upward.
     df["y"] = -df["y_px"] / pixels_per_meter
 
     df["vx"] = np.gradient(df["x"], df["time"])
@@ -233,15 +223,10 @@ def analyze_collision(data, pixels_per_meter, mass_red, mass_blue):
     return df
 
 
-# ============================================================
-# UI
-# ============================================================
 
 def projectile_mode():
-    st.subheader("📹 Real-World Projectile Motion")
-    st.write(
-        "Use your laptop camera to track a colored object and estimate its motion."
-    )
+    st.markdown('<h2 style="text-align:center;">Real-World Projectile Motion</h2>', unsafe_allow_html=True)
+    st.markdown('<p style="text-align:center;">Use your laptop camera to track a colored object and estimate its motion.</p>', unsafe_allow_html=True)
 
     pixels_per_meter = st.number_input(
         "Pixels per meter",
@@ -293,7 +278,7 @@ def projectile_mode():
     df = st.session_state.get("real_projectile_data")
 
     if df is not None:
-        st.markdown("### Motion Data")
+        st.markdown('<h3 style="text-align:center;">Motion Data</h3>', unsafe_allow_html=True)
 
         m1, m2, m3, m4 = st.columns(4)
         m1.metric("Flight Time", f"{df['time'].iloc[-1]:.2f} s")
@@ -323,10 +308,8 @@ def projectile_mode():
 
 
 def collision_mode():
-    st.subheader("📹 Real-World Collision")
-    st.write(
-        "Use two colored objects to estimate velocity, momentum, and kinetic energy."
-    )
+    st.markdown('<h2 style="text-align:center;">Real-World Collision</h2>', unsafe_allow_html=True)
+    st.markdown('<p style="text-align:center;">Use two colored objects to estimate velocity, momentum, and kinetic energy.</p>', unsafe_allow_html=True)
 
     col1, col2, col3 = st.columns(3)
 
@@ -400,7 +383,7 @@ def collision_mode():
     df = st.session_state.get("real_collision_data")
 
     if df is not None:
-        st.markdown("### Collision Data")
+        st.markdown('<h3 style="text-align:center;">Collision Data</h3>', unsafe_allow_html=True)
 
         m1, m2, m3 = st.columns(3)
         m1.metric("Initial Distance", f"{df['distance'].iloc[0]:.2f} m")
@@ -438,13 +421,13 @@ def collision_mode():
 
 
 def real_world_experiment():
-    st.title("📹 Real-World Physics Experiment")
-    st.write(
-        "Use your laptop camera to turn a real physical experiment into measurable data."
-    )
+    st.markdown('<h1 style="text-align:center;">Real-World Physics Experiment</h1>', unsafe_allow_html=True)
+    st.markdown('<p style="text-align:center;">Use your laptop camera to turn a real physical experiment into measurable data.</p>', unsafe_allow_html=True)
+
+    st.markdown('<p style="text-align:center;">Choose what you want to measure</p>', unsafe_allow_html=True)
 
     mode = st.radio(
-        "Choose what you want to measure",
+        "",
         [
             "Projectile Motion",
             "Collision"
@@ -459,3 +442,11 @@ def real_world_experiment():
         projectile_mode()
     else:
         collision_mode()
+
+    st.markdown("<br>", unsafe_allow_html=True)
+
+    if st.button("Back to Experiments", key="real_world_back"):
+        st.session_state.page = "select"
+        st.session_state.experiment = None
+        st.query_params.clear()
+        st.rerun()
