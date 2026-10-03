@@ -106,7 +106,6 @@ def init_state():
     if "experiment" not in st.session_state:
         st.session_state.experiment = None
 
-
 def home_page():
     st.markdown(
         '<div class="home-title">What happens if…?</div>',
@@ -138,7 +137,6 @@ def home_page():
         ):
             st.session_state.page = "select"
             st.rerun()
-
 
 def selection_page():
     st.html(
