@@ -3,7 +3,7 @@ plotly
 groq
 pydantic
 numpy
+pandas
 streamlit-webrtc
 opencv-python-headless
-pandas
 av
