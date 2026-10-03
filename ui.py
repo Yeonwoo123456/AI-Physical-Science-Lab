@@ -238,7 +238,17 @@ def selection_page():
     )
 
     # Real-World Physics만 별도로 3열 중앙에 배치
-    real_world_image = get_image("assets/real_world.png")
+    real_world_image_path = Path(__file__).parent / "assets" / "real_world.png"
+
+    if real_world_image_path.exists():
+        real_world_image = base64.b64encode(
+            real_world_image_path.read_bytes()
+        ).decode()
+        real_world_background = (
+            f"background-image:url('data:image/png;base64,{real_world_image}');"
+        )
+    else:
+        real_world_background = "background-color:#C7B8EA;"
 
     st.html(
         f"""
@@ -250,11 +260,8 @@ def selection_page():
             <a href="?experiment=real_world"
                class="physics-card"
                style="
-                   background-color:#C7B8EA;
+                   {real_world_background}
                    width:calc((100% - 40px) / 3);
-                   background-image:url(
-                       'data:image/png;base64,{real_world_image}'
-                   );
                ">
 
                 <div class="card-text">
