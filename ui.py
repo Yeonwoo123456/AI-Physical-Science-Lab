@@ -157,56 +157,56 @@ def selection_page():
     )
 
     experiments = [
-        (
-            "projectile",
-            "Projectile Motion",
-            "Kinematics",
-            "Speed · Angle · Gravity",
-            "#9FC5F8"
-        ),
-        (
-            "collision",
-            "Collision",
-            "Momentum & Energy",
-            "Mass · Speed · Elasticity",
-            "#F4A6A6"
-        ),
-        (
-            "pendulum",
-            "Pendulum",
-            "Periodic Motion",
-            "Length · Gravity · Angle",
-            "#F6D77A"
-        ),
-        (
-            "spring",
-            "Spring",
-            "Hooke's Law",
-            "Mass · k · Displacement",
-            "#9ED6A8"
-        ),
-        (
-            "friction",
-            "Friction",
-            "Friction Force",
-            "μ · Mass · Gravity",
-            "#8FD3D3"
-        ),
-        (
-            "orbit",
-            "Gravity & Orbit",
-            "Gravity",
-            "Mass · Distance · Velocity",
-            "#B7A4E8"
-        ),
-        (
-            "real_world",
-            "Real-World Physics",
-            "Camera Physics",
-            "Projectile · Collision · Real Data",
-            "#C4B5FD"
-        )
-    ]
+    (
+        "projectile",
+        "Projectile Motion",
+        "Kinematics",
+        "Speed · Angle · Gravity",
+        "#9FC5F8"
+    ),
+    (
+        "collision",
+        "Collision",
+        "Momentum & Energy",
+        "Mass · Speed · Elasticity",
+        "#F4A6A6"
+    ),
+    (
+        "real_world",
+        "Real-World Physics",
+        "Camera Experiment",
+        "Projectile · Collision",
+        "#C7B8EA"
+    ),
+    (
+        "pendulum",
+        "Pendulum",
+        "Periodic Motion",
+        "Length · Gravity · Angle",
+        "#F6D77A"
+    ),
+    (
+        "spring",
+        "Spring",
+        "Hooke's Law",
+        "Mass · k · Displacement",
+        "#9ED6A8"
+    ),
+    (
+        "friction",
+        "Friction",
+        "Friction Force",
+        "μ · Mass · Gravity",
+        "#8FD3D3"
+    ),
+    (
+        "orbit",
+        "Gravity & Orbit",
+        "Gravity",
+        "Mass · Distance · Velocity",
+        "#B7A4E8"
+    )
+]
 
     cards = ""
 
