@@ -14,21 +14,28 @@ def load_css():
         )
 
 
-def add_button_sound():
+def get_click_sound_data():
     sound_path = Path(__file__).parent / "assets" / "click.mp3"
 
     if not sound_path.exists():
-        return
+        return ""
 
-    audio_data = base64.b64encode(
+    return base64.b64encode(
         sound_path.read_bytes()
     ).decode()
+
+
+def add_button_sound():
+    sound_data = get_click_sound_data()
+
+    if not sound_data:
+        return
 
     st.html(
         f"""
         <audio
             id="physics-lab-button-sound"
-            src="data:audio/mpeg;base64,{audio_data}"
+            src="data:audio/mpeg;base64,{sound_data}"
             preload="auto">
         </audio>
 
@@ -40,13 +47,7 @@ def add_button_sound():
 
             window.__physicsLabSoundInstalled = true;
 
-            document.addEventListener("click", function(event) {{
-                const button = event.target.closest("button");
-
-                if (!button) {{
-                    return;
-                }}
-
+            window.physicsLabPlayClick = function() {{
                 const audio = document.getElementById(
                     "physics-lab-button-sound"
                 );
@@ -57,6 +58,27 @@ def add_button_sound():
 
                 audio.currentTime = 0;
                 audio.play().catch(function() {{}});
+            }};
+
+            document.addEventListener("click", function(event) {{
+                const button = event.target.closest("button");
+
+                if (!button) {{
+                    return;
+                }}
+
+                const text = button.innerText.trim();
+
+                const excludedButtons = [
+                    "Run Experiment",
+                    "Analyze with AI"
+                ];
+
+                if (excludedButtons.includes(text)) {{
+                    return;
+                }}
+
+                window.physicsLabPlayClick();
             }});
         }})();
         </script>
@@ -136,6 +158,8 @@ def selection_page():
         """
     )
 
+    click_sound_data = get_click_sound_data()
+
     experiments = [
         (
             "projectile",
@@ -186,9 +210,22 @@ def selection_page():
     for key, title, concept, params, color in experiments:
         image = get_image(f"assets/{key}.png")
 
+        sound_attribute = ""
+
+        if click_sound_data:
+            sound_attribute = (
+                f"""onclick="(function() {{
+                    const audio = new Audio(
+                        'data:audio/mpeg;base64,{click_sound_data}'
+                    );
+                    audio.play().catch(function() {{}});
+                }})()" """
+            )
+
         cards += f"""
         <a href="?experiment={key}"
            class="physics-card"
+           {sound_attribute}
            style="
                background-color:{color};
                background-image:url(
