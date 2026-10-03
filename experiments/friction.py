@@ -647,7 +647,18 @@ resize();
 
 def friction_experiment():
 
-    st.subheader("Friction Experiment")
+    st.html(
+        """
+        <div style="text-align:center; margin:10px 0 55px 0;">
+            <div style="font-size:42px; font-weight:700; color:white;">
+                Friction Experiment
+            </div>
+            <div style="font-size:18px; color:#AAB4C3; margin-top:18px;">
+                Explore how mass, friction coefficients, applied force, and gravity affect motion.
+            </div>
+        </div>
+        """
+    )
 
     defaults = {
         "friction_mass": 10.0,
@@ -664,10 +675,10 @@ def friction_experiment():
     if "friction_result" not in st.session_state:
         st.session_state.friction_result = None
 
-    st.markdown("### Describe Your Experiment")
+    st.markdown("### AI Experiment Assistant")
 
     ai_text = st.text_area(
-        "AI Assistant",
+        "Describe your experiment",
         placeholder=(
             "Example: 질량 10kg인 블록을 μs 0.5, μk 0.3인 "
             "바닥에서 오른쪽으로 50N의 힘으로 밀어줘"
@@ -677,8 +688,9 @@ def friction_experiment():
     )
 
     if st.button(
-        "Run AI Analysis",
-        key="friction_ai_button"
+        "Analyze with AI",
+        key="friction_ai_button",
+        use_container_width=True
     ):
         if ai_text.strip():
             parsed = parse_ai_friction(ai_text)
@@ -760,7 +772,8 @@ def friction_experiment():
     if st.button(
         "Run Experiment",
         type="primary",
-        key="friction_run_button"
+        key="friction_run_button",
+        use_container_width=True
     ):
         st.session_state.friction_result = simulate_friction(
             mass=mass,
