@@ -1,5 +1,9 @@
+import base64
 import math
+from pathlib import Path
+
 import streamlit as st
+import streamlit.components.v1 as components
 import plotly.graph_objects as go
 
 from app_modules import NaturalLanguageParser, PhysicsValidator
@@ -490,12 +494,104 @@ def run_projectile_simulation(
 
     st.markdown("### Simulation")
 
-    st.plotly_chart(
-        fig,
-        use_container_width=True,
-        config={
+    def load_audio_data(names):
+        base = Path(__file__).parent / "assets"
+
+        for name in names:
+            path = base / name
+            if path.exists():
+                return base64.b64encode(
+                    path.read_bytes()
+                ).decode()
+
+        return ""
+
+    whoosh_data = load_audio_data([
+        "projectile_whoosh.mp3",
+        "dragon-studio-simple-whoosh-382724(1).mp3",
+        "dragon-studio-simple-whoosh-382724.mp3",
+    ])
+
+    bounce_data = load_audio_data([
+        "projectile_bounce.mp3",
+        "freesound_community-plastic-ball-bounce-14790.mp3",
+    ])
+
+    post_script = f"""
+    const plot = document.getElementById('{{plot_id}}');
+    const whoosh = document.getElementById('projectile-whoosh');
+    const bounce = document.getElementById('projectile-bounce');
+
+    let bounceTimer = null;
+
+    plot.on('plotly_buttonclicked', function(event) {{
+        if (!event.button || event.button.label !== 'PLAY') {{
+            return;
+        }}
+
+        if (bounceTimer) {{
+            clearTimeout(bounceTimer);
+        }}
+
+        if (whoosh) {{
+            whoosh.currentTime = 0;
+            whoosh.play().catch(() => {{}});
+
+            setTimeout(() => {{
+                whoosh.pause();
+            }}, 1000);
+        }}
+
+        if (bounce) {{
+            bounce.pause();
+            bounce.currentTime = 0;
+
+            const unlock = bounce.play();
+            if (unlock) {{
+                unlock.then(() => {{
+                    bounce.pause();
+                    bounce.currentTime = 0;
+                }}).catch(() => {{}});
+            }}
+        }}
+
+        bounceTimer = setTimeout(() => {{
+            if (bounce) {{
+                bounce.currentTime = 0;
+                bounce.play().catch(() => {{}});
+            }}
+        }}, 2970);
+    }});
+    """
+
+    chart_html = fig.to_html(
+        include_plotlyjs="cdn",
+        full_html=False,
+        auto_play=False,
+        post_script=post_script,
+        config={{
             "displayModeBar": False
-        }
+        }}
+    )
+
+    audio_html = f"""
+    <audio
+        id="projectile-whoosh"
+        preload="auto"
+        src="data:audio/mpeg;base64,{whoosh_data}">
+    </audio>
+
+    <audio
+        id="projectile-bounce"
+        preload="auto"
+        src="data:audio/mpeg;base64,{bounce_data}">
+    </audio>
+    """
+
+    components.html(
+        audio_html + chart_html,
+        height=650,
+        scrolling=False
     )
 
     st.markdown("### Results")
