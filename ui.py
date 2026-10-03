@@ -14,6 +14,57 @@ def load_css():
         )
 
 
+def add_button_sound():
+    sound_path = Path(__file__).parent / "assets" / "click.mp3"
+
+    if not sound_path.exists():
+        return
+
+    audio_data = base64.b64encode(
+        sound_path.read_bytes()
+    ).decode()
+
+    st.html(
+        f"""
+        <audio
+            id="physics-lab-button-sound"
+            src="data:audio/mpeg;base64,{audio_data}"
+            preload="auto">
+        </audio>
+
+        <script>
+        (function() {{
+            if (window.__physicsLabSoundInstalled) {{
+                return;
+            }}
+
+            window.__physicsLabSoundInstalled = true;
+
+            document.addEventListener("click", function(event) {{
+                const button = event.target.closest("button");
+
+                if (!button) {{
+                    return;
+                }}
+
+                const audio = document.getElementById(
+                    "physics-lab-button-sound"
+                );
+
+                if (!audio) {{
+                    return;
+                }}
+
+                audio.currentTime = 0;
+                audio.play().catch(function() {{}});
+            }});
+        }})();
+        </script>
+        """,
+        unsafe_allow_javascript=True
+    )
+
+
 @st.cache_data
 def get_image(path):
     p = Path(__file__).parent / path
@@ -133,33 +184,22 @@ def selection_page():
     cards = ""
 
     for key, title, concept, params, color in experiments:
-
-        image = get_image(
-            f"assets/{key}.png"
-        )
+        image = get_image(f"assets/{key}.png")
 
         cards += f"""
         <a href="?experiment={key}"
            class="physics-card"
            style="
                background-color:{color};
-               background-image:url('data:image/png;base64,{image}');
+               background-image:url(
+                   'data:image/png;base64,{image}'
+               );
            ">
 
             <div class="card-text">
-
-                <div class="card-title">
-                    {title}
-                </div>
-
-                <div class="card-concept">
-                    {concept}
-                </div>
-
-                <div class="card-parameters">
-                    {params}
-                </div>
-
+                <div class="card-title">{title}</div>
+                <div class="card-concept">{concept}</div>
+                <div class="card-parameters">{params}</div>
             </div>
 
         </a>
@@ -173,32 +213,20 @@ def selection_page():
         """
     )
 
-    st.markdown(
-        "<br>",
-        unsafe_allow_html=True
-    )
+    st.markdown("<br>", unsafe_allow_html=True)
 
     if st.button("Back to Home"):
-
         st.session_state.page = "home"
         st.session_state.experiment = None
-
         st.query_params.clear()
-
         st.rerun()
 
 
 def show_experiment_error(name, error):
-    st.error(
-        f"{name} could not be loaded."
-    )
+    st.error(f"{name} could not be loaded.")
 
-    # Show the actual exception so deployment logs are not the
-    # only way to find the problem.
     with st.expander("Show error details"):
-        st.code(
-            f"{type(error).__name__}: {error}"
-        )
+        st.code(f"{type(error).__name__}: {error}")
 
     if st.button(
         "Back to Experiments",
@@ -235,29 +263,17 @@ def run_experiment_safely(
         experiment_function()
 
     except ImportError as error:
-        show_experiment_error(
-            display_name,
-            error
-        )
+        show_experiment_error(display_name, error)
 
     except AttributeError as error:
-        show_experiment_error(
-            display_name,
-            error
-        )
+        show_experiment_error(display_name, error)
 
     except Exception as error:
-        show_experiment_error(
-            display_name,
-            error
-        )
+        show_experiment_error(display_name, error)
 
 
 def experiment_page():
-
-    experiment = st.session_state.get(
-        "experiment"
-    )
+    experiment = st.session_state.get("experiment")
 
     experiment_map = {
         "projectile": (
@@ -292,14 +308,10 @@ def experiment_page():
         )
     }
 
-    config = experiment_map.get(
-        experiment
-    )
+    config = experiment_map.get(experiment)
 
     if config is None:
-        st.warning(
-            "This experiment is not available."
-        )
+        st.warning("This experiment is not available.")
 
         if st.button(
             "Back to Experiments",
@@ -323,15 +335,12 @@ def experiment_page():
 
 
 def render_app():
-
     load_css()
     init_state()
+    add_button_sound()
 
-    experiment = st.query_params.get(
-        "experiment"
-    )
+    experiment = st.query_params.get("experiment")
 
-    # Only allow experiments that are explicitly registered above.
     valid_experiments = {
         "projectile",
         "collision",
@@ -351,13 +360,10 @@ def render_app():
         st.query_params.clear()
 
     if st.session_state.page == "home":
-
         home_page()
 
     elif st.session_state.page == "select":
-
         selection_page()
 
     else:
-
         experiment_page()
