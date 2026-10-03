@@ -516,7 +516,19 @@ def back_to_experiments_button():
 
 
 def spring_experiment():
-    st.subheader("Spring Experiment")
+
+    st.html(
+        """
+        <div style="text-align:center; margin:10px 0 55px 0;">
+            <div style="font-size:42px; font-weight:700; color:white;">
+                Spring Motion
+            </div>
+            <div style="font-size:18px; color:#AAB4C3; margin-top:18px;">
+                Explore how mass, spring constant, displacement, gravity, and damping affect spring motion.
+            </div>
+        </div>
+        """
+    )
 
     defaults = {
         "spring_mass": 1.0,
@@ -541,10 +553,10 @@ def spring_experiment():
     if not isinstance(result, dict) or not required_keys.issubset(result.keys()):
         st.session_state.pop("spring_result", None)
 
-    st.markdown("### Describe Your Experiment")
+    st.markdown("### AI Experiment Assistant")
 
     ai_text = st.text_area(
-        "AI Assistant",
+        "AI Natural Language",
         placeholder=(
             "Example: 질량 5kg, 스프링 상수 100N/m, "
             "평형 위치에서 0.5m 당겨서 시작해"
@@ -553,7 +565,11 @@ def spring_experiment():
         height=100
     )
 
-    if st.button("Run AI Analysis", key="spring_ai_button"):
+    if st.button(
+        "Analyze with AI",
+        key="spring_ai_button",
+        use_container_width=True
+    ):
         if ai_text.strip():
             parsed = parse_ai_spring(ai_text)
 
@@ -713,4 +729,3 @@ def spring_experiment():
 
     st.markdown("<div style='min-height: 28px;'></div>", unsafe_allow_html=True)
     back_to_experiments_button()
-
