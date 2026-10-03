@@ -106,6 +106,9 @@ def init_state():
     if "experiment" not in st.session_state:
         st.session_state.experiment = None
 
+    if "natural_language_prompt" not in st.session_state:
+        st.session_state.natural_language_prompt = ""
+
 
 def home_page():
     st.markdown(
@@ -128,19 +131,192 @@ def home_page():
         unsafe_allow_html=True
     )
 
+    # Natural-language experiment input
+    st.markdown(
+        """
+        <div style="
+            max-width:850px;
+            margin:35px auto 10px auto;
+            color:#AAB4C3;
+            font-size:15px;
+            font-weight:600;
+        ">
+            ✨ DESCRIBE YOUR EXPERIMENT
+        </div>
+        """,
+        unsafe_allow_html=True
+    )
+
+    prompt = st.text_area(
+        "Describe your experiment",
+        value=st.session_state.natural_language_prompt,
+        placeholder=(
+            'Example: "What happens if I launch a ball at '
+            '20 m/s at a 45° angle?"'
+        ),
+        height=100,
+        label_visibility="collapsed"
+    )
+
+    _, col, _ = st.columns([1.5, 1, 1.5])
+
+    with col:
+        if st.button(
+            "✨ Try It →",
+            type="primary",
+            use_container_width=True
+        ):
+            if prompt.strip():
+                st.session_state.natural_language_prompt = prompt.strip()
+                st.session_state.page = "select"
+                st.query_params.clear()
+                st.rerun()
+            else:
+                st.warning("Describe an experiment first.")
+
+    # Main CTA
+    st.markdown(
+        """
+        <div style="
+            text-align:center;
+            margin-top:22px;
+            color:#7F8A9A;
+            font-size:14px;
+        ">
+            or choose an experiment manually
+        </div>
+        """,
+        unsafe_allow_html=True
+    )
+
     _, col, _ = st.columns([1, 2, 1])
 
     with col:
         if st.button(
             "Start Exploring",
-            type="primary",
+            type="secondary",
             use_container_width=True
         ):
             st.session_state.page = "select"
             st.rerun()
 
+    # How it works
+    st.markdown(
+        """
+        <div style="
+            max-width:950px;
+            margin:75px auto 20px auto;
+            text-align:center;
+        ">
+            <div style="
+                color:white;
+                font-size:25px;
+                font-weight:700;
+            ">
+                How It Works
+            </div>
+
+            <div style="
+                color:#7F8A9A;
+                font-size:14px;
+                margin-top:8px;
+            ">
+                From an idea to an interactive physics simulation.
+            </div>
+
+            <div style="
+                display:grid;
+                grid-template-columns:repeat(3, 1fr);
+                gap:22px;
+                margin-top:28px;
+            ">
+                <div style="
+                    padding:24px 18px;
+                    border:1px solid #252C36;
+                    border-radius:16px;
+                    background:#11151C;
+                ">
+                    <div style="font-size:30px;">💭</div>
+                    <div style="
+                        color:white;
+                        font-size:18px;
+                        font-weight:700;
+                        margin-top:10px;
+                    ">
+                        1. Imagine
+                    </div>
+                    <div style="
+                        color:#8E99A8;
+                        font-size:14px;
+                        margin-top:8px;
+                        line-height:1.5;
+                    ">
+                        Think of a physical situation or experiment.
+                    </div>
+                </div>
+
+                <div style="
+                    padding:24px 18px;
+                    border:1px solid #252C36;
+                    border-radius:16px;
+                    background:#11151C;
+                ">
+                    <div style="font-size:30px;">✨</div>
+                    <div style="
+                        color:white;
+                        font-size:18px;
+                        font-weight:700;
+                        margin-top:10px;
+                    ">
+                        2. Describe
+                    </div>
+                    <div style="
+                        color:#8E99A8;
+                        font-size:14px;
+                        margin-top:8px;
+                        line-height:1.5;
+                    ">
+                        Describe what you want to test in natural language.
+                    </div>
+                </div>
+
+                <div style="
+                    padding:24px 18px;
+                    border:1px solid #252C36;
+                    border-radius:16px;
+                    background:#11151C;
+                ">
+                    <div style="font-size:30px;">🔬</div>
+                    <div style="
+                        color:white;
+                        font-size:18px;
+                        font-weight:700;
+                        margin-top:10px;
+                    ">
+                        3. Simulate
+                    </div>
+                    <div style="
+                        color:#8E99A8;
+                        font-size:14px;
+                        margin-top:8px;
+                        line-height:1.5;
+                    ">
+                        Turn the idea into a physics simulation and explore the result.
+                    </div>
+                </div>
+            </div>
+        </div>
+        """,
+        unsafe_allow_html=True
+    )
+
 
 def selection_page():
+    saved_prompt = st.session_state.get("natural_language_prompt", "")
+
+    if saved_prompt:
+        st.info(f"Your experiment idea: {saved_prompt}")
+
     st.html(
         """
         <div style="text-align:center; margin:10px 0 45px 0;">
@@ -172,6 +348,13 @@ def selection_page():
             "Momentum & Energy",
             "Mass · Speed · Elasticity",
             "#F4A6A6"
+        ),
+        (
+            "real_world",
+            "Real-World Physics",
+            "Camera Experiment",
+            "Projectile · Collision",
+            "#A9D6C5"
         ),
         (
             "pendulum",
@@ -327,6 +510,11 @@ def experiment_page():
             "experiments.orbit",
             "orbit_experiment",
             "Gravity & Orbit"
+        ),
+        "real_world": (
+            "experiments.real_world_experiment",
+            "real_world_experiment",
+            "Real-World Physics"
         )
     }
 
@@ -369,7 +557,8 @@ def render_app():
         "pendulum",
         "spring",
         "friction",
-        "orbit"
+        "orbit",
+        "real_world"
     }
 
     if experiment in valid_experiments:
