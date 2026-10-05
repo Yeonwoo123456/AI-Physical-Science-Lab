@@ -260,9 +260,9 @@ def parse_ai_orbit(prompt):
         }
 
     system_prompt = """
-You convert a user's natural-language orbit experiment description into exactly one JSON object.
+You convert natural-language orbit experiment descriptions into JSON.
 
-Return ONLY valid JSON. Do not include explanations, markdown, or code fences.
+Return ONLY valid JSON.
 
 Schema:
 {
@@ -274,8 +274,7 @@ Schema:
   "angle_deg": number or null
 }
 
-All returned values must use SI units:
-
+Units:
 planet_mass: kg
 planet_radius: m
 satellite_mass: kg
@@ -283,49 +282,19 @@ initial_altitude: m
 initial_velocity: m/s
 angle_deg: degrees
 
+The user may describe values using:
+tonnes (t), kilograms (kg), kilometers (km), meters (m),
+kilometers per second (km/s), or meters per second (m/s).
+
+Convert all values to SI units before returning JSON.
+
+Only use values explicitly stated by the user.
+Do not invent missing values.
+
 Conversions:
 1 t = 1000 kg
 1 km = 1000 m
 1 km/s = 1000 m/s
-
-Interpret natural-language expressions and convert them to the correct parameter.
-
-Examples:
-
-"planet has a mass of 5.97 × 10^24 kg"
--> planet_mass
-
-"planet radius is 6371 km"
--> planet_radius
-
-"satellite weighs 1000 kg"
--> satellite_mass
-
-"satellite is 400 km above the planet"
--> initial_altitude
-
-"satellite moves at 7.67 km/s"
--> initial_velocity
-
-"velocity is perpendicular to the radial direction"
--> angle_deg = 90
-
-"velocity is tangential to the planet"
--> angle_deg = 90
-
-"satellite moves directly away from the planet"
--> angle_deg = 0
-
-"satellite moves directly toward the planet"
--> angle_deg = 180
-
-Only use information explicitly stated or directly expressed by the user.
-
-Do not invent missing values.
-
-If a parameter is not specified, return null.
-
-Always convert recognized values to SI units.
 """
 
     try:
@@ -336,14 +305,14 @@ Always convert recognized values to SI units.
             messages=[
                 {
                     "role": "system",
-                    "content": system_prompt
+                    "content": system_prompt,
                 },
                 {
                     "role": "user",
-                    "content": prompt
-                }
+                    "content": prompt,
+                },
             ],
-            temperature=0
+            temperature=0,
         )
 
         raw = response.choices[0].message.content.strip()
@@ -352,17 +321,10 @@ Always convert recognized values to SI units.
             r"^```(?:json)?\s*|\s*```$",
             "",
             raw,
-            flags=re.IGNORECASE
-        ).strip()
+            flags=re.IGNORECASE,
+        )
 
-        match = re.search(r"\{.*\}", raw, re.DOTALL)
-
-        if not match:
-            raise ValueError(
-                "AI did not return a valid JSON object."
-            )
-
-        result = json.loads(match.group(0))
+        result = json.loads(raw)
 
         allowed = {
             "planet_mass",
@@ -370,28 +332,19 @@ Always convert recognized values to SI units.
             "satellite_mass",
             "initial_altitude",
             "initial_velocity",
-            "angle_deg"
+            "angle_deg",
         }
 
-        cleaned = {}
-
-        for key in allowed:
-            value = result.get(key)
-
-            if value is None:
-                cleaned[key] = None
-            else:
-                try:
-                    cleaned[key] = float(value)
-                except (TypeError, ValueError):
-                    cleaned[key] = None
-
-        return cleaned
+        return {
+            key: result.get(key)
+            for key in allowed
+        }
 
     except Exception as exc:
         return {
             "error": str(exc)
         }
+
 
 def orbit_animation_html(data, planet_radius, playback_ratio=100.0, planet_mass=0.0, initial_altitude=0.0, initial_velocity=0.0, angle_deg=90.0):
     """
@@ -905,6 +858,7 @@ def orbit_experiment():
                     st.session_state.orbit_angle_deg = float(result["angle_deg"])
 
                 st.success("AI analysis completed and parameters updated.")
+                st.rerun()
 
     ai_values = st.session_state.get("orbit_ai", {})
 
