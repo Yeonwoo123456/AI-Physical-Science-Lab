@@ -9,12 +9,10 @@ import pandas as pd
 import streamlit as st
 from streamlit_webrtc import WebRtcMode, webrtc_streamer
 
-
 def has_cloudflare_turn():
     return bool(_secret("CLOUDFLARE_TURN_KEY_ID")) and bool(
         _secret("CLOUDFLARE_TURN_KEY_API_TOKEN")
     )
-
 
 def get_rtc_configuration():
     # Let streamlit-webrtc automatically fetch Cloudflare TURN credentials
@@ -55,7 +53,6 @@ class MotionTracker:
         with self.lock:
             return list(self.collision_records)
 
-
 def find_center(mask, minimum_area=150):
     contours, _ = cv2.findContours(
         mask,
@@ -78,7 +75,6 @@ def find_center(mask, minimum_area=150):
         moments["m10"] / moments["m00"],
         moments["m01"] / moments["m00"]
     )
-
 
 def make_projectile_callback(tracker):
     def callback(frame):
@@ -132,7 +128,6 @@ def make_projectile_callback(tracker):
             return frame
 
     return callback
-
 
 def make_collision_callback(tracker):
     def callback(frame):
@@ -196,7 +191,6 @@ def make_collision_callback(tracker):
 
     return callback
 
-
 def start_camera(key, callback, tracker):
     kwargs = {
         "key": key,
@@ -221,7 +215,6 @@ def start_camera(key, callback, tracker):
             st.code(f"{type(exc).__name__}: {exc}")
         return None
 
-
 def get_tracker(key, mode):
     state_key = f"{key}_tracker"
     tracker = st.session_state.get(state_key)
@@ -229,7 +222,6 @@ def get_tracker(key, mode):
         tracker = MotionTracker(mode)
         st.session_state[state_key] = tracker
     return tracker
-
 
 def analyze_projectile(data, pixels_per_meter):
     if len(data) < 5:
@@ -248,7 +240,6 @@ def analyze_projectile(data, pixels_per_meter):
     df["ax"] = np.gradient(df["vx"], df["time"])
     df["ay"] = np.gradient(df["vy"], df["time"])
     return df
-
 
 def analyze_collision(data, pixels_per_meter, mass_red, mass_blue):
     if len(data) < 8:
@@ -276,7 +267,6 @@ def analyze_collision(data, pixels_per_meter, mass_red, mass_blue):
         0.5 * mass_blue * df["blue_v"] ** 2
     )
     return df
-
 
 def projectile_mode():
     st.markdown('<h2 style="text-align:center;">Real-World Projectile Motion</h2>', unsafe_allow_html=True)
@@ -348,7 +338,6 @@ def projectile_mode():
             df[["time", "x", "y", "vx", "vy", "speed", "ax", "ay"]],
             use_container_width=True
         )
-
 
 def collision_mode():
     st.markdown('<h2 style="text-align:center;">Real-World Collision</h2>', unsafe_allow_html=True)
@@ -449,7 +438,6 @@ def collision_mode():
             ]],
             use_container_width=True
         )
-
 
 def real_world_experiment():
     st.markdown('<h1 style="text-align:center;">Real-World Physics Experiment</h1>', unsafe_allow_html=True)
