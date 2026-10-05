@@ -10,37 +10,28 @@ import streamlit as st
 from streamlit_webrtc import WebRtcMode, webrtc_streamer
 
 
-def _secret(name, default=None):
-    try:
-        value = st.secrets.get(name)
-        if value:
-            return value
-    except Exception:
-        pass
-    return os.getenv(name, default)
+def has_cloudflare_turn():
+    return bool(_secret("CLOUDFLARE_TURN_KEY_ID")) and bool(
+        _secret("CLOUDFLARE_TURN_KEY_API_TOKEN")
+    )
 
 
 def get_rtc_configuration():
-    ice_servers = [
-        {"urls": [
-            "stun:stun.l.google.com:19302",
-            "stun:stun1.l.google.com:19302"
-        ]}
-    ]
+    # Let streamlit-webrtc automatically fetch Cloudflare TURN credentials
+    # when the corresponding secrets are configured.
+    if has_cloudflare_turn():
+        return None
 
-    turn_server = _secret("TURN_SERVER")
-    turn_username = _secret("TURN_USERNAME")
-    turn_credential = _secret("TURN_CREDENTIAL")
-
-    if turn_server and turn_username and turn_credential:
-        ice_servers.append({
-            "urls": turn_server,
-            "username": turn_username,
-            "credential": turn_credential
-        })
-
-    return {"iceServers": ice_servers}
-
+    return {
+        "iceServers": [
+            {
+                "urls": [
+                    "stun:stun.l.google.com:19302",
+                    "stun:stun1.l.google.com:19302"
+                ]
+            }
+        ]
+    }
 
 class MotionTracker:
     def __init__(self, mode):
@@ -204,6 +195,31 @@ def make_collision_callback(tracker):
             return frame
 
     return callback
+
+
+def start_camera(key, callback, tracker):
+    kwargs = {
+        "key": key,
+        "mode": WebRtcMode.SENDRECV,
+        "media_stream_constraints": {
+            "video": True,
+            "audio": False
+        },
+        "video_frame_callback": callback,
+        "async_processing": True
+    }
+
+    rtc_configuration = get_rtc_configuration()
+    if rtc_configuration is not None:
+        kwargs["rtc_configuration"] = rtc_configuration
+
+    try:
+        return webrtc_streamer(**kwargs)
+    except Exception as exc:
+        st.error("Camera connection could not be started.")
+        with st.expander("Connection details"):
+            st.code(f"{type(exc).__name__}: {exc}")
+        return None
 
 
 def get_tracker(key, mode):
