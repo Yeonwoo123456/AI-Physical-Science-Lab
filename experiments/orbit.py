@@ -260,7 +260,7 @@ def parse_ai_orbit(prompt):
         }
 
     system_prompt = """
-You convert natural-language orbit experiment descriptions into JSON.
+You convert a natural-language orbit experiment description into JSON.
 
 Return ONLY valid JSON.
 
@@ -282,14 +282,28 @@ initial_altitude: m
 initial_velocity: m/s
 angle_deg: degrees
 
-The user may describe values using:
-tonnes (t), kilograms (kg), kilometers (km), meters (m),
-kilometers per second (km/s), or meters per second (m/s).
+The user may use tonnes, t, kilograms, kg, kilometers, km, meters, m,
+kilometers per second, km/s, meters per second, m/s.
 
-Convert all values to SI units before returning JSON.
+Convert all values to SI units.
 
-Only use values explicitly stated by the user.
+If the user gives "initial distance", "distance from the planet's center",
+or "distance from the planet", interpret it as center-to-center distance.
+If planet_radius is also provided, calculate:
+initial_altitude = initial_distance - planet_radius.
+
+If the user says "perpendicular to the radial direction", "tangential",
+or "tangent to the orbit", then angle_deg = 90.
+
+If the user says "directly away from the planet" or "radially outward",
+then angle_deg = 0.
+
+If the user says "directly toward the planet" or "radially inward",
+then angle_deg = 180.
+
+Only use information explicitly stated by the user.
 Do not invent missing values.
+Return null for parameters that are not specified.
 
 Conversions:
 1 t = 1000 kg
@@ -322,9 +336,14 @@ Conversions:
             "",
             raw,
             flags=re.IGNORECASE,
-        )
+        ).strip()
 
-        result = json.loads(raw)
+        match = re.search(r"\{.*\}", raw, re.DOTALL)
+
+        if not match:
+            raise ValueError("AI did not return a valid JSON object.")
+
+        result = json.loads(match.group(0))
 
         allowed = {
             "planet_mass",
@@ -335,10 +354,19 @@ Conversions:
             "angle_deg",
         }
 
-        return {
-            key: result.get(key)
-            for key in allowed
-        }
+        cleaned = {}
+
+        for key in allowed:
+            value = result.get(key)
+            if value is None:
+                cleaned[key] = None
+            else:
+                try:
+                    cleaned[key] = float(value)
+                except (TypeError, ValueError):
+                    cleaned[key] = None
+
+        return cleaned
 
     except Exception as exc:
         return {
@@ -841,61 +869,62 @@ def orbit_experiment():
                 st.error(result["error"])
             else:
                 st.session_state["orbit_ai"] = result
-
-                # Apply AI-parsed values directly to the widget state so the
-                # next Run Experiment always uses the newly analyzed values.
-                if result.get("planet_mass") is not None:
-                    st.session_state.orbit_planet_mass_t = float(result["planet_mass"]) / 1000.0
-                if result.get("planet_radius") is not None:
-                    st.session_state.orbit_planet_radius_km = float(result["planet_radius"]) / 1000.0
-                if result.get("satellite_mass") is not None:
-                    st.session_state.orbit_satellite_mass_t = float(result["satellite_mass"]) / 1000.0
-                if result.get("initial_altitude") is not None:
-                    st.session_state.orbit_initial_altitude_km = float(result["initial_altitude"]) / 1000.0
-                if result.get("initial_velocity") is not None:
-                    st.session_state.orbit_initial_velocity_kms = float(result["initial_velocity"]) / 1000.0
-                if result.get("angle_deg") is not None:
-                    st.session_state.orbit_angle_deg = float(result["angle_deg"])
-
-                st.success("AI analysis completed and parameters updated.")
+                st.session_state["orbit_ai_pending"] = result
                 st.rerun()
 
     ai_values = st.session_state.get("orbit_ai", {})
+    pending_values = st.session_state.pop("orbit_ai_pending", None)
 
-    # Keep each input in Streamlit session state. This prevents stale widget
-    # defaults from being reused when the user changes a value and clicks Run.
+    if pending_values is not None:
+        ai_values = pending_values
+
+        if ai_values.get("planet_mass") is not None:
+            st.session_state["orbit_planet_mass_t"] = float(ai_values["planet_mass"]) / 1000.0
+        if ai_values.get("planet_radius") is not None:
+            st.session_state["orbit_planet_radius_km"] = float(ai_values["planet_radius"]) / 1000.0
+        if ai_values.get("satellite_mass") is not None:
+            st.session_state["orbit_satellite_mass_t"] = float(ai_values["satellite_mass"]) / 1000.0
+        if ai_values.get("initial_altitude") is not None:
+            st.session_state["orbit_initial_altitude_km"] = float(ai_values["initial_altitude"]) / 1000.0
+        if ai_values.get("initial_velocity") is not None:
+            st.session_state["orbit_initial_velocity_kms"] = float(ai_values["initial_velocity"]) / 1000.0
+        if ai_values.get("angle_deg") is not None:
+            st.session_state["orbit_angle_deg"] = float(ai_values["angle_deg"])
+
+        st.success("AI analysis completed and parameters updated.")
+
     if "orbit_planet_mass_t" not in st.session_state:
-        st.session_state.orbit_planet_mass_t = (
+        st.session_state["orbit_planet_mass_t"] = (
             float(ai_values["planet_mass"]) / 1000.0
             if ai_values.get("planet_mass") is not None
             else defaults["planet_mass"]
         )
     if "orbit_planet_radius_km" not in st.session_state:
-        st.session_state.orbit_planet_radius_km = (
+        st.session_state["orbit_planet_radius_km"] = (
             float(ai_values["planet_radius"]) / 1000.0
             if ai_values.get("planet_radius") is not None
             else defaults["planet_radius"]
         )
     if "orbit_satellite_mass_t" not in st.session_state:
-        st.session_state.orbit_satellite_mass_t = (
+        st.session_state["orbit_satellite_mass_t"] = (
             float(ai_values["satellite_mass"]) / 1000.0
             if ai_values.get("satellite_mass") is not None
             else defaults["satellite_mass"]
         )
     if "orbit_initial_altitude_km" not in st.session_state:
-        st.session_state.orbit_initial_altitude_km = (
+        st.session_state["orbit_initial_altitude_km"] = (
             float(ai_values["initial_altitude"]) / 1000.0
             if ai_values.get("initial_altitude") is not None
             else defaults["initial_altitude"]
         )
     if "orbit_initial_velocity_kms" not in st.session_state:
-        st.session_state.orbit_initial_velocity_kms = (
+        st.session_state["orbit_initial_velocity_kms"] = (
             float(ai_values["initial_velocity"]) / 1000.0
             if ai_values.get("initial_velocity") is not None
             else defaults["initial_velocity"]
         )
     if "orbit_angle_deg" not in st.session_state:
-        st.session_state.orbit_angle_deg = (
+        st.session_state["orbit_angle_deg"] = (
             float(ai_values["angle_deg"])
             if ai_values.get("angle_deg") is not None
             else defaults["angle_deg"]
@@ -981,12 +1010,12 @@ def orbit_experiment():
     ):
         try:
             result = simulate_orbit(
-                planet_mass=planet_mass_si,
-                planet_radius=planet_radius_si,
-                satellite_mass=satellite_mass_si,
-                initial_altitude=initial_altitude_si,
-                initial_velocity=initial_velocity_si,
-                angle_deg=angle_deg,
+                planet_mass=float(st.session_state["orbit_planet_mass_t"]) * 1000.0,
+                planet_radius=float(st.session_state["orbit_planet_radius_km"]) * 1000.0,
+                satellite_mass=float(st.session_state["orbit_satellite_mass_t"]) * 1000.0,
+                initial_altitude=float(st.session_state["orbit_initial_altitude_km"]) * 1000.0,
+                initial_velocity=float(st.session_state["orbit_initial_velocity_kms"]) * 1000.0,
+                angle_deg=float(st.session_state["orbit_angle_deg"]),
                 duration=float(duration),
                 dt=float(dt),
             )
