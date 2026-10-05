@@ -1,9 +1,9 @@
-streamlit>=1.37.0
+streamlit>=1.51.0
 plotly
 groq
 pydantic
 numpy
 pandas
-streamlit-webrtc
+streamlit-webrtc>=0.78.1
 opencv-python-headless
-av
+av>=15.1.0
